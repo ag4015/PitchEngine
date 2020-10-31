@@ -1,0 +1,1 @@
+gcc main.c fft.c -lm -o main
