@@ -6,26 +6,29 @@ int main()
 	// Variable declaration
 	unsigned long sizeData;                                 //Size of audio data in bytes
 	FILE* outfile;
-	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/clean_guitar.wav";
+	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/clean_guitar_2.wav";
 	#if DISTORTION
 	coeffs = load_distortion_coefficients(&coeff_size);
   printf("Number of coefficients: %ld\n", coeff_size);
 	#endif
 
 	printf("Input file: %s\n\n", filePath);
-	audio16 = readWav(&sizeData, filePath);                 // Get input audio from wav file and fetch the size
-	NUM_SAMP = sizeData/sizeof(*audio16);                   // Number of samples
+	audio16 = readWav(&sizeData, filePath);                  // Get input audio from wav file and fetch the size
+	NUM_SAMP = sizeData/sizeof(*audio16);                    // Number of samples
 
 	// Allocate and zero fill arrays 
-	inbuffer  = (float *) calloc(CIRCBUF,  sizeof(float));	// Input array 
-	outbuffer = (float *) calloc(CIRCBUF,  sizeof(float));  // Output array 
-	inframe   = (float *) calloc(FFTLEN,   sizeof(float));  // Array for processing
-	outframe  = (float *) calloc(FFTLEN,   sizeof(float));  // Array for processing
-	inwin     = (float *) calloc(FFTLEN,   sizeof(float));  // Input window
-	outwin    = (float *) calloc(FFTLEN,   sizeof(float));  // Output window
-	cpx       = (cplx  *) calloc(FFTLEN,   sizeof(cplx ));  // Complex variable for FFT 
-	in_audio  = (float *) calloc(NUM_SAMP, sizeof(float));  // Total input audio
-	out_audio = (float *) calloc(NUM_SAMP, sizeof(float));  // Total output audio
+	inbuffer  = (float *) calloc(CIRCBUF,  sizeof(float));	 // Input array 
+	outbuffer = (float *) calloc(CIRCBUF,  sizeof(float));   // Output array 
+	inframe   = (float *) calloc(FFTLEN,   sizeof(float));   // Array for processing
+	outframe  = (float *) calloc(FFTLEN,   sizeof(float));   // Array for processing
+	inwin     = (float *) calloc(FFTLEN,   sizeof(float));   // Input window
+	outwin    = (float *) calloc(FFTLEN,   sizeof(float));   // Output window
+	phase 		= (float *) calloc(FFTLEN,   sizeof(float));   // Phase of current frame
+	phi_s 		= (float *) calloc(FFTLEN,   sizeof(float));   // Phase adjusted for synthesis stage
+	mag		 		= (float *) calloc(FFTLEN,   sizeof(float));   // Magnitude of current frame
+	cpx       = (complex*)calloc(FFTLEN,   sizeof(complex)); // Complex variable for FFT 
+	in_audio  = (float *) calloc(NUM_SAMP, sizeof(float));   // Total input audio
+	out_audio = (float *) calloc(NUM_SAMP, sizeof(float));   // Total output audio
 
 	
 	// Initialize input and output window functions
@@ -44,7 +47,7 @@ int main()
 	}
 
 	while(audio_ptr < NUM_SAMP){
-		process_frame();
+		process_buffer();
 	}
 
 	printf("It took an average time of %f ms to process each frame.\n", 1000*avg_time/CLOCKS_PER_SEC);
@@ -92,7 +95,7 @@ void buffer_interrupt(int sig)
 		}
 }
 
-void process_frame()
+void process_buffer()
 {
 	/* Variable declaration */
 	int k, m;
@@ -130,12 +133,15 @@ void process_frame()
 	for(k = 0; k < FFTLEN; k++)
 	{
 		inframe[k] = inbuffer[m] * inwin[k];
+		/* cpx[k] = CMPLX(inframe[k], 0); */
 		cpx[k] = inframe[k];
 		if (++m >= CIRCBUF) m = 0; /* wrap if required */
 	}	
 
 	// Compute the FFT of the frame
 	fft(cpx, FFTLEN, 0);
+
+	process_frame();
 
 	// Store the frame frequency transform on freq.csv
 	/* show("FFT: \n", cpx); */
@@ -150,11 +156,11 @@ void process_frame()
 
 	/* multiply outframe by the output window and overlap-add into the output buffer */
 	m = io_ptr0;
-	for (k=0; k < (FFTLEN - FRAMEINC); k++)
+	for (k = 0; k < (FFTLEN - FRAMEINC); k++)
 	{
 		/* this loop adds into outbuffer */
-		outbuffer[m] = outbuffer[m]+outframe[k]*outwin[k];
-		if (++m >= CIRCBUF) m=0; /* wrap if required */
+		outbuffer[m] = outbuffer[m] + outframe[k] * outwin[k];
+		if (++m >= CIRCBUF) m = 0; /* wrap if required */
 	}
 
 	for(; k < FFTLEN; k++)
@@ -209,3 +215,28 @@ float* load_distortion_coefficients(size_t* coeff_size)
 	return coeffs;
 
 }
+
+void process_frame()
+{
+	complex current_phase;
+	float		omega_bin;
+	float		delta_t_a = FSAMP/FFTLEN; 	// Analysis stage
+	float		delta_t_s = delta_t_a;    	// Synthesis stage. Assume for now it is the same as delta_t_a.
+	float		delta_omega;
+	float		delta_omega_wrapped;
+	float		omega_true;
+	for(uint16_t k = 0; k < FFTLEN; k++)
+	{
+		mag[k] = 20 * log10(cabs(cpx[k]));
+		current_phase = carg(cpx[k]);
+		omega_bin = k * (FSAMP/FFTLEN);
+		// Here phase[k] contains the value of the previous frame
+		delta_omega = (current_phase - phase[k])/delta_t_a - omega_bin; 
+		delta_omega_wrapped = fmod(delta_omega + PI , 2 * PI) - PI;
+		omega_true = omega_bin + delta_omega_wrapped;
+		phi_s[k] = phi_s[k] + delta_t_s * omega_true;
+		phase[k] = current_phase;
+	}	
+}
+
+
