@@ -32,7 +32,7 @@ typedef struct  WAV_HEADER
 // Function prototypes 
 int      getFileSize(FILE *inFile); 
 void     printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead);
-void     separateChannels(int16_t* audio, int16_t* left_channel, int16_t* right_channel, unsigned long size);
+void     separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* right_channel,*/ unsigned long size);
 wav_hdr  makeHeaderMono(wav_hdr header);
 int16_t* readWav(unsigned long *sizeData, const char* filePath);
 void     writeWav(int16_t* audio, const char* filePath);
@@ -47,11 +47,11 @@ int getFileSize(FILE *inFile){
 }
 
 // If audio is stereo separate the channels
-void separateChannels(int16_t* audio, int16_t* left_channel, int16_t* right_channel, unsigned long size){
+void separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* right_channel,*/ unsigned long size){
 
     for (unsigned int i = 0; i < size/4; i++){
         left_channel[i] = audio[2*i];
-        right_channel[i] = audio[2*i + 1];
+        // right_channel[i] = audio[2*i + 1];
     }
     return;
 }
@@ -73,8 +73,6 @@ wav_hdr makeHeaderMono(wav_hdr header){
 // Print header information
 void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){
 
-    fclose(wavFile);
-
     printf("Data size: %d.\n", wavHeader.ChunkSize);
     printf("Sampling Rate              : %d Hz. \n", wavHeader.SamplesPerSec);
     printf("bits/sample                : %d. \n", wavHeader.bitsPerSample);
@@ -85,7 +83,7 @@ void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){
     // Audio format 1=PCM,6=mulaw,7=alaw, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM 
 
     printf("Block align                : %d. \n", wavHeader.blockAlign);
-	printf("**************************************\n");
+		printf("**************************************\n");
 }
 
 int16_t* readWav(unsigned long *sizeData, const char* filePath){
@@ -105,6 +103,7 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
     // Read the header
     size_t bytesRead = fread(&wavHeader,headerSize,1,wavFile);
     printHeader(wavFile, wavHeader, bytesRead);
+		fclose(wavFile);
 
     // Re-open file to load all the data
     wavFile = fopen(filePath , "rb");
@@ -117,20 +116,20 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
     *sizeData = wavHeader.ChunkSize - 36;
 
     // Allocate SIZE_DATA plus headerSize number of bytes to store the wav file
-    int8_t* data = (int8_t*)calloc((headerSize + *sizeData), 1);
-    size_t bytesRead2 = fread(data,(headerSize + *sizeData),1,wavFile);
+    int8_t* data = (int8_t*)calloc((headerSize + *sizeData), sizeof(int8_t));
+    fread(data,(headerSize + *sizeData),1,wavFile);
 
     // Separate header from audio data
-    audio = (int16_t*)data + 44;
+    audio = (int16_t*)(data + 44);
 
     // If audio is stereo separate the channels
     if(wavHeader.NumOfChan == 2){
         // Allocate memory for right and left channels
         int16_t* left_channel = (int16_t*)calloc((*sizeData / 2), 1);
-        int16_t* right_channel = (int16_t*)calloc((*sizeData / 2), 1);
+        // int16_t* right_channel = (int16_t*)calloc((*sizeData / 2), 1);
         
         // Get two audio arrays for each stereo channel
-        separateChannels(audio, left_channel, right_channel, *sizeData);
+        separateChannels(audio, left_channel/*, right_channel*/, *sizeData);
 
         // The audio is now mono so the size of the data is halved
         *sizeData = *sizeData/2;
@@ -138,11 +137,11 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
         // Ignore right_channel
         audio = left_channel;
 
-        free(right_channel);
+        // free(right_channel);
         free(data);
     }
 
-	fclose(wavFile);
+		fclose(wavFile);
 
     return audio;
 }
@@ -154,12 +153,9 @@ void writeWav(int16_t* audio, const char* filePath){
     FILE *wavFile;
     FILE *outWavFile;
     int headerSize = sizeof(wav_hdr);
-    
-    // const char* filePath;
-    const char* outputFilePath;
 
-    // filePath = "/home/alex/Documents/Denoiser/sine_tester.wav";
-    outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
+    const char* outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
+		printf("Output file: %s\n\n", outputFilePath);
 
     wavFile = fopen( filePath , "r" );
 
@@ -177,20 +173,22 @@ void writeWav(int16_t* audio, const char* filePath){
     wavHeader.Subchunk2ID[2] = 't';
     wavHeader.Subchunk2ID[3] = 'a';
     printHeader(wavFile, wavHeader, bytesRead);
-
+		fclose(wavFile);
 
     // Re-open file to load all the data
     wavFile = fopen(filePath , "rb");
 
-    if(wavFile == NULL){
+    if(wavFile == NULL)
+		{
         printf("Couldn't open wave file\n");
         exit(EXIT_FAILURE);
     }
-    
-    // Open and write to output wav file
-    outWavFile = fopen(outputFilePath , "wb");
 
-    if(outWavFile == NULL){
+    // Open and write to output wav file
+    outWavFile = fopen(outputFilePath , "w");
+
+    if(outWavFile == NULL)
+		{
         printf("Couldn't open output wave file\n");
         exit(EXIT_FAILURE);
     }
@@ -198,29 +196,32 @@ void writeWav(int16_t* audio, const char* filePath){
     const unsigned long SIZE_DATA = wavHeader.Subchunk2Size;
 
     // Make header information mono
-    if (wavHeader.NumOfChan == 2){
+    if (wavHeader.NumOfChan == 2)
+		{
         outWavHeader = makeHeaderMono(wavHeader);
     }
-    else{
+    else
+		{
         outWavHeader = wavHeader;
     }
-    
+
     // Write output wav data to file
     fwrite(&outWavHeader, (headerSize), 1, outWavFile);
-    fclose(wavFile);
+    fclose(outWavFile);
+
     outWavFile = fopen(outputFilePath, "a");
-    if (wavHeader.NumOfChan == 2){
+    if (wavHeader.NumOfChan == 2)
+		{
         fwrite(audio, (SIZE_DATA/2), 1, outWavFile);
     }
-    else{
+    else
+		{
         fwrite(audio, SIZE_DATA, 1, outWavFile);
     }
+
     // Close wav files
     fclose(wavFile);
     fclose(outWavFile);
-
-    // Free memory
-    // free(audio);
 
     return;
 }

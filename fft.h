@@ -5,14 +5,14 @@
 #include <complex.h>
 #include <stdbool.h>
 
-#define PI 3.141592653589793
-#define FSAMP 44100
-#define FFTLEN 1024
+#define PI (float)3.141592653589793
+#define FSAMP  44100
+#define BUFLEN 1024
 
-typedef float complex cplx;
+// typedef float complex cplx;
 
-void fft2(cplx buf[], cplx out[], int n, int step, int isign);
-void fft(cplx buf[], int n, bool inverse);
-void show(const char * s, cplx buf[]);
+void fft2(complex buf[], complex out[], int n, int step, int isign);
+void fft(complex buf[], int n, bool inverse);
+void show(const char * s, complex buf[]);
 
 #endif // FFT_H
