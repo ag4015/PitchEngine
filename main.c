@@ -1,5 +1,6 @@
 
 #include "main.h"
+#include <string.h>
 
 int main()
 {
@@ -7,6 +8,7 @@ int main()
 	unsigned long sizeData;                                 //Size of audio data in bytes
 	FILE* outfile;
 	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/clean_guitar.wav";
+
 	#if DISTORTION
 	coeffs = load_distortion_coefficients(&coeff_size);
   PRINT_LOG2("Number of coefficients: %ld\n", coeff_size);
@@ -17,7 +19,7 @@ int main()
 	shift = pow(2, steps/12);
 	hopA = (int)round(BUFLEN/NUMFRAMES);
 	hopS = (int)round(hopA * shift);
-	cleanIdx = hopS*(NUMFRAMES-1);
+	cleanIdx = hopS*4;
 
 	PRINT_LOG2("Input file: %s\n\n", filePath);
 	audio16 = readWav(&sizeData, filePath);                  // Get input audio from wav file and fetch the size
@@ -29,6 +31,7 @@ int main()
 	for (uint8_t f = 0; f < NUMFRAMES; f++)
 	{
 		inframe[f]  = (float *) calloc(hopA,     sizeof(float));
+		outframe[f] = (float *) calloc(hopS,     sizeof(float));
 	}
 	vTime     = (float *) calloc(2*hopS*NUMFRAMES,sizeof(float)); // Overlap-add signal. Times two because of ping-pong.
 	inwin     = (float *) calloc(BUFLEN,          sizeof(float));   // Input window
@@ -40,14 +43,18 @@ int main()
 	in_audio  = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total input audio
 	out_audio = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total output audio
 
+	previousPhase     = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	deltaPhi          = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	deltaPhiPrime     = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	deltaPhiPrimeMod  = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	trueFreq          = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	phaseCumulative   = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+
 	
 	// Initialize input and output window functions
 	for(int k = 0; k < BUFLEN; k++){
-		// For some reason there is a scaling factor (the sqrt part)
-		inwin[k]  = (HAMCONST - (1 - HAMCONST) * cos((2 * PI * k)/BUFLEN))/sqrt((2*BUFLEN)/hopA);
-		outwin[k] = (HAMCONST - (1 - HAMCONST) * cos((2 * PI * k)/BUFLEN))/sqrt((2*BUFLEN)/hopS);
-		inwin[k] = 1;
-		outwin[k] = 1;
+		inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopA)/2);
+		outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopS)/2);
 	}
 	
 	// Clear freq.csv file of any content
@@ -100,6 +107,7 @@ int main()
 	for (uint8_t f = 0; f < NUMFRAMES; f++)
 	{
 		free(inframe[f]);
+		free(outframe[f]);
 	}
 	free(vTime);
 	free(inwin);
@@ -111,6 +119,13 @@ int main()
 	free(in_audio);
 	free(out_audio);
 	free(coeffs);
+
+	free(previousPhase);
+	free(deltaPhi);  
+	free(deltaPhiPrime);
+	free(deltaPhiPrimeMod);
+	free(trueFreq);
+	free(phaseCumulative);
 
 	return 0;
 
@@ -136,10 +151,11 @@ void process_buffer()
 		{
 			for (int k = 0; k < hopA; k++)
 			{
-				cpx[k + f2*hopA] = inframe[frameNum2][k] * inwin[k];
+				cpx[k + f2*hopA] = inframe[frameNum2][k]/* * inwin[k]*/;
 			}
 			if (++frameNum2 >= NUMFRAMES) frameNum2 = 0;
 		}
+		COPY(cpx[k], cpx[k] * inwin[k], BUFLEN);
 
 /************ PROCESSING STAGE ***********************/
 
@@ -147,39 +163,151 @@ void process_buffer()
 		// Compute the FFT of the frame
 		fft(cpx, BUFLEN, 0);
 
-		/* process_frame(); */
+		process_frame();
 
 		// Reconstruct the time domain signal using the IFFT 
 		fft(cpx, BUFLEN, 1);
+
+		COPY(cpx[k], creal(cpx[k]) * outwin[k], BUFLEN);
+		#endif
+		#ifdef PDEBUG
+		/* if (audio_ptr == 1024) */
+		/* { */
+		/* 	COPY(mag[k], creal(cpx[k]), BUFLEN); */
+		/* 	dumpFloatArray(inbuffer, BUFLEN, "debugData/inbuffer.csv"); */
+		/* 	dumpFloatArray(mag, BUFLEN, "debugData/cpx.csv"); */
+		/* 	dumpFloatArray(inwin           , BUFLEN, "debugData/inwin.csv"); */
+		/* 	dumpFloatArray(outwin           , BUFLEN, "debugData/outwin.csv"); */
+		/* 	dumpFloatArray(previousPhase   , BUFLEN, "debugData/previousPhase.csv"); */
+		/* 	dumpFloatArray(phase           , BUFLEN, "debugData/phase.csv"); */
+		/* 	dumpFloatArray(deltaPhi        , BUFLEN, "debugData/deltaPhi.csv"); */
+		/* 	dumpFloatArray(deltaPhiPrime   , BUFLEN, "debugData/deltaPhiPrime.csv"); */
+		/* 	dumpFloatArray(deltaPhiPrimeMod, BUFLEN, "debugData/deltaPhiPrimeMod.csv"); */
+		/* 	dumpFloatArray(trueFreq        , BUFLEN, "debugData/trueFreq.csv"); */
+		/* 	dumpFloatArray(phaseCumulative , BUFLEN, "debugData/phaseCumulative.csv"); */
+		/* } */
 		#endif
 
 /************ SYNTHESIS STAGE ***********************/
 
 		PRINT_LOG1("*******************\n");
 		PRINT_LOG2("vTimeIdx: %i\n", vTimeIdx);
-		if (cleanIdx >= NUMFRAMES*hopS*2) cleanIdx = cleanIdx - NUMFRAMES*hopS*2;
 		PRINT_LOG2("cleanIdx from %i", cleanIdx);
+		/* COPY(cpx[k], 0.25, BUFLEN); */
 		for (k = 0; k < hopS; k++)
 		{
-			vTime[cleanIdx++] = 0;
+			vTime[cleanIdx] = 0;
+			if (++cleanIdx >= NUMFRAMES*hopS*2) cleanIdx = 0;
 		}
 		PRINT_LOG2(" to %i\n", cleanIdx-1);
 
 		// The indexing variable for vTime has to be circular.
 		int t = vTimeIdx + hopS*f;
-		if (t >= NUMFRAMES*hopS*2) t = t - NUMFRAMES*hopS*2;
+		if (t >= NUMFRAMES*hopS*2) t = 0;
 
 		PRINT_LOG2("t from %i ", t);
 		for (k = 0; k < BUFLEN; k++)
 		{
-			vTime[t] += creal(cpx[k]) * outwin[k];
-			if ((++t) >= (NUMFRAMES*hopS*2)) t -= NUMFRAMES*hopS*2;
+			vTime[t] += creal(cpx[k]);
+			if ((++t) >= (NUMFRAMES*hopS*2)) t = 0;
 		}
 		PRINT_LOG2("to %i\n", t);
 		PRINT_LOG2("k from 0 to %i\n", k);
+		#ifdef PDEBUG
+		char* fileName = (char*) malloc(sizeof(char)*50);
+		strcpy(fileName, "debugData/vTimeXXX.csv");
+		if (count < 20)
+		{
+			fileName[15] = (int)(count/100) + 48;
+			fileName[16] = (int)(count/10) + 48;
+			fileName[17] = (int)(count % 10) + 48;
+			count++;
+			dumpFloatArray(vTime,NUMFRAMES*hopS*2, fileName);
+		}
+		free(fileName);
+		#endif
+
+/********************************************************/
 
 		if ((++frameNum) >= NUMFRAMES) frameNum = 0;
 
+	}
+	if (steps == 12)
+	{
+		for (k = 0; k < BUFLEN; k++)
+		{
+			outbuffer[k] = vTime[vTimeIdx + k * 2] * GAIN;
+		}
+	}
+
+/************ LINEAR INTERPOLATION ***********************/
+	else
+	{
+		float tShift;
+		float upper;
+		float lower;
+		/* PRINT_LOG2("k from %i", vTimeIdx); */
+		for (k = vTimeIdx; k < vTimeIdx + BUFLEN; k++)
+		{
+			tShift = (k - vTimeIdx) * shift;
+			lower = vTime[(int)(tShift + vTimeIdx)];
+			if ((int)(round(tShift + vTimeIdx + 0.499999)) > NUMFRAMES*hopS*2)
+			{
+				PRINT_LOG2("index: %i\n", (int)(round(tShift + vTimeIdx + 0.499999)));
+			}
+			upper = vTime[(int)(round(tShift + vTimeIdx + 0.499999))];
+			outbuffer[k - vTimeIdx] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
+			outbuffer[k - vTimeIdx] *= GAIN;
+		}
+		if (vTimeIdx == NUMFRAMES * hopS)
+		{
+			outbuffer[k - vTimeIdx - 1] = lower + (lower - vTime[(int)(tShift + vTimeIdx - 1)]);
+			outbuffer[k - vTimeIdx - 1] *= GAIN;
+		}
+		/* PRINT_LOG2(" to %i\n", k); */
+		/* PRINT_LOG2("tShfit: %f\n", tShift); */
+		/* PRINT_LOG2("lower: %f\n", lower); */
+		/* PRINT_LOG2("upper: %f\n", upper); */
+
+		PRINT_LOG1("*******************\n");
+		PRINT_LOG1("Buffer is out\n");
+		PRINT_LOG1("*********************************\n");
+	}
+
+	/* for (k = 0; k < BUFLEN; k++) */
+	/* { */
+	/* 	if (k % hopA == 0) */
+	/* 	{ */
+	/* 		outbuffer[k] = 0.9; */
+	/* 	} */
+	/* 	if (k % hopS == 0) */
+	/* 	{ */
+	/* 		outbuffer[k] = -0.9; */
+	/* 	} */
+	/* } */
+
+	#if DISTORTION
+	float distortedSample = 0;
+	for (int n = coeff_size - 1; n > -1; n--)
+	{
+		distortedSample += pow(outbuffer[m], coeff_size - n - 1) * coeffs[n];
+	}
+	outbuffer[m] = distortedSample;
+	#endif
+
+	elapsed_time = clock() - elapsed_time;
+	avg_time = avg_time + (elapsed_time - avg_time)/N;
+	N++;
+	vTimeIdx += NUMFRAMES * hopS;
+	if ((vTimeIdx) >= NUMFRAMES*hopS*2) vTimeIdx = 0;
+	char* fileName2 = (char*) malloc(sizeof(char)*50);
+	strcpy(fileName2, "debugData/outXX.csv");
+	if (count2 < 10)
+	{
+		fileName2[13] = (int)(count2/10) + 48;
+		fileName2[14] = (int)(count2 % 10) + 48;
+		dumpFloatArray(outbuffer,BUFLEN, fileName2);
+		count2++;
 	}
 	for (k = 0; k < BUFLEN; k++)
 	{
@@ -260,33 +388,69 @@ float* load_distortion_coefficients(size_t* coeff_size)
 		PRINT_LOG2("%f\n", coeffs[n]);
 		n++;
 	}
+	fclose(inFile);
 
 	return coeffs;
 
 }
 
-void process_frame()
-{
-	complex current_phase;
-	float		omega_bin;
-	float		delta_t_a = ((float)hopA)/(float)(FSAMP);    	// Analysis stage
-	float		delta_t_s = ((float)hopS)/(float)(FSAMP);    	// Synthesis stage. Assume for now it is the same as delta_t_a.
-	float		delta_omega;
-	float		delta_omega_wrapped;
-	float		omega_true;
-	for(uint16_t k = 0; k < BUFLEN; k++)
-	{
-		mag[k] = 20 * log10(cabs(cpx[k]));
-		current_phase = carg(cpx[k]);
-		omega_bin = (k + 1) * (FSAMP/BUFLEN);
-		// Here phase[k] contains the value of the previous frame
-		delta_omega = ((current_phase - phase[k])/delta_t_a) - omega_bin; 
-		delta_omega_wrapped = fmod(delta_omega + PI , 2 * PI) - PI;
-		omega_true = omega_bin + delta_omega_wrapped;
-		phi_s[k] = phi_s[k] + delta_t_s * omega_true;
-		phase[k] = current_phase;
-		cpx[k] = cabs(cpx[k])*cexp(I*phi_s[k]);
-	}	
+void dumpFloatArray(float buf[], size_t size, const char* name) {
+
+		// Open file to append fft data
+		FILE *outfile;
+		outfile = fopen(name, "w");
+
+		// Store in a format understandable by numpy in python
+		for (int i = 0; i < size; i++){
+			fprintf(outfile, "%f;", buf[i]);	
+		}
+
+		fprintf(outfile, "\n");
+		fclose(outfile);
 }
 
+/* void process_frame() */
+/* { */
+/* 	float current_phase; */
+/* 	float		deltaPhi; */
+/* 	float		deltaPhiPrime; */
+/* 	float		deltaPhiPrimeMod; */
+/* 	float   trueFreq; */
+/*  */
+/* 	for(uint16_t k = 0; k < BUFLEN; k++) */
+/* 	{ */
+/* 		mag[k] = cabs(cpx[k]); */
+/*  */
+/* 		current_phase = carg(cpx[k]); */
+/* 		deltaPhi = current_phase - phase[k]; */
+/* 		phase[k] = current_phase; */
+/*  */
+/* 		deltaPhiPrime = deltaPhi - (hopA * 2 * PI * k)/BUFLEN; */
+/*  */
+/* 		deltaPhiPrimeMod = fmod(deltaPhiPrime + PI , 2 * PI) - PI; */
+/*  */
+/* 		trueFreq = (2 * PI * k)/BUFLEN + deltaPhiPrimeMod/hopA; */
+/*  */
+/* 		phaseCumulative = phaseCumulative + hopS * trueFreq; */
+/*  */
+/* 		cpx[k] = mag[k]*cexp(I*phaseCumulative); */
+/* 	}	 */
+/* } */
+
+void process_frame()
+{
+		COPY(mag[k], cabs(cpx[k]), BUFLEN);
+		COPY(phase[k], carg(cpx[k]), BUFLEN);
+		COPY(deltaPhi[k], phase[k] - previousPhase[k], BUFLEN);
+		COPY(previousPhase[k], phase[k], BUFLEN);
+		COPY(deltaPhiPrime[k], deltaPhi[k] - (hopA * 2 * PI * k)/BUFLEN, BUFLEN);
+		COPY(deltaPhiPrimeMod[k], fmod(deltaPhiPrime[k] + PI , 2 * PI) - PI, BUFLEN);
+		COPY(trueFreq[k], (2 * PI * k)/BUFLEN + deltaPhiPrimeMod[k]/hopA, BUFLEN);
+		COPY(phaseCumulative[k], phaseCumulative[k] + hopS * trueFreq[k], BUFLEN);
+		COPY(cpx[k], mag[k]*cexp(I*phaseCumulative[k]), BUFLEN);
+}
+
+/* void overlapAdd(float in[NUMFRAMES][], float out[], int bufLen, int hop) */
+/* { */
+/* } */
 

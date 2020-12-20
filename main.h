@@ -18,7 +18,7 @@
 #define HAMCONST   0.53836                // Constant used for the hamming window
 #define FFT        1                      // FFT = 1: Compute the FFT and IFFT of input audio
 #define DISTORTION 0                      // DISTORTION = 1: Apply a polynomial function to the input audio
-#define GAIN       1
+#define GAIN       10
 // #define PDEBUG                            // Print debug information
 
 #ifdef PDEBUG
@@ -31,9 +31,12 @@
        #define PRINT_LOG3(x,y,z) 
 #endif
 
+#define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
+
 // Global variables declaration
 float *inbuffer, *outbuffer;              // Input and output buffers
 float *inframe[NUMFRAMES];                // Pointer to the current frame
+float *outframe[NUMFRAMES];                // Pointer to the current frame
 float *inwin, *outwin;                    // Input and output windows
 float *vTime;                             // Overlap-add signal
 float *in_audio, *out_audio;              // Complete audio data from wav file for input and output
@@ -58,6 +61,16 @@ int hopA;
 int hopS;
 float* vTimePtr;                          // Pointer to the ping-pong vTime array
 int cleanIdx;
+int count = 0;
+int count2 = 0;
+// float		phaseCumulative = 0;
+
+float *previousPhase;
+float *deltaPhi;  
+float *deltaPhiPrime;
+float *deltaPhiPrimeMod;
+float *trueFreq;
+float *phaseCumulative;
 
 // Function declaration
 void buffer_interrupt(int sig);
@@ -65,5 +78,7 @@ void sigalrm_handler(int sig);
 void process_buffer();
 void process_frame();
 float* load_distortion_coefficients(size_t* coeff_size);
+void dumpFloatArray(float buf[], size_t size, const char* name);
+void overlapAdd(float buf[], int bufLen, int numFrames, int hop);
 
 #endif // MAIN_H
