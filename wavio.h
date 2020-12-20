@@ -135,15 +135,23 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
         *sizeData = *sizeData/2;
 
         // Ignore right_channel
-        audio = left_channel;
+        // audio = left_channel;
 
         // free(right_channel);
         free(data);
-    }
-
 		fclose(wavFile);
-
-    return audio;
+        return left_channel;
+    }
+    else
+    {
+        int16_t* mono = (int16_t*)calloc(*sizeData, sizeof(int16_t));
+        for (unsigned int i = 0; i < *sizeData/2; i++){
+            mono[i] = audio[i];
+        }
+        free(data);
+		fclose(wavFile);
+        return mono;
+    }
 }
 
 void writeWav(int16_t* audio, const char* filePath){
@@ -173,7 +181,7 @@ void writeWav(int16_t* audio, const char* filePath){
     wavHeader.Subchunk2ID[2] = 't';
     wavHeader.Subchunk2ID[3] = 'a';
     printHeader(wavFile, wavHeader, bytesRead);
-		fclose(wavFile);
+    fclose(wavFile);
 
     // Re-open file to load all the data
     wavFile = fopen(filePath , "rb");
