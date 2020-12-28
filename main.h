@@ -2,23 +2,29 @@
 #define MAIN_H
 
 #include "wavio.h"
-#include "fft.h"
+// #include "fft.h"
 #include <math.h>
 #include <signal.h>
 #include <sys/time.h>
 #include <time.h>
+#include "kissfft/kiss_fft.h"
+#include "kissfft/_kiss_fft_guts.h"
 
+#define BUFLEN     2048
+#define PI         (float)3.1415926535 
 #define NFREQ      (1 + BUFLEN/2)         // Number of unique frequency bins
-#define NUMFRAMES   4                     // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
+#define HOPA       256
+#define NUMFRAMES  (int)BUFLEN/HOPA                    // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
 // #define HOPA       (BUFLEN/NUMFRAMES)     // Hopcount or number of samples between frames for the analysis stage
 // #define HOPS       (2*HOPA)               // Hopcount or number of samples between frames for the synthesis stage. 2*HOPA because we are doubling in frequency.
 #define DTA        (BUFLEN/FSAMP)         // Delta t_a. Time between frames.
 #define MAXVAL16   32768/1.5              // Maximum
 #define WINCONST   0.85185                // Constant used for the hamming window
 #define HAMCONST   0.53836                // Constant used for the hamming window
-#define FFT        1                      // FFT = 1: Compute the FFT and IFFT of input audio
 #define DISTORTION 0                      // DISTORTION = 1: Apply a polynomial function to the input audio
-#define GAIN       10
+#define INGAIN     1
+#define OUTGAIN    4
+#define FSAMP      44100
 // #define PDEBUG                            // Print debug information
 
 #ifdef PDEBUG
@@ -45,7 +51,7 @@ float *phi_s;                             // Phase adjusted for synthesis stage
 float *coeffs = NULL;                     // Coefficients from the distortion polynomial
 size_t coeff_size;                        // Number of coefficients pointed at by coeffs
 int16_t *audio16;                         // 16 bit integer representation of the audio
-complex *cpx;                             // Complex variable for FFT 
+kiss_fft_cpx *cpxIn, *cpxOut;                  // Complex variable for FFT 
 volatile int io_ptr = 0;                  // Input/output pointer for circular buffers
 volatile int frame_ptr = 0;               // Frame pointer 
 unsigned long int audio_ptr = 0;          // Wav file sample pointer
@@ -65,12 +71,21 @@ int count = 0;
 int count2 = 0;
 // float		phaseCumulative = 0;
 
-float *previousPhase;
-float *deltaPhi;  
-float *deltaPhiPrime;
-float *deltaPhiPrimeMod;
-float *trueFreq;
-float *phaseCumulative;
+#ifdef PDEBUG
+	float *previousPhase;
+	float *deltaPhi;  
+	float *deltaPhiPrime;
+	float *deltaPhiPrimeMod;
+	float *trueFreq;
+	float *phaseCumulative;
+#else
+	float previousPhase;
+	float deltaPhi;  
+	float deltaPhiPrime;
+	float deltaPhiPrimeMod;
+	float trueFreq;
+	float phaseCumulative;
+#endif
 
 // Function declaration
 void buffer_interrupt(int sig);
@@ -80,5 +95,8 @@ void process_frame();
 float* load_distortion_coefficients(size_t* coeff_size);
 void dumpFloatArray(float buf[], size_t size, const char* name);
 void overlapAdd(float buf[], int bufLen, int numFrames, int hop);
+float absc(kiss_fft_cpx *a);
+float argc(kiss_fft_cpx *a);
+void expc(kiss_fft_cpx *a, float mag, float phase);
 
 #endif // MAIN_H

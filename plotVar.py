@@ -11,14 +11,14 @@ extension = 'csv'
 os.chdir(path)
 names = glob.glob('*.{}'.format(extension))
 
-FFTLEN = 1024
+FFTLEN = 2048
 NFREQ = 1 + FFTLEN/2
 FSAMP = 44100
 TFRAME = (1/FSAMP)*FFTLEN
 hopA = 256
-steps = 24 
-numFrames = 4
-hopS = (int)(hopA*2**(steps/12))
+steps = 12 
+numFrames = int(FFTLEN/hopA)
+hopS = int(hopA*2**(steps/12))
 # names = ["inbuffer", "cpx", "previousPhase", "phase", "inwin", "outwin", "deltaPhi", "deltaPhiPrime", "deltaPhiPrimeMod", "trueFreq", "phaseCumulative"]
 
 xcoordsA = [hopA*i for i in range(0,numFrames)]
