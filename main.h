@@ -23,14 +23,14 @@
 #define HAMCONST   0.53836                // Constant used for the hamming window
 #define DISTORTION 0                      // DISTORTION = 1: Apply a polynomial function to the input audio
 #define INGAIN     1
-#define OUTGAIN    4
+#define OUTGAIN    1
 #define FSAMP      44100
 // #define PDEBUG                            // Print debug information
 
 #ifdef PDEBUG
-       #define PRINT_LOG1(x)      printf(x)
-       #define PRINT_LOG2(x,y)    printf(x,y)
-       #define PRINT_LOG3(x,y,z)  printf(x,y,z)
+       #define PRINT_LOG1(x)       if(count < 10 ) printf(x)
+       #define PRINT_LOG2(x,y)     if(count < 10 ) printf(x,y)
+       #define PRINT_LOG3(x,y,z)   if(count < 10 ) printf(x,y,z)
 #else
        #define PRINT_LOG1(x) 
        #define PRINT_LOG2(x,y) 
@@ -69,7 +69,10 @@ float* vTimePtr;                          // Pointer to the ping-pong vTime arra
 int cleanIdx;
 int count = 0;
 int count2 = 0;
-// float		phaseCumulative = 0;
+float pOutBuffLastSample = 0; 
+int sizeVTime;
+kiss_fft_cfg cfg;
+kiss_fft_cfg cfgInv;
 
 #ifdef PDEBUG
 	float *previousPhase;
@@ -84,7 +87,7 @@ int count2 = 0;
 	float deltaPhiPrime;
 	float deltaPhiPrimeMod;
 	float trueFreq;
-	float phaseCumulative;
+	float phaseCumulative = 0;
 #endif
 
 // Function declaration
