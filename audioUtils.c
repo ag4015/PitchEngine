@@ -35,7 +35,7 @@ void process_frame(float* mag, kiss_fft_cpx* cpxOut, float* phase, float* deltaP
 		}
 }
 #else
-void process_frame(kiss_fft_cpx* input, float* mag, float* phase, float phaseCumulative,
+void process_frame(kiss_fft_cpx* input, float* mag, float* phase, float* phaseCumulative,
                    int hopA, int hopS, int bufLen)
 {
 	float   current_phase;
@@ -54,11 +54,17 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* phase, float phaseCum
 		deltaPhiPrime = deltaPhi - (hopA * 2 * PI * k)/bufLen;
 		deltaPhiPrimeMod = fmod(deltaPhiPrime + PI , 2 * PI) - PI;
 		trueFreq = (2 * PI * k)/bufLen + deltaPhiPrimeMod/hopA;
-		phaseCumulative = phaseCumulative + hopS * trueFreq;
-		expc(&input[k], mag[k], phaseCumulative);
+		phaseCumulative[k] = phaseCumulative[k] + hopS * trueFreq;
+		expc(&input[k], mag[k], phaseCumulative[k]);
 	}	
 }
 #endif
+
+/* void process_frame2() */
+/* { */
+/* 	float* delta_t  = (float *) calloc(BUFLEN, sizeof(float)); */
+/*  */
+/* } */
 
 
 void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t frameNum, int numFrames)

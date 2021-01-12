@@ -32,6 +32,7 @@ int count = 0;
 int count2 = 0;
 int sizeVTime;
 float pOutBuffLastSample = 0; 
+float* phaseCumulative;
 
 #ifdef PDEBUG
 	float *previousPhase;
@@ -39,25 +40,22 @@ float pOutBuffLastSample = 0;
 	float *deltaPhiPrime;
 	float *deltaPhiPrimeMod;
 	float *trueFreq;
-	float *phaseCumulative;
 #else
 	float previousPhase;
 	float deltaPhi;  
 	float deltaPhiPrime;
 	float deltaPhiPrimeMod;
 	float trueFreq;
-	float phaseCumulative = 0;
 #endif
 
 int main()
 {
 	// Variable declaration
 	unsigned long sizeData;                                 //Size of audio data in bytes
-	FILE* outfile;
-	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/sine_tester_short.wav";
+	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/clean_guitar.wav";
 
 	// Pitch variables
-	steps = 5;
+	steps = 12;
 	shift = pow(2, steps/12);
 
 	hopA = HOPA;
@@ -84,6 +82,7 @@ int main()
 	cpxOut    = (kiss_fft_cpx*)calloc(BUFLEN,     sizeof(kiss_fft_cpx)); // Complex variable for FFT 
 	in_audio  = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total input audio
 	out_audio = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total output audio
+	phaseCumulative = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
 
 	cfg    = kiss_fft_alloc( BUFLEN, 0, 0, 0);
 	cfgInv = kiss_fft_alloc( BUFLEN, 1, 0, 0);
@@ -94,7 +93,6 @@ int main()
 	deltaPhiPrime     = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
 	deltaPhiPrimeMod  = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
 	trueFreq          = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
-	phaseCumulative   = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
 #endif
 
 	
@@ -108,10 +106,6 @@ int main()
 		/* outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN)); */
 	}
 	
-	// Clear freq.csv file of any content
-	outfile = fopen("freq.csv", "w");
-	fclose(outfile);
-
 	// Convert 16bit audio to floating point
 	for (unsigned long i = 0; i < NUM_SAMP; i++){
 		in_audio[i] = ((float)audio16[i])/MAXVAL16;
@@ -172,6 +166,7 @@ int main()
 	free(in_audio);
 	free(out_audio);
 	free(coeffs);
+	free(phaseCumulative);
 	kiss_fft_free(cfg);
 	kiss_fft_free(cfgInv);
 
@@ -181,7 +176,6 @@ int main()
 	free(deltaPhiPrime);
 	free(deltaPhiPrimeMod);
 	free(trueFreq);
-	free(phaseCumulative);
 #endif
 
 	return 0;

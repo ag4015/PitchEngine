@@ -7,9 +7,6 @@
 #include "kissfft/_kiss_fft_guts.h"
 #include "main.h"
 
-// typedef __uint8_t uint8_t;
-// typedef __uint16_t uint16_t;
-
 kiss_fft_cpx *cpxIn, *cpxOut;                  // Complex variable for FFT 
 kiss_fft_cfg cfg;
 kiss_fft_cfg cfgInv;
@@ -20,7 +17,7 @@ void process_frame(float* mag, kiss_fft_cpx* cpxOut, float* phase, float* deltaP
 									 int hopA, int hopS, int bufLen);
 #else
 
-void process_frame(kiss_fft_cpx* input, float* mag, float* phase, float phaseCumulative,
+void process_frame(kiss_fft_cpx* input, float* mag, float* phase, float* phaseCumulative,
                    int hopA, int hopS, int bufLen);
 #endif
 float absc(kiss_fft_cpx *a);
