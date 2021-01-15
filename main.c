@@ -1,16 +1,17 @@
 
 #include "main.h"
 #include <time.h>
-#include "audioUtils.h"
 #include "wavio.h"
+#include "audioUtils.h"
 
 // Global variables declaration
 float *inbuffer, *outbuffer;              // Input and output buffers
-float *inframe, *outframe;                // Pointer to the current frame
+float *inframe;                           // Pointer to the current frame
 float *inwin, *outwin;                    // Input and output windows
 float *vTime;                             // Overlap-add signal
 float *in_audio, *out_audio;              // Complete audio data from wav file for input and output
-float *mag, *phase;                       // Frame magnitude and phase
+float *mag_ping, *mag_pong, *phi_a;       // Frame magnitude and phase
+float *mag, *magPrev;                     // Pointer to the magnitude of the current frame
 float *phi_s;                             // Phase adjusted for synthesis stage
 float *coeffs = 0;                        // Coefficients from the distortion polynomial
 size_t coeff_size;                        // Number of coefficients pointed at by coeffs
@@ -23,36 +24,26 @@ float N = 1;                              // Number of samples processed
 uint8_t frameNum = 0;                     // Frame index. It's circular.
 int vTimeIdx = 0;                         // Circular buffer for vTime
 float steps;                              // Number of semitones by which to shift the signal
+float* vTimePtr;                          // Pointer to the ping-pong vTime array
 float shift;
 int hopA;
 int hopS;
-float* vTimePtr;                          // Pointer to the ping-pong vTime array
 int cleanIdx;
 int count = 0;
 int count2 = 0;
 int sizeVTime;
 float pOutBuffLastSample = 0; 
-float* phaseCumulative;
-
-#ifdef PDEBUG
-	float *previousPhase;
-	float *deltaPhi;  
-	float *deltaPhiPrime;
-	float *deltaPhiPrimeMod;
-	float *trueFreq;
-#else
-	float previousPhase;
-	float deltaPhi;  
-	float deltaPhiPrime;
-	float deltaPhiPrimeMod;
-	float trueFreq;
-#endif
+float* delta_t_back;
+float* delta_f_cent;
+kiss_fft_cpx *cpxIn, *cpxOut;             // Complex variable for FFT 
+kiss_fft_cfg cfg;
+kiss_fft_cfg cfgInv;
 
 int main()
 {
 	// Variable declaration
 	unsigned long sizeData;                                 //Size of audio data in bytes
-	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/clean_guitar.wav";
+	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/sine_tester.wav";
 
 	// Pitch variables
 	steps = 12;
@@ -71,31 +62,23 @@ int main()
 	inbuffer  = (float *) calloc(BUFLEN,          sizeof(float));   // Input array 
 	outbuffer = (float *) calloc(BUFLEN,          sizeof(float));   // Output array 
 	inframe   = (float *) calloc(BUFLEN,          sizeof(float));
-	outframe  = (float *) calloc(sizeVTime,       sizeof(float));
 	vTime     = (float *) calloc(sizeVTime,       sizeof(float));   // Overlap-add signal. Times two because of ping-pong.
 	inwin     = (float *) calloc(BUFLEN,          sizeof(float));   // Input window
 	outwin    = (float *) calloc(BUFLEN,          sizeof(float));   // Output window
-	phase     = (float *) calloc(BUFLEN,          sizeof(float));   // Phase of current frame
+	phi_a     = (float *) calloc(BUFLEN,          sizeof(float));   // Phase of current frame
 	phi_s     = (float *) calloc(BUFLEN,          sizeof(float));   // Phase adjusted for synthesis stage
-	mag       = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	delta_t_back = (float *) calloc(BUFLEN,       sizeof(float));   // Backward phase derivative in time domain
+	delta_f_cent = (float *) calloc(BUFLEN,       sizeof(float));   // Centered phase derivative in frequency domain
+	mag_ping  = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
+	mag_pong  = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of previous frame
 	cpxIn     = (kiss_fft_cpx*)calloc(BUFLEN,     sizeof(kiss_fft_cpx)); // Complex variable for FFT 
 	cpxOut    = (kiss_fft_cpx*)calloc(BUFLEN,     sizeof(kiss_fft_cpx)); // Complex variable for FFT 
 	in_audio  = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total input audio
 	out_audio = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total output audio
-	phaseCumulative = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
 
 	cfg    = kiss_fft_alloc( BUFLEN, 0, 0, 0);
 	cfgInv = kiss_fft_alloc( BUFLEN, 1, 0, 0);
 
-#ifdef PDEBUG
-	previousPhase     = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
-	deltaPhi          = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
-	deltaPhiPrime     = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
-	deltaPhiPrimeMod  = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
-	trueFreq          = (float *) calloc(BUFLEN,  sizeof(float));   // Magnitude of current frame
-#endif
-
-	
 	// Initialize input and output window functions
 	for(int k = 0; k < BUFLEN; k++){
 		inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopA)/2);
@@ -154,29 +137,22 @@ int main()
 	free(inbuffer);
 	free(outbuffer);
 	free(inframe);
-	free(outframe);
 	free(vTime);
 	free(inwin);
 	free(outwin);
-	free(phase);
+	free(phi_a);
 	free(phi_s);
-	free(mag);
+	free(delta_t_back);
+	free(delta_f_cent);
+	free(mag_ping);
+	free(mag_pong);
 	free(cpxIn);
 	free(cpxOut);
 	free(in_audio);
 	free(out_audio);
 	free(coeffs);
-	free(phaseCumulative);
 	kiss_fft_free(cfg);
 	kiss_fft_free(cfgInv);
-
-#ifdef PDEBUG
-	free(previousPhase);
-	free(deltaPhi);  
-	free(deltaPhiPrime);
-	free(deltaPhiPrimeMod);
-	free(trueFreq);
-#endif
 
 	return 0;
 
@@ -184,41 +160,35 @@ int main()
 
 void process_buffer()
 {
-	/* Variable declaration */
+
 	elapsed_time = clock();
 
 	for (uint8_t f = 0; f < NUMFRAMES; f++)
 	{
+		
+		// Update magnitude pointers
+		magPrev = mag;
+		mag = (mag == mag_ping) ? mag_pong : mag_ping;
 
 /************ ANALYSIS STAGE ***********************/
 
 		overlapAdd(inbuffer, inframe, mag, hopA, frameNum, NUMFRAMES);  
 		COPY(cpxIn[k].r, mag[k] * inwin[k], BUFLEN);
 
-/************ PROCESSING STAGE ***********************/
+/************ PROCESSING STAGE *********************/
 
 		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxInXXX.csv", count, 40, audio_ptr, -1);
 
 		kiss_fft( cfg , cpxIn , cpxOut );
 
-#ifndef PDEBUG
-    process_frame(cpxOut, mag, phase, phaseCumulative, hopA, hopS, BUFLEN);
-#else
-    process_frame( mag, cpxOut, phase, deltaPhi, previousPhase, deltaPhiPrime,
-		               deltaPhiPrimeMod, trueFreq, phaseCumulative, hopA, hopS, BUFLEN);
-#endif
+    process_frame(cpxOut, mag, magPrev, phi_a, phi_s, delta_t_back, delta_f_cent, hopA, hopS, BUFLEN);
 
-		DUMP_ARRAY_COMPLEX(cpxOut  , BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr, -1);
-		DUMP_ARRAY(inbuffer        , BUFLEN, "debugData/inbuffer.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(inwin           , BUFLEN, "debugData/inwin.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(outwin          , BUFLEN, "debugData/outwin.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(previousPhase   , BUFLEN, "debugData/previousPhase.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(phase           , BUFLEN, "debugData/phase.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(deltaPhi        , BUFLEN, "debugData/deltaPhi.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(deltaPhiPrime   , BUFLEN, "debugData/deltaPhiPrime.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(deltaPhiPrimeMod, BUFLEN, "debugData/deltaPhiPrimeMod.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(trueFreq        , BUFLEN, "debugData/trueFreq.csv", count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(phaseCumulative , BUFLEN, "debugData/phaseCumulative.csv", count, -1, audio_ptr, BUFLEN);
+		DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
+		DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
+		DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"    , count, -1, audio_ptr, BUFLEN);
+		DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"   , count, -1, audio_ptr, BUFLEN);
+		DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"    , count, -1, audio_ptr, BUFLEN);
+		DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"    , count, -1, audio_ptr, BUFLEN);
 
 		kiss_fft( cfgInv , cpxIn , cpxOut );
 
@@ -233,7 +203,6 @@ void process_buffer()
 		PRINT_LOG2("cleanIdx from %i", cleanIdx);
     strechFrame(vTime, mag, &cleanIdx, hopS, frameNum, vTimeIdx, sizeVTime, BUFLEN);
 		PRINT_LOG2(" to %i\n", cleanIdx-1);
-		/* PRINT_LOG3("t from %i to %i.\n", initT, t); */
 
 		DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, "debugData/vTimeXXX.csv", count, 40, audio_ptr, -1);
 
@@ -241,12 +210,13 @@ void process_buffer()
 		count++;
 
 	}
-/************ LINEAR INTERPOLATION ***********************/
+
+/************* LINEAR INTERPOLATION *****************/
 
 	interpolate(outbuffer, vTime, steps, shift, vTimeIdx, pOutBuffLastSample, hopS, BUFLEN);
 
-	PRINT_LOG1("*******************\n");
-	PRINT_LOG1("Buffer is out\n");
+	PRINT_LOG1("*********************************\n");
+	PRINT_LOG1("********* Buffer is out *********\n");
 	PRINT_LOG1("*********************************\n");
 
 	DUMP_ARRAY(outbuffer, BUFLEN, "debugData/outXXX.csv", count2, 10, audio_ptr, -1);
@@ -290,10 +260,8 @@ float* load_distortion_coefficients(size_t* coeff_size)
 
 void dumpFloatArray(float* buf, size_t size, const char* name, int count, int max, int auP, int auPMax)
 {
-		if ((count > max && max != -1) || (auP != auPMax && auPMax != -1))
-		{
-			return;
-		}
+		if ((count > max && max != -1) || (auP != auPMax && auPMax != -1)) { return; }
+
 		int len = strlen(name);
 		char* fileName = (char*) malloc(sizeof(char)*len);
 		strcpy(fileName, name);
@@ -310,7 +278,7 @@ void dumpFloatArray(float* buf, size_t size, const char* name, int count, int ma
 		outfile = fopen(fileName, "w");
 
 		// Store in a format understandable by numpy in python
-		for (int i = 0; i < size; i++){
+		for (size_t i = 0; i < size; i++){
 			fprintf(outfile, "%f;", buf[i]);	
 		}
 

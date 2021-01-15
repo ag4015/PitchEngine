@@ -7,19 +7,14 @@
 #include "kissfft/_kiss_fft_guts.h"
 #include "main.h"
 
-kiss_fft_cpx *cpxIn, *cpxOut;                  // Complex variable for FFT 
-kiss_fft_cfg cfg;
-kiss_fft_cfg cfgInv;
+extern "C"
+{
 
-#ifdef PDEBUG
-void process_frame(float* mag, kiss_fft_cpx* cpxOut, float* phase, float* deltaPhi, float* previousPhase,
-                   float* deltaPhiPrime, float* deltaPhiPrimeMod, float* trueFreq, float* phaseCumulative,
-									 int hopA, int hopS, int bufLen);
-#else
+void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s,
+                   float* delta_t_back, float* delta_f_cent, int hopA, int hopS, int bufLen);
 
-void process_frame(kiss_fft_cpx* input, float* mag, float* phase, float* phaseCumulative,
-                   int hopA, int hopS, int bufLen);
-#endif
+void propagate_phase(float* delta_t, float* delta_f,float* mag, float* magPrev,float* phi_s, float tol, int bufLen);
+float get_max(float* in, int size);
 float absc(kiss_fft_cpx *a);
 float argc(kiss_fft_cpx *a);
 void expc(kiss_fft_cpx *a, float mag, float phase);
@@ -31,6 +26,8 @@ void strechFrame(float* output, float* input, int* cleanIdx, int hop,
 
 void interpolate(float* outbuffer, float* vTime, int steps, float shift,
 		             int vTimeIdx, float pOutBuffLastSample, int hopS, int bufLen);
+
+}
 
 #endif // AUDIOUTILS_H
 

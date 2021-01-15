@@ -17,7 +17,8 @@
 #define INGAIN     1
 #define OUTGAIN    1
 #define FSAMP      44100
-#define PDEBUG                       // Print debug information
+// #define PDEBUG                          // Print debug information
+#define SIMULATION                      // This is a simulation of the device
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
 
@@ -34,8 +35,6 @@
        #define DUMP_ARRAY(a,b,c,d,e,f,g)
        #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g)
 #endif
-
-
 
 // Function declaration
 void buffer_interrupt(int sig);

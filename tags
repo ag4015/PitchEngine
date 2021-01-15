@@ -1,0 +1,99 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AudioFormat	wavio.h	/^    uint16_t        AudioFormat;    \/\/ Audio format 1=PCM,6=mulaw,7=alaw,     257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM$/;"	m	struct:WAV_HEADER
+CIRCBUF	main.h	15;"	d
+ChunkSize	wavio.h	/^    uint32_t        ChunkSize;      \/\/ RIFF Chunk Size$/;"	m	struct:WAV_HEADER
+DISTORTION	main.h	20;"	d
+DTA	main.h	16;"	d
+FFT	main.h	19;"	d
+FFTLEN	fft.h	10;"	d
+FFTLEN	plot_frequency.py	/^FFTLEN = 1024$/;"	v
+FFT_H	fft.h	3;"	d
+FSAMP	fft.h	9;"	d
+FSAMP	plot_frequency.py	/^FSAMP = 44100$/;"	v
+HOPA	main.h	13;"	d
+HOPS	main.h	14;"	d
+MAIN_H	main.h	2;"	d
+MAXVAL16	main.h	17;"	d
+N	main.h	/^float N = 1;                     \/\/ Number of samples processed$/;"	v
+NFREQ	main.h	11;"	d
+NFREQ	plot_frequency.py	/^NFREQ = 1 + FFTLEN\/2$/;"	v
+NUM_SAMP	main.h	/^unsigned long NUM_SAMP;				   \/\/ Total number of samples in wave file$/;"	v
+NumOfChan	wavio.h	/^    uint16_t        NumOfChan;      \/\/ Number of channels 1=Mono 2=Sterio$/;"	m	struct:WAV_HEADER
+OVERSAMP	main.h	12;"	d
+PI	fft.h	8;"	d
+RIFF	wavio.h	/^    uint8_t         RIFF[4];        \/\/ RIFF Header Magic header$/;"	m	struct:WAV_HEADER
+SamplesPerSec	wavio.h	/^    uint32_t        SamplesPerSec;  \/\/ Sampling Frequency in Hz$/;"	m	struct:WAV_HEADER
+Subchunk1Size	wavio.h	/^    uint32_t        Subchunk1Size;  \/\/ Size of the fmt chunk$/;"	m	struct:WAV_HEADER
+Subchunk2ID	wavio.h	/^    uint8_t         Subchunk2ID[4]; \/\/ "data"  string$/;"	m	struct:WAV_HEADER
+Subchunk2Size	wavio.h	/^    uint32_t        Subchunk2Size;  \/\/ Sampled data length$/;"	m	struct:WAV_HEADER
+TFRAME	plot_frequency.py	/^TFRAME = (1\/FSAMP)*FFTLEN$/;"	v
+WAVE	wavio.h	/^    uint8_t         WAVE[4];        \/\/ WAVE Header$/;"	m	struct:WAV_HEADER
+WAVIO_H	wavio.h	3;"	d
+WAV_HEADER	wavio.h	/^typedef struct  WAV_HEADER$/;"	s
+WINCONST	main.h	18;"	d
+audio16	main.h	/^int16_t *audio16;                \/\/ 16 bit integer representation of the audio$/;"	v
+audio_ptr	main.h	/^unsigned long int audio_ptr = 0; \/\/ Wav file sample pointer$/;"	v
+avg_time	main.h	/^float avg_time = 0;              \/\/ Average time taken to compute a frame$/;"	v
+ax	plot_frequency.py	/^ax = fig.add_subplot(111)$/;"	v
+axes	plot_frequency.py	/^axes = plt.gca()$/;"	v
+b	plot_frequency.py	/^    b = "Starting in " + str(x)$/;"	v
+b	plot_frequency.py	/^    b = "Time:  " + str(int((end-start)\/60)) + " : " + str(int((end-start)%60))$/;"	v
+bitsPerSample	wavio.h	/^    uint16_t        bitsPerSample;  \/\/ Number of bits per sample$/;"	m	struct:WAV_HEADER
+blockAlign	wavio.h	/^    uint16_t        blockAlign;     \/\/ 2=16-bit mono, 4=16-bit stereo$/;"	m	struct:WAV_HEADER
+buffer_interrupt	main.c	/^void buffer_interrupt(int sig)$/;"	f
+bytesPerSec	wavio.h	/^    uint32_t        bytesPerSec;    \/\/ bytes per second$/;"	m	struct:WAV_HEADER
+coeff_size	main.h	/^size_t coeff_size;							 \/\/ Number of coefficients pointed at by coeffs$/;"	v
+coeffs	main.h	/^float *coeffs = NULL;            \/\/ Coefficients from the distortion polynomial$/;"	v
+cpx	main.h	/^complex *cpx;						         \/\/ Complex variable for FFT $/;"	v
+elapsed_time	main.h	/^float elapsed_time = 0;          \/\/ Time spent computing the current frame$/;"	v
+end	plotFunction.py	/^end = 1$/;"	v
+end	plot_frequency.py	/^    end = time.time()$/;"	v
+fft	fft.c	/^void fft(complex buf[], int n, bool inverse)$/;"	f
+fft	plot_frequency.py	/^fft = np.nan_to_num(genfromtxt('freq.csv', delimiter=';',dtype=complex))$/;"	v
+fft2	fft.c	/^void fft2(complex buf[], complex out[], int n, int step, int isign)$/;"	f
+fig	plot_frequency.py	/^fig = plt.figure()$/;"	v
+fmt	wavio.h	/^    uint8_t         fmt[4];         \/\/ FMT header$/;"	m	struct:WAV_HEADER
+frame_ptr	main.h	/^volatile int frame_ptr = 0;		 	 \/\/ Frame pointer $/;"	v
+frame_start	plot_frequency.py	/^    frame_start = time.time() - start$/;"	v
+frame_start	plot_frequency.py	/^frame_start = 60$/;"	v
+getFileSize	wavio.h	/^int getFileSize(FILE *inFile){$/;"	f
+in_audio	main.h	/^float *in_audio, *out_audio;	 	 \/\/ Complete audio data from wav file for input and output$/;"	v
+inbuffer	main.h	/^float *inbuffer, *outbuffer;  	 \/\/ Input\/output circular buffers$/;"	v
+inframe	main.h	/^float *inframe, *outframe; 		 	 \/\/ Input and output frames$/;"	v
+inwin	main.h	/^float *inwin, *outwin;				   \/\/ Input and output windows$/;"	v
+io_ptr	main.h	/^volatile int io_ptr = 0;			   \/\/ Input\/output pointer for circular buffers$/;"	v
+load_distortion_coefficients	main.c	/^float* load_distortion_coefficients(size_t* coeff_size)$/;"	f
+mag	main.h	/^float *mag, *phase;						 	 \/\/ Frame magnitude and phase$/;"	v
+mag	plot_frequency.py	/^mag = np.abs(fft)$/;"	v
+main	main.c	/^int main()$/;"	f
+main	syseqsolver.c	/^int main (int argc, char *argv[])$/;"	f
+makeHeaderMono	wavio.h	/^wav_hdr makeHeaderMono(wav_hdr header){$/;"	f
+numpoints	plotFunction.py	/^numpoints = order + 1$/;"	v
+order	plotFunction.py	/^order = 8$/;"	v
+out_audio	main.h	/^float *in_audio, *out_audio;	 	 \/\/ Complete audio data from wav file for input and output$/;"	v
+outbuffer	main.h	/^float *inbuffer, *outbuffer;  	 \/\/ Input\/output circular buffers$/;"	v
+outframe	main.h	/^float *inframe, *outframe; 		 	 \/\/ Input and output frames$/;"	v
+outwin	main.h	/^float *inwin, *outwin;				   \/\/ Input and output windows$/;"	v
+phase	main.h	/^float *mag, *phase;						 	 \/\/ Frame magnitude and phase$/;"	v
+phi_s	main.h	/^float *phi_s;                    \/\/ Phase adjusted for synthesis stage$/;"	v
+plotError2d	plotFunction.py	/^def plotError2d(var, static, min, max):$/;"	f
+plotErrorSurface	plotFunction.py	/^def plotErrorSurface(minOrder, maxOrder, minLim, maxLim, numLim):$/;"	f
+printHeader	wavio.h	/^void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){$/;"	f
+process_buffer	main.c	/^void process_buffer()$/;"	f
+process_frame	main.c	/^void process_frame()$/;"	f
+readWav	wavio.h	/^int16_t* readWav(unsigned long *sizeData, const char* filePath){$/;"	f
+sa	main.h	/^struct sigaction sa;				     \/\/ Set interrupt timer for input\/output simulation$/;"	v	typeref:struct:sigaction
+separateChannels	wavio.h	/^void separateChannels(int16_t* audio, int16_t* left_channel, int16_t* right_channel, unsigned long size){$/;"	f
+show	fft.c	/^void show(const char * s, complex buf[]) {$/;"	f
+solveEquation	plotFunction.py	/^def solveEquation(order, start, end, th, plotFunction = False, printVars = False):$/;"	f
+start	plotFunction.py	/^start = 0$/;"	v
+start	plot_frequency.py	/^start = time.time()$/;"	v
+th	plotFunction.py	/^th = 0.3$/;"	v
+timer	main.h	/^struct itimerval timer;          \/\/ Set interrupt timer for input\/output simulation$/;"	v	typeref:struct:itimerval
+wav_hdr	wavio.h	/^} wav_hdr;$/;"	t	typeref:struct:WAV_HEADER
+writeWav	wavio.h	/^void writeWav(int16_t* audio, const char* filePath){$/;"	f
