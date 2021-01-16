@@ -47,7 +47,7 @@ void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){
     // Audio format 1=PCM,6=mulaw,7=alaw, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM 
 
     printf("Block align                : %d. \n", wavHeader.blockAlign);
-		printf("**************************************\n");
+    printf("**************************************\n");
 }
 
 int16_t* readWav(unsigned long *sizeData, const char* filePath){
@@ -67,7 +67,7 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
     // Read the header
     size_t bytesRead = fread(&wavHeader,headerSize,1,wavFile);
     printHeader(wavFile, wavHeader, bytesRead);
-		fclose(wavFile);
+	fclose(wavFile);
 
     // Re-open file to load all the data
     wavFile = fopen(filePath , "rb");
@@ -127,7 +127,7 @@ void writeWav(int16_t* audio, const char* filePath){
     int headerSize = sizeof(wav_hdr);
 
     const char* outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
-		printf("Output file: %s\n\n", outputFilePath);
+	printf("Output file: %s\n\n", outputFilePath);
 
     wavFile = fopen( filePath , "r" );
 
@@ -160,7 +160,7 @@ void writeWav(int16_t* audio, const char* filePath){
     outWavFile = fopen(outputFilePath , "w");
 
     if(outWavFile == NULL)
-		{
+	{
         printf("Couldn't open output wave file\n");
         exit(EXIT_FAILURE);
     }
@@ -169,11 +169,11 @@ void writeWav(int16_t* audio, const char* filePath){
 
     // Make header information mono
     if (wavHeader.NumOfChan == 2)
-		{
+	{
         outWavHeader = makeHeaderMono(wavHeader);
     }
     else
-		{
+	{
         outWavHeader = wavHeader;
     }
 
@@ -183,11 +183,11 @@ void writeWav(int16_t* audio, const char* filePath){
 
     outWavFile = fopen(outputFilePath, "a");
     if (wavHeader.NumOfChan == 2)
-		{
+	{
         fwrite(audio, (SIZE_DATA/2), 1, outWavFile);
     }
     else
-		{
+	{
         fwrite(audio, SIZE_DATA, 1, outWavFile);
     }
 

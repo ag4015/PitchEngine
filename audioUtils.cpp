@@ -1,7 +1,7 @@
 
 #include "audioUtils.h"
 #include <algorithm>
-#include <vector>
+#include "setI.h"
 
 
 float absc(kiss_fft_cpx *a)
@@ -24,17 +24,17 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 	float current_phi_a;
 	float tol = 1e-6;
 
-	float	phi_diff;
-  /*
+	float phi_diff;
+	/*
 	 Time differentiation variables.
 	 Can't do forward differentiation because the algorithm is real time
 	*/
-	float	deltaPhiPrime_t_back;
-	float	deltaPhiPrimeMod_t_back;
+	float deltaPhiPrime_t_back;
+	float deltaPhiPrimeMod_t_back;
 
 	// Frequency differentiation variables
-	float	deltaPhiPrimeMod_f_back;
-	float	deltaPhiPrimeMod_f_fwd;
+	float deltaPhiPrimeMod_f_back;
+	float deltaPhiPrimeMod_f_fwd;
 	float delta_f_back;
 	float delta_f_fwd;
 
@@ -87,39 +87,13 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 
 void propagate_phase(float* delta_t, float* delta_f,float* mag, float* magPrev,float* phi_s, float tol, int bufLen)
 {
-	float maxMag  = get_max(mag, bufLen);
-	float maxPrev = get_max(mag, bufLen);
-	float abstol = tol * ((maxMag >= maxPrev) ? (maxMag) : (maxPrev));
-
-	std::vector<uint16_t> set_I;
-	set_I.reserve(bufLen);
-	std::srand(1); // Don't know if the SoC knows about time so seed with 1
-
-	for (uint16_t k = 0; k < bufLen; k++)
+	setI I(mag, magPrev, phi_s, bufLen, tol);
+	I.sort();
+	for (int i = 0; i < I.size(); i++)
 	{
-		if (mag[k] > abstol) { set_I.push_back(k); }
-		else
-		{
-			phi_s[k] = (std::rand()/RAND_MAX) * 2 * PI - PI;
-		}
-	}
-	// auto cmpFunc = [&phi_s](auto &a, auto &b){ return phi_s[a] < phi_s[b]; };
-}
-bool cmp_in_heap(const uint16_t &a, const uint16_t &b, std::vector<uint16_t> &vec)
-{
-	return vec[a] < vec[b];
-}
 
-float get_max(float* in, int size)
-{
-	float max = 0;
-	for (int k = 0; k < size; k++)
-	{
-		if (in[k] > max) { max = in[k]; }
 	}
-	return max;
 }
-
 
 void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t frameNum, int numFrames)
 {

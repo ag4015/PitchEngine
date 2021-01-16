@@ -6,30 +6,22 @@ struct Tuple
 {
 	uint16_t m;
 	uint16_t n;
-};
-
-class setIIterator
-{
+	Tuple(uint16_t &&m, uint16_t &&n) : m(m), n(n) {};
 };
 
 class setI
 {
+private:
+	const float* mag_;
+	const float* magPrev_;
+	float* phi_s_;
+	float abstol_;
+	std::vector<Tuple> tuple_;
+	bool comp(uint16_t &a, uint16_t &b);
+	float get_max(const float* in, const int &size);
 public:
-	setI(const float* mag, const float* magPrev, float* phi_s, const int size);
+	setI(const float* mag, const float* magPrev, float* phi_s, const int size, float tol);
 	void sort();
 	void pop();
-	// typedef setI::iterator iterator;
-	// typedef std::vector<Point>::const_iterator const_iterator;
-  //
-	// iterator begin() { return m_shape.container.begin(); }
-	// const_iterator begin() const { return m_shape.container.begin(); }
-	// iterator end() { return m_shape.container.end(); }
-	// const_iterator end() const { return m_shape.const_container.end(); }
-
-private:
-	std::vector<Tuple> tuple;
-	const float* mag;
-	const float* magPrev;
-	float* phi_s;
-	bool comp(uint16_t &a, uint16_t &b);
+	const int size() { return tuple_.size(); }
 };

@@ -43,7 +43,7 @@ int main()
 {
 	// Variable declaration
 	unsigned long sizeData;                                 //Size of audio data in bytes
-	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/sine_tester.wav";
+	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/sine_tester_short.wav";
 
 	// Pitch variables
 	steps = 12;
@@ -52,29 +52,29 @@ int main()
 	hopA = HOPA;
 	hopS = (int)round(hopA * shift);
 	cleanIdx = hopS*NUMFRAMES;
-  sizeVTime = NUMFRAMES * hopS * 2;
+	sizeVTime = NUMFRAMES * hopS * 2;
 
 	PRINT_LOG2("Input file: %s\n\n", filePath);
-	audio16 = readWav(&sizeData, filePath);                         // Get input audio from wav file and fetch the size
-	NUM_SAMP = sizeData/sizeof(*audio16);                           // Number of samples
+	audio16 = readWav(&sizeData, filePath);                                  // Get input audio from wav file and fetch the size
+	NUM_SAMP = sizeData/sizeof(*audio16);                                    // Number of samples
 
 	// Allocate and zero fill arrays 
-	inbuffer  = (float *) calloc(BUFLEN,          sizeof(float));   // Input array 
-	outbuffer = (float *) calloc(BUFLEN,          sizeof(float));   // Output array 
-	inframe   = (float *) calloc(BUFLEN,          sizeof(float));
-	vTime     = (float *) calloc(sizeVTime,       sizeof(float));   // Overlap-add signal. Times two because of ping-pong.
-	inwin     = (float *) calloc(BUFLEN,          sizeof(float));   // Input window
-	outwin    = (float *) calloc(BUFLEN,          sizeof(float));   // Output window
-	phi_a     = (float *) calloc(BUFLEN,          sizeof(float));   // Phase of current frame
-	phi_s     = (float *) calloc(BUFLEN,          sizeof(float));   // Phase adjusted for synthesis stage
-	delta_t_back = (float *) calloc(BUFLEN,       sizeof(float));   // Backward phase derivative in time domain
-	delta_f_cent = (float *) calloc(BUFLEN,       sizeof(float));   // Centered phase derivative in frequency domain
-	mag_ping  = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of current frame
-	mag_pong  = (float *) calloc(BUFLEN,          sizeof(float));   // Magnitude of previous frame
-	cpxIn     = (kiss_fft_cpx*)calloc(BUFLEN,     sizeof(kiss_fft_cpx)); // Complex variable for FFT 
-	cpxOut    = (kiss_fft_cpx*)calloc(BUFLEN,     sizeof(kiss_fft_cpx)); // Complex variable for FFT 
-	in_audio  = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total input audio
-	out_audio = (float *) calloc(NUM_SAMP,        sizeof(float));   // Total output audio
+	inbuffer     = (float *)      calloc(BUFLEN,      sizeof(float));        // Input array 
+	outbuffer    = (float *)      calloc(BUFLEN,      sizeof(float));        // Output array 
+	inframe      = (float *)      calloc(BUFLEN,      sizeof(float));        // Input frame
+	vTime        = (float *)      calloc(sizeVTime,   sizeof(float));        // Overlap-add signal. Times two because of ping-pong.
+	inwin        = (float *)      calloc(BUFLEN,      sizeof(float));        // Input window
+	outwin       = (float *)      calloc(BUFLEN,      sizeof(float));        // Output window
+	phi_a        = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase of current frame
+	phi_s        = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase adjusted for synthesis stage
+	delta_t_back = (float *)      calloc(BUFLEN,      sizeof(float));        // Backward phase derivative in time domain
+	delta_f_cent = (float *)      calloc(BUFLEN,      sizeof(float));        // Centered phase derivative in frequency domain
+	mag_ping     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of current frame
+	mag_pong     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of previous frame
+	cpxIn        = (kiss_fft_cpx*)calloc(BUFLEN,      sizeof(kiss_fft_cpx)); // Complex variable for FFT 
+	cpxOut       = (kiss_fft_cpx*)calloc(BUFLEN,      sizeof(kiss_fft_cpx)); // Complex variable for FFT 
+	in_audio     = (float *)      calloc(NUM_SAMP,    sizeof(float));        // Total input audio
+	out_audio    = (float *)      calloc(NUM_SAMP,    sizeof(float));        // Total output audio
 
 	cfg    = kiss_fft_alloc( BUFLEN, 0, 0, 0);
 	cfgInv = kiss_fft_alloc( BUFLEN, 1, 0, 0);
@@ -160,6 +160,7 @@ int main()
 
 void process_buffer()
 {
+	// mag, magPrev, mag_ping, mag_pong, inbuffer, inframe, hopA, frameNum, numFrames, cpxIn, inwin
 
 	elapsed_time = clock();
 
@@ -181,7 +182,7 @@ void process_buffer()
 
 		kiss_fft( cfg , cpxIn , cpxOut );
 
-    process_frame(cpxOut, mag, magPrev, phi_a, phi_s, delta_t_back, delta_f_cent, hopA, hopS, BUFLEN);
+		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, delta_t_back, delta_f_cent, hopA, hopS, BUFLEN);
 
 		DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
 		DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
@@ -201,7 +202,7 @@ void process_buffer()
 		PRINT_LOG1("*******************\n");
 		PRINT_LOG2("vTimeIdx: %i\n", vTimeIdx);
 		PRINT_LOG2("cleanIdx from %i", cleanIdx);
-    strechFrame(vTime, mag, &cleanIdx, hopS, frameNum, vTimeIdx, sizeVTime, BUFLEN);
+		strechFrame(vTime, mag, &cleanIdx, hopS, frameNum, vTimeIdx, sizeVTime, BUFLEN);
 		PRINT_LOG2(" to %i\n", cleanIdx-1);
 
 		DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, "debugData/vTimeXXX.csv", count, 40, audio_ptr, -1);
@@ -244,7 +245,7 @@ float* load_distortion_coefficients(size_t* coeff_size)
 	}
 	while( fscanf(inFile, "%f\n", &coeff) != EOF )
 	coeffs = (float *) calloc(*coeff_size, sizeof(float));
-  PRINT_LOG1("Coefficients:\n");
+	PRINT_LOG1("Coefficients:\n");
 
 	while( fscanf(inFile, "%f\n", &coeff) != EOF )
 	{
