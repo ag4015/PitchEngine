@@ -10,11 +10,10 @@
 extern "C"
 {
 
-void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s,
-                   float* delta_t_back, float* delta_f_cent, int hopA, int hopS, int bufLen);
+void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s, float* phi_sPrev,
+                   float* delta_t, float* delta_tPrev, float* delta_f, int hopA, int hopS, float shift, int bufLen);
 
-void propagate_phase(float* delta_t, float* delta_f,float* mag, float* magPrev,float* phi_s, float tol, int bufLen);
-float get_max(float* in, int size);
+void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen);
 float absc(kiss_fft_cpx *a);
 float argc(kiss_fft_cpx *a);
 void expc(kiss_fft_cpx *a, float mag, float phase);
@@ -26,8 +25,8 @@ void strechFrame(float* output, float* input, int* cleanIdx, int hop,
 
 void interpolate(float* outbuffer, float* vTime, int steps, float shift,
 		             int vTimeIdx, float pOutBuffLastSample, int hopS, int bufLen);
+float get_max(const float* in, int size);
 
-}
+} // extern C
 
 #endif // AUDIOUTILS_H
-

@@ -1,8 +1,12 @@
 
 #include "audioUtils.h"
 #include <algorithm>
-#include "setI.h"
+#include "Tuple.h"
+#include <iostream>
+#include <queue>
+#include <set>
 
+int already = 0;
 
 float absc(kiss_fft_cpx *a)
 {
@@ -18,12 +22,10 @@ void expc(kiss_fft_cpx *a, float mag, float phase)
 	a->i = mag*sin(phase);
 }
 
-void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s,
-                   float* delta_t_back, float* delta_f_cent, int hopA, int hopS, int bufLen)
+void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s, float* phi_sPrev,
+                   float* delta_t, float* delta_tPrev, float* delta_f, int hopA, int hopS, float shift, int bufLen)
 {
 	float current_phi_a;
-	float tol = 1e-6;
-
 	float phi_diff;
 	/*
 	 Time differentiation variables.
@@ -49,7 +51,7 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 		phi_a[k] = current_phi_a;
 		deltaPhiPrime_t_back = phi_diff - (hopA * 2 * PI * k)/bufLen;
 		deltaPhiPrimeMod_t_back = fmod(deltaPhiPrime_t_back + PI , 2 * PI) - PI;
-		delta_t_back[k] = (2 * PI * k)/bufLen + deltaPhiPrimeMod_t_back/hopA;
+		delta_t[k] = (2 * PI * k)/bufLen + deltaPhiPrimeMod_t_back/hopA;
 
 		// Backward frequency differentiation
 		if (k > 0)
@@ -70,28 +72,73 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 		else { delta_f_fwd = 0; }
 
 		// Take the average of fwd and back or whichever is non-zero
-		delta_f_cent[k] = (delta_f_back && delta_f_fwd)
+		delta_f[k] = (delta_f_back && delta_f_fwd)
                    ? (0.5 * (delta_f_back + delta_f_fwd))
-									 : (!delta_f_back ? delta_f_fwd : delta_f_back);
+			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 
 		}
-		
-		propagate_phase(delta_t_back, delta_f_cent, mag, magPrev, phi_s, tol, bufLen);
+
+		propagate_phase(delta_t, delta_tPrev, delta_f, mag, magPrev, phi_s, phi_sPrev, hopA, shift, bufLen);
 
 		for(uint16_t k = 0; k < bufLen; k++)
 		{
-			phi_s[k] = phi_s[k] + hopS * delta_t_back[k];
+			phi_s[k] = phi_s[k] + hopS * delta_t[k];
 			expc(&input[k], mag[k], phi_s[k]);
 		}
 }
 
-void propagate_phase(float* delta_t, float* delta_f,float* mag, float* magPrev,float* phi_s, float tol, int bufLen)
+void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen)
 {
-	setI I(mag, magPrev, phi_s, bufLen, tol);
-	I.sort();
-	for (int i = 0; i < I.size(); i++)
-	{
+	// int count = already;
+	std::set<uint16_t> I;
+	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject> h{TupleCompareObject(mag, magPrev)};
 
+	float b_a = 10; // b_a = L / M (TODO: Adjust this value)
+	float b_s = shift * b_a;
+
+	// STEP 1
+	float tol     = 1e-4;
+	float maxMag  = get_max(mag, bufLen);
+	float maxPrev = get_max(mag, bufLen);
+	float abstol  = tol * ((maxMag >= maxPrev) ? (maxMag) : (maxPrev));
+
+	for (int m = 0; m < bufLen; m++)
+	{
+		h.push(Tuple(m, 1)); // STEP 4
+		if (mag[m] > abstol) { 
+			I.insert(m); // STEP 2
+			h.push(Tuple(m, 0)); // STEP 5
+		}
+		else { phi_s[m] = (std::rand()/RAND_MAX) * 2 * PI - PI; } // STEP 3
+	}
+	PRINT_LOG2("I size: %i\n\n", I.size());
+	while(!I.empty()) // STEP 6
+	{
+		// STEP 7
+		Tuple current = h.top();
+		h.pop();
+
+		if (current.n == 0 && I.count(current.m)) // STEPS 8 & 9
+		{
+			phi_s[current.m] = phi_sPrev[current.m] + (hopA/2)*(delta_tPrev[current.m] + delta_t[current.m]); // STEP 10
+			I.erase(current.m); // STEP 11
+			h.push(current); // STEP 12
+		}
+		if (current.n == 1) // STEP 15
+		{
+			if (I.count(current.m + 1)) // STEP 16
+			{
+				phi_s[current.m + 1] = phi_s[current.m] + (b_s/2) * (delta_f[current.m] + delta_f[current.m + 1]); // STEP 17
+				I.erase(current.m + 1); // STEP 18
+				h.push(Tuple(current.m + 1, current.n)); // STEP 19
+			}
+			if (I.count(current.m - 1)) // STEP 21
+			{
+				phi_s[current.m - 1] = phi_s[current.m] - (b_s/2) * (delta_f[current.m] + delta_f[current.m - 1]); // STEP 22
+				I.erase(current.m - 1); // STEP 23
+				h.push(Tuple(current.m - 1, current.n)); // STEP 24
+			}
+		}
 	}
 }
 
@@ -144,7 +191,6 @@ void interpolate(float* outbuffer, float* vTime, int steps, float shift,
 			outbuffer[k] = vTime[vTimeIdx + k * 2];
 		}
 	}
-
 	else
 	{
 		float tShift;
@@ -186,3 +232,21 @@ void interpolate(float* outbuffer, float* vTime, int steps, float shift,
 		pOutBuffLastSample = outbuffer[k - vTimeIdx - 1];
 	}
 }
+
+float get_max(const float* in, int size)
+{
+	float max = 0;
+	for (int k = 0; k < size; k++)
+	{
+		if (in[k] > max) { max = in[k]; }
+	}
+	return max;
+}
+// void print_queue(std::priority_queue<Tuple, std::vector<Tuple>, GreaterTuple>& q, const float* mag, const float* magPrev)
+// {
+//     while(!q.empty()) {
+// 		std::cout << q.top().n ? &mag[q.top().m] : &magPrev[q.top().m]) << " ";
+//         q.pop();
+//     }
+//     std::cout << '\n';
+// }

@@ -10,9 +10,13 @@ float *inframe;                           // Pointer to the current frame
 float *inwin, *outwin;                    // Input and output windows
 float *vTime;                             // Overlap-add signal
 float *in_audio, *out_audio;              // Complete audio data from wav file for input and output
-float *mag_ping, *mag_pong, *phi_a;       // Frame magnitude and phase
-float *mag, *magPrev;                     // Pointer to the magnitude of the current frame
-float *phi_s;                             // Phase adjusted for synthesis stage
+float *mag, *magPrev;                     // Pointer to the magnitude of the current and previous frame
+float *mag_ping, *mag_pong;               // Frame magnitude ping-pong buffers
+float *phi_a;                             // Frame analysis phase
+float *phi_s, *phi_sPrev;                 // Phase adjusted for synthesis stage of the current and previous frame
+float *phi_ping, *phi_pong;               // Frame phase ping-pong buffers
+float* delta_t, *delta_tPrev, *delta_f;   // Frame phase time and frequency derivatives
+float *delta_t_ping, *delta_t_pong;       // Frame phase time derivative ping-pong buffers
 float *coeffs = 0;                        // Coefficients from the distortion polynomial
 size_t coeff_size;                        // Number of coefficients pointed at by coeffs
 int16_t *audio16;                         // 16 bit integer representation of the audio
@@ -33,8 +37,6 @@ int count = 0;
 int count2 = 0;
 int sizeVTime;
 float pOutBuffLastSample = 0; 
-float* delta_t_back;
-float* delta_f_cent;
 kiss_fft_cpx *cpxIn, *cpxOut;             // Complex variable for FFT 
 kiss_fft_cfg cfg;
 kiss_fft_cfg cfgInv;
@@ -43,7 +45,7 @@ int main()
 {
 	// Variable declaration
 	unsigned long sizeData;                                 //Size of audio data in bytes
-	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/sine_tester_short.wav";
+	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/constant_guitar.wav";
 
 	// Pitch variables
 	steps = 12;
@@ -66,11 +68,13 @@ int main()
 	inwin        = (float *)      calloc(BUFLEN,      sizeof(float));        // Input window
 	outwin       = (float *)      calloc(BUFLEN,      sizeof(float));        // Output window
 	phi_a        = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase of current frame
-	phi_s        = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase adjusted for synthesis stage
-	delta_t_back = (float *)      calloc(BUFLEN,      sizeof(float));        // Backward phase derivative in time domain
-	delta_f_cent = (float *)      calloc(BUFLEN,      sizeof(float));        // Centered phase derivative in frequency domain
-	mag_ping     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of current frame
-	mag_pong     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of previous frame
+	phi_ping     = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase adjusted for synthesis stage
+	phi_pong     = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase adjusted for synthesis stage
+	delta_t_ping = (float *)      calloc(BUFLEN,      sizeof(float));        // Backward phase derivative in time domain
+	delta_t_pong = (float *)      calloc(BUFLEN,      sizeof(float));        // Backward phase derivative in time domain
+	delta_f      = (float *)      calloc(BUFLEN,      sizeof(float));        // Centered phase derivative in frequency domain
+	mag_ping     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of frame
+	mag_pong     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of frame
 	cpxIn        = (kiss_fft_cpx*)calloc(BUFLEN,      sizeof(kiss_fft_cpx)); // Complex variable for FFT 
 	cpxOut       = (kiss_fft_cpx*)calloc(BUFLEN,      sizeof(kiss_fft_cpx)); // Complex variable for FFT 
 	in_audio     = (float *)      calloc(NUM_SAMP,    sizeof(float));        // Total input audio
@@ -78,6 +82,18 @@ int main()
 
 	cfg    = kiss_fft_alloc( BUFLEN, 0, 0, 0);
 	cfgInv = kiss_fft_alloc( BUFLEN, 1, 0, 0);
+
+	// Initialize the magnitude pointers
+	mag = mag_ping;
+	magPrev = mag_pong;
+
+	// Initialize the synthesis phase pointers
+	phi_s = phi_ping;
+	phi_sPrev = phi_pong;
+
+	// Initialize the time phase derivative pointers
+	delta_t = delta_t_ping;
+	delta_tPrev = delta_t_pong;
 
 	// Initialize input and output window functions
 	for(int k = 0; k < BUFLEN; k++){
@@ -141,11 +157,13 @@ int main()
 	free(inwin);
 	free(outwin);
 	free(phi_a);
-	free(phi_s);
-	free(delta_t_back);
-	free(delta_f_cent);
+	free(delta_t_ping);
+	free(delta_t_pong);
+	free(delta_f);
 	free(mag_ping);
 	free(mag_pong);
+	free(phi_ping);
+	free(phi_pong);
 	free(cpxIn);
 	free(cpxOut);
 	free(in_audio);
@@ -171,6 +189,14 @@ void process_buffer()
 		magPrev = mag;
 		mag = (mag == mag_ping) ? mag_pong : mag_ping;
 
+		// Update phase pointers
+		phi_sPrev = phi_s;
+		phi_s = (phi_s == phi_ping) ? phi_pong : phi_ping;
+
+		// Update time phase derivative pointers
+		delta_tPrev = delta_t;
+		delta_t = (delta_t == delta_t_ping) ? delta_t_pong : delta_t_ping;
+
 /************ ANALYSIS STAGE ***********************/
 
 		overlapAdd(inbuffer, inframe, mag, hopA, frameNum, NUMFRAMES);  
@@ -182,7 +208,7 @@ void process_buffer()
 
 		kiss_fft( cfg , cpxIn , cpxOut );
 
-		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, delta_t_back, delta_f_cent, hopA, hopS, BUFLEN);
+		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN);
 
 		DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
 		DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
