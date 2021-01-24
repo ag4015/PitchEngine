@@ -6,8 +6,6 @@ struct Tuple
 	uint16_t m;
 	uint16_t n;
 	Tuple(uint16_t m, uint16_t n) : m(m), n(n) {};
-	// Tuple(uint16_t &m, uint16_t &n) : m(m), n(n) {};
-	// Tuple(uint16_t &&m, uint16_t &&n) : m(m), n(n) {};
 };
 
 // Function object

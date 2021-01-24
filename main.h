@@ -15,7 +15,7 @@
 #define HAMCONST   0.53836              // Constant used for the hamming window
 #define DISTORTION 0                    // DISTORTION = 1: Apply a polynomial function to the input audio
 #define INGAIN     1
-#define OUTGAIN    1
+#define OUTGAIN    2.5
 #define FSAMP      44100
 // #define PDEBUG                          // Print debug information
 #define SIMULATION                      // This is a simulation of the device

@@ -16,7 +16,7 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen);
 float absc(kiss_fft_cpx *a);
 float argc(kiss_fft_cpx *a);
-void expc(kiss_fft_cpx *a, float mag, float phase);
+void expc(kiss_fft_cpx *a, float& mag, float& phase);
 
 void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t frameNum, int numFrames);
 

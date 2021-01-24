@@ -132,7 +132,10 @@ int main()
 		{
 			out_audio[audio_ptr + k] = outbuffer[k] * OUTGAIN;
 			// Avoid uint16_t overflow and clip the signal instead.
-			out_audio[audio_ptr + k] = (out_audio[audio_ptr + k] > 1) ? 1 : out_audio[audio_ptr + k];
+			if (abs(out_audio[audio_ptr + k]) > 1)
+			{
+				out_audio[audio_ptr + k] = (out_audio[audio_ptr + k] < 0) ? -1 : 1;
+			}
 		}
 		audio_ptr += BUFLEN;
 	}
@@ -199,8 +202,10 @@ void process_buffer()
 
 /************ ANALYSIS STAGE ***********************/
 
+		// Using mag as output buffer, nothing to do with magnitude
 		overlapAdd(inbuffer, inframe, mag, hopA, frameNum, NUMFRAMES);  
 		COPY(cpxIn[k].r, mag[k] * inwin[k], BUFLEN);
+		COPY(cpxIn[k].i, 0, BUFLEN);
 
 /************ PROCESSING STAGE *********************/
 
@@ -210,16 +215,18 @@ void process_buffer()
 
 		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN);
 
-		DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
+		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
 		DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
 		DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"    , count, -1, audio_ptr, BUFLEN);
 		DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"   , count, -1, audio_ptr, BUFLEN);
 		DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"    , count, -1, audio_ptr, BUFLEN);
 		DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"    , count, -1, audio_ptr, BUFLEN);
 
-		kiss_fft( cfgInv , cpxIn , cpxOut );
+		kiss_fft( cfgInv , cpxOut , cpxIn );
 
-		COPY(cpxOut[k].r, cpxIn[k].r * outwin[k], BUFLEN);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
+
+		COPY(cpxOut[k].r, cpxIn[k].r * outwin[k]/BUFLEN, BUFLEN);
 
 
 /************ SYNTHESIS STAGE ***********************/
