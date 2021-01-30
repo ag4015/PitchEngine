@@ -20,13 +20,16 @@ steps = 4
 numFrames = int(FFTLEN/hopA)
 hopS = int(hopA*2**(steps/12))
 # names = ["inbuffer", "cpx", "previousPhase", "phase", "inwin", "outwin", "deltaPhi", "deltaPhiPrime", "deltaPhiPrimeMod", "trueFreq", "phaseCumulative"]
+# mynames = ["phi_s"]
 
 xcoordsA = [hopA*i for i in range(0,numFrames)]
 xcoordsS = [hopS*i for i in range(0,numFrames)]
 for name in names:
+    # if "phi_s" not in name:
+    #     continue
     fig = plt.figure()
     var = np.nan_to_num(genfromtxt(path + name, delimiter=';',dtype=float))
-    plt.plot(var);
+    plt.plot(var)
     for xc in xcoordsA:
         plt.axvline(x=xc,color='blue')
     for xc in xcoordsS:

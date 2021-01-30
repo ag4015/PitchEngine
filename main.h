@@ -17,15 +17,15 @@
 #define INGAIN     1
 #define OUTGAIN    2.5
 #define FSAMP      44100
-// #define PDEBUG                          // Print debug information
+#define PDEBUG                          // Print debug information
 #define SIMULATION                      // This is a simulation of the device
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
 
 #ifdef PDEBUG
-       #define PRINT_LOG1(x)       if(count < 10 ) printf(x)
-       #define PRINT_LOG2(x,y)     if(count < 10 ) printf(x,y)
-       #define PRINT_LOG3(x,y,z)   if(count < 10 ) printf(x,y,z)
+       #define PRINT_LOG1(x)       printf(x)
+       #define PRINT_LOG2(x,y)     printf(x,y)
+       #define PRINT_LOG3(x,y,z)   printf(x,y,z)
        #define DUMP_ARRAY(a,b,c,d,e,f,g) dumpFloatArray(a,b,c,d,e,f,g)
        #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g) COPY(mag[k], a[k].r, b); dumpFloatArray(mag,b,c,d,e,f,g)
 #else

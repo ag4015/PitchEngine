@@ -50,7 +50,7 @@ void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){
     printf("**************************************\n");
 }
 
-int16_t* readWav(unsigned long *sizeData, const char* filePath){
+int16_t* readWav(unsigned long *sizeData, char* filePath){
 
     int16_t* audio;
     wav_hdr wavHeader;
@@ -64,9 +64,12 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
         exit(EXIT_FAILURE);
     }
 
+    fread(&wavHeader,headerSize,1,wavFile);
+#ifdef DEBUG
     // Read the header
     size_t bytesRead = fread(&wavHeader,headerSize,1,wavFile);
     printHeader(wavFile, wavHeader, bytesRead);
+#endif
 	fclose(wavFile);
 
     // Re-open file to load all the data
@@ -118,7 +121,7 @@ int16_t* readWav(unsigned long *sizeData, const char* filePath){
     }
 }
 
-void writeWav(int16_t* audio, const char* filePath){
+void writeWav(int16_t* audio, char* inputFilePath, char* outputFilePath){
 
     wav_hdr wavHeader;
     wav_hdr outWavHeader;
@@ -126,10 +129,10 @@ void writeWav(int16_t* audio, const char* filePath){
     FILE *outWavFile;
     int headerSize = sizeof(wav_hdr);
 
-    const char* outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
-	printf("Output file: %s\n\n", outputFilePath);
+    // const char* outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
+	printf("Output file: %s\n", outputFilePath);
 
-    wavFile = fopen( filePath , "r" );
+    wavFile = fopen( inputFilePath , "r" );
 
     if(wavFile == NULL){
         printf("Couldn't open wave file\n");
@@ -137,18 +140,24 @@ void writeWav(int16_t* audio, const char* filePath){
     }
 
     // Read the header
+#ifdef DEBUG
     size_t bytesRead = fread(&wavHeader,headerSize,1,wavFile);
+#else
+    fread(&wavHeader,headerSize,1,wavFile);
+#endif
 
     wavHeader.Subchunk2Size = wavHeader.ChunkSize - 36;
     wavHeader.Subchunk2ID[0] = 'd';
     wavHeader.Subchunk2ID[1] = 'a';
     wavHeader.Subchunk2ID[2] = 't';
     wavHeader.Subchunk2ID[3] = 'a';
+#ifdef DEBUG
     printHeader(wavFile, wavHeader, bytesRead);
+#endif
     fclose(wavFile);
 
     // Re-open file to load all the data
-    wavFile = fopen(filePath , "rb");
+    wavFile = fopen(inputFilePath , "rb");
 
     if(wavFile == NULL)
 		{

@@ -40,12 +40,41 @@ float pOutBuffLastSample = 0;
 kiss_fft_cpx *cpxIn, *cpxOut;             // Complex variable for FFT 
 kiss_fft_cfg cfg;
 kiss_fft_cfg cfgInv;
+float var;
 
-int main()
+int main(int argc, char **argv)
 {
 	// Variable declaration
 	unsigned long sizeData;                                 //Size of audio data in bytes
-	const char* filePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/constant_guitar.wav";
+	char* inputFilePath; 
+	char* outputFilePath; 
+	var = 0;
+	if (argc > 1)
+	{
+		inputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/" ) + (int)strlen(argv[1]) + 1);
+		strcpy(inputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/");
+		strcat(inputFilePath, argv[1]);
+	}
+	else
+	{
+		inputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/constant_guitar.wav" ) );
+		strcpy(inputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/constant_guitar.wav");
+	}
+	if (argc > 2)
+	{
+		outputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/") + (int)strlen(argv[2]) + 1);
+		strcpy(outputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/");
+		strcat(outputFilePath, argv[2]);
+	}
+	else
+	{
+		outputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/output.wav"));
+		strcpy(outputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/output.wav");
+	}
+	if (argc > 3)
+	{
+		var = atof(argv[3]);
+	}
 
 	// Pitch variables
 	steps = 12;
@@ -56,8 +85,8 @@ int main()
 	cleanIdx = hopS*NUMFRAMES;
 	sizeVTime = NUMFRAMES * hopS * 2;
 
-	PRINT_LOG2("Input file: %s\n\n", filePath);
-	audio16 = readWav(&sizeData, filePath);                                  // Get input audio from wav file and fetch the size
+	PRINT_LOG2("Input file: %s\n\n", inputFilePath);
+	audio16 = readWav(&sizeData, inputFilePath);                                  // Get input audio from wav file and fetch the size
 	NUM_SAMP = sizeData/sizeof(*audio16);                                    // Number of samples
 
 	// Allocate and zero fill arrays 
@@ -99,10 +128,6 @@ int main()
 	for(int k = 0; k < BUFLEN; k++){
 		inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopA)/2);
 		outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopS)/2);
-		/* inwin[k] = 1; */
-		/* outwin[k] = 1; */
-		/* inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN)); */
-		/* outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN)); */
 	}
 	
 	// Convert 16bit audio to floating point
@@ -110,7 +135,7 @@ int main()
 		in_audio[i] = ((float)audio16[i])/MAXVAL16;
 	}
 
-	printf("Buffer length: %i.\n", BUFLEN);
+	PRINT_LOG2("Buffer length: %i.\n", BUFLEN);
 
 	// The first buffer isn't processed but it is stored
 	for (uint8_t f = 0; f < NUMFRAMES; f++)
@@ -148,8 +173,8 @@ int main()
 		audio16[i] = (uint16_t)(out_audio[i]*MAXVAL16);
 	}
 
-	// Save the processed audio to output.wav
-	writeWav(audio16, filePath);
+	// Save the processed audio to the output file
+	writeWav(audio16, inputFilePath, outputFilePath);
 
 	// Deallocate allocated memory
 	free(audio16);
@@ -172,6 +197,8 @@ int main()
 	free(in_audio);
 	free(out_audio);
 	free(coeffs);
+	free(inputFilePath);
+	free(outputFilePath);
 	kiss_fft_free(cfg);
 	kiss_fft_free(cfgInv);
 
@@ -209,22 +236,22 @@ void process_buffer()
 
 /************ PROCESSING STAGE *********************/
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxInXXX.csv", count, 40, audio_ptr, -1);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxInXXX.csv", count, 5, audio_ptr, -1);
 
 		kiss_fft( cfg , cpxIn , cpxOut );
 
-		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN);
+		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN, var);
 
 		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
-		DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"    , count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"   , count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"    , count, -1, audio_ptr, BUFLEN);
-		DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"   , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"    , count, -1, audio_ptr, BUFLEN);
 
 		kiss_fft( cfgInv , cpxOut , cpxIn );
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxOutXXX.csv", count, 5, audio_ptr,     -1);
 
 		COPY(cpxOut[k].r, cpxIn[k].r * outwin[k]/BUFLEN, BUFLEN);
 
@@ -232,13 +259,9 @@ void process_buffer()
 /************ SYNTHESIS STAGE ***********************/
 
 		COPY(mag[k], cpxOut[k].r, BUFLEN);
-		PRINT_LOG1("*******************\n");
-		PRINT_LOG2("vTimeIdx: %i\n", vTimeIdx);
-		PRINT_LOG2("cleanIdx from %i", cleanIdx);
 		strechFrame(vTime, mag, &cleanIdx, hopS, frameNum, vTimeIdx, sizeVTime, BUFLEN);
-		PRINT_LOG2(" to %i\n", cleanIdx-1);
 
-		DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, "debugData/vTimeXXX.csv", count, 40, audio_ptr, -1);
+		// DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, "debugData/vTimeXXX.csv", count, 40, audio_ptr, -1);
 
 		if ((++frameNum) >= NUMFRAMES) frameNum = 0;
 		count++;
@@ -249,9 +272,7 @@ void process_buffer()
 
 	interpolate(outbuffer, vTime, steps, shift, vTimeIdx, pOutBuffLastSample, hopS, BUFLEN);
 
-	PRINT_LOG1("*********************************\n");
 	PRINT_LOG1("********* Buffer is out *********\n");
-	PRINT_LOG1("*********************************\n");
 
 	DUMP_ARRAY(outbuffer, BUFLEN, "debugData/outXXX.csv", count2, 10, audio_ptr, -1);
 	count2++;
@@ -296,7 +317,7 @@ void dumpFloatArray(float* buf, size_t size, const char* name, int count, int ma
 {
 		if ((count > max && max != -1) || (auP != auPMax && auPMax != -1)) { return; }
 
-		int len = strlen(name);
+		int len = strlen(name) + 1; // Plus one for the \0
 		char* fileName = (char*) malloc(sizeof(char)*len);
 		strcpy(fileName, name);
 
@@ -307,7 +328,7 @@ void dumpFloatArray(float* buf, size_t size, const char* name, int count, int ma
 			fileName[len - 5] = (int)(count % 10) + 48;
 		}
 
-		// Open file to append fft data
+		// Open file to append data
 		FILE *outfile;
 		outfile = fopen(fileName, "w");
 
