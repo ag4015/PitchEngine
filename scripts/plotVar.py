@@ -30,11 +30,10 @@ def plot_everything():
         plt.close()
 
 def plot_delta():
-    numDeltas = 100
     delta_t = np.nan_to_num(genfromtxt("delta_t" + ".csv", delimiter=';',dtype=float))
     delta_t = delta_t * FSAMP/(2*np.pi)
     delta_f = np.nan_to_num(genfromtxt("delta_f" + ".csv", delimiter=';',dtype=float))
-    # delta_f = delta_f * FSAMP/(2*np.pi)
+
     fig = plt.figure()
     im = plt.imshow(np.flip(delta_t[:,int(FFTLEN/2):].T,0), cmap='jet', interpolation='nearest', aspect='auto', origin="lowest")
     plt.colorbar(im)

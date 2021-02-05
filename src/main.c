@@ -321,11 +321,6 @@ void dumpFloatArray(float* buf, size_t size, const char* name, int count, int ma
 		char* fileName = (char*) malloc(sizeof(char)*len);
 		strcpy(fileName, name);
 
-		// fileName[len - 9] = (int)(count/1000) % 1000 + 48;
-		// fileName[len - 8] = (int)(count/100) % 100 + 48;
-		// fileName[len - 7] = (int)((count/10) % 10) + 48;
-		// fileName[len - 6] = (int)(count%10) + 48;
-
 		// Open file to append data. Clear if it's the first entry
 		FILE *outfile;
 		if (!count) { outfile = fopen(fileName, "w"); }
