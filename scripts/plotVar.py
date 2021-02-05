@@ -5,11 +5,11 @@ import time
 from numpy import genfromtxt
 import os
 import glob
+import pdb
 
 path = "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/debugData/"
 extension = 'csv'
 os.chdir(path)
-names = glob.glob('*.{}'.format(extension))
 
 FFTLEN = 2048
 NFREQ = 1 + FFTLEN/2
@@ -19,21 +19,38 @@ hopA = 256
 steps = 4 
 numFrames = int(FFTLEN/hopA)
 hopS = int(hopA*2**(steps/12))
-# names = ["inbuffer", "cpx", "previousPhase", "phase", "inwin", "outwin", "deltaPhi", "deltaPhiPrime", "deltaPhiPrimeMod", "trueFreq", "phaseCumulative"]
-# mynames = ["phi_s"]
 
-xcoordsA = [hopA*i for i in range(0,numFrames)]
-xcoordsS = [hopS*i for i in range(0,numFrames)]
-for name in names:
-    # if "phi_s" not in name:
-    #     continue
+def plot_everything():
+    names = glob.glob('*.{}'.format(extension))
+    for name in names:
+        fig = plt.figure()
+        var = np.nan_to_num(genfromtxt(path + name, delimiter=';',dtype=float))
+        plt.plot(var)
+        plt.savefig(path + name[:-4] + "Plot.png", dpi=300);
+        plt.close()
+
+def plot_delta():
+    numDeltas = 100
+    delta_t = np.nan_to_num(genfromtxt("delta_t" + ".csv", delimiter=';',dtype=float))
+    delta_t = delta_t * FSAMP/(2*np.pi)
+    delta_f = np.nan_to_num(genfromtxt("delta_f" + ".csv", delimiter=';',dtype=float))
+    # delta_f = delta_f * FSAMP/(2*np.pi)
     fig = plt.figure()
-    var = np.nan_to_num(genfromtxt(path + name, delimiter=';',dtype=float))
-    plt.plot(var)
-    for xc in xcoordsA:
-        plt.axvline(x=xc,color='blue')
-    for xc in xcoordsS:
-        plt.axvline(x=xc,color='red')
-    plt.savefig(path + name[:-4] + "Plot.png", dpi=300);
+    im = plt.imshow(np.flip(delta_t[:,int(FFTLEN/2):].T,0), cmap='jet', interpolation='nearest', aspect='auto', origin="lowest")
+    plt.colorbar(im)
+    plt.xlabel('Frame')
+    plt.ylabel('Frequency bin')
+    plt.savefig(path + "delta_t" + "Plot.png", dpi=300)
     plt.close()
 
+    fig = plt.figure()
+    im = plt.imshow(np.flip(delta_f[:,int(FFTLEN/2):].T,0), cmap='jet', interpolation='nearest', aspect='auto', origin="lowest")
+    plt.colorbar(im)
+    plt.xlabel('Frame')
+    plt.ylabel('Frequency bin')
+    plt.savefig(path + "delta_f" + "Plot.png", dpi=300)
+    plt.close()
+
+
+
+plot_delta()

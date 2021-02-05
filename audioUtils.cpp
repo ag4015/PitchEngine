@@ -41,8 +41,6 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 	// Frequency differentiation variables
 	float delta_f_back;
 	float delta_f_fwd;
-	// float b_s = 1;
-	// float b_a = b_s/shift;
 	float b_a = 1;
 	float b_s = b_a * shift;
 
@@ -50,6 +48,16 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 	{
 		mag[k] = absc(&input[k]);
 		current_phi_a = argc(&input[k]);
+	}
+
+	// STEP 1
+	float tol     = 1e-4;
+	float maxMag  = get_max(mag, bufLen);
+	float maxPrev = get_max(magPrev, bufLen);
+	float abstol  = tol * ((maxMag >= maxPrev) ? (maxMag) : (maxPrev));
+
+	for(uint16_t k = 0; k < bufLen; k++)
+	{
 
 		// Time differentiation
 		phi_diff = current_phi_a - phi_a[k];
@@ -60,23 +68,22 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 		delta_t[k] = deltaPhiPrimeMod_t_back/hopA + (2 * PI * k)/bufLen;
 
 		// Backward frequency differentiation
-		if (k > 0)
+		if (k > 0 && mag[k-1] > abstol)
 		{
 			phi_diff = current_phi_a - argc(&input[k - 1]);
+			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
 			// delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 			delta_f_back = (1/b_a)*(fmod(phi_diff, 2 * PI));
-			// delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
-			// std::cout << (fmod(phi_diff, 2 * PI) - fmod(phi_diff + PI, 2*PI) - PI) << std::endl;
 		}
 		else { delta_f_back = 0; }
 
 		// Forward frequency differentiation
-		if(k < bufLen - 1)
+		if(k < bufLen - 1 && mag[k+1] > abstol)
 		{
 			phi_diff = argc(&input[k + 1]) - current_phi_a; 
+			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
 			// delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 			delta_f_fwd = (1/b_a)*(fmod(phi_diff, 2 * PI));
-			// delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 		}
 		else { delta_f_fwd = 0; }
 
@@ -86,39 +93,29 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 
 	}
-	// std::cout << "delta_t[100] = " << delta_t[100] << std::endl;
-	// std::cout << "delta_f[100] = " << delta_f[100] << std::endl;
 
-	// propagate_phase(delta_t, delta_tPrev, delta_f, mag, magPrev, phi_s, phi_sPrev, hopA, shift, bufLen, b_s);
+	propagate_phase(delta_t, delta_tPrev, delta_f, mag, magPrev, phi_s, phi_sPrev, hopA, shift, bufLen, b_s, abstol);
 
 	for(uint16_t k = 0; k < bufLen; k++)
 	{
 		expc(&input[k], mag[k], phi_s[k]);
 	}
 
-	DUMP_ARRAY(mag, BUFLEN, "debugData/magxxx.csv" , count3, 5, 1, -1);
-	DUMP_ARRAY(phi_a, BUFLEN, "debugData/phi_axxx.csv" , count3, 5, 1, -1);
-	DUMP_ARRAY(phi_s, BUFLEN, "debugData/phi_sxxx.csv" , count3, 5, 1, -1);
-	DUMP_ARRAY(phi_sPrev, BUFLEN, "debugData/phi_sPrevxxx.csv" , count3, 5, 1, -1);
-	DUMP_ARRAY(delta_f, BUFLEN, "debugData/delta_fxxx.csv" , count3, 5, 1, -1);
-	// DUMP_ARRAY(delta_t, BUFLEN, "debugData/delta_txxx.csv" , count3, 5, 1, -1);
+	// DUMP_ARRAY(mag, BUFLEN, "debugData/magxxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(phi_a, BUFLEN, "debugData/phi_axxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(phi_s, BUFLEN, "debugData/phi_sxxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(phi_sPrev, BUFLEN, "debugData/phi_sPrevxxxxx.csv" , count3, 10, 1, -1);
 	count3++;
 }
 
-void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen, float b_s)
+void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen, float b_s, float abstol)
 {
 	// int count = already;
-	std::set<uint16_t> setI;
+	std::set<uint16_t> setI, setICopy;
 	std::vector<Tuple> container;
-	// container.reserve(1024);
+	container.reserve(1024);
 	TupleCompareObject cmp(mag, magPrev);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject> h{cmp, std::move(container)}; // STEP 4
-
-	// STEP 1
-	float tol     = 1e-6;
-	float maxMag  = get_max(mag, bufLen);
-	float maxPrev = get_max(magPrev, bufLen);
-	float abstol  = tol * ((maxMag >= maxPrev) ? (maxMag) : (maxPrev));
 
 	for (int m = 0; m < bufLen; m++)
 	{
@@ -129,9 +126,7 @@ void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* 
 		}
 		else { phi_s[m] = (std::rand()/(float)RAND_MAX) * 2 * PI - PI; } // STEP 3
 	}
-	// std::cout << h.size() << ", ";
-	// std::cout << setI.size() << ", " << h.size() << "\n";
-	// std::cout << count3 << " " << delta_f[87] << ", " << delta_f[88] << ", " << delta_f[89] << ", " << delta_f[90] << ", " << delta_f[91] << "\n";
+	setICopy = setI;
 
 	// PRINT_LOG2("I size: %lu\n", setI.size());
 
@@ -167,6 +162,16 @@ void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* 
 			}
 		}
 	}
+	for (int i = 0; i < BUFLEN; i++)
+	{
+		if(!setICopy.count(i))
+		{
+			delta_t[i] = 0;
+			delta_f[i] = 0;
+		}
+	}
+	DUMP_ARRAY(delta_f, BUFLEN, "debugData/delta_f.csv" , count3, -1, 1, -1);
+	DUMP_ARRAY(delta_t, BUFLEN, "debugData/delta_t.csv" , count3, -1, 1, -1);
 	return;
 }
 

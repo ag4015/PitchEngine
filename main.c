@@ -236,22 +236,22 @@ void process_buffer()
 
 /************ PROCESSING STAGE *********************/
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxInXXX.csv", count, 5, audio_ptr, -1);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxInXXXXX.csv", count, 5, audio_ptr, -1);
 
 		kiss_fft( cfg , cpxIn , cpxOut );
 
 		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN, var);
 
-		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXX.csv", count, 40, audio_ptr,     -1);
-		// DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv" , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"    , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"   , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"    , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXXXX.csv", count, 40, audio_ptr,     -1);
+		// DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv"  , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"     , count, -1, audio_ptr, BUFLEN);
 
 		kiss_fft( cfgInv , cpxOut , cpxIn );
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxOutXXX.csv", count, 5, audio_ptr,     -1);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxOutXXXXX.csv", count, 5, audio_ptr,     -1);
 
 		COPY(cpxOut[k].r, cpxIn[k].r * outwin[k]/BUFLEN, BUFLEN);
 
@@ -272,7 +272,7 @@ void process_buffer()
 
 	interpolate(outbuffer, vTime, steps, shift, vTimeIdx, pOutBuffLastSample, hopS, BUFLEN);
 
-	PRINT_LOG1("********* Buffer is out *********\n");
+	// PRINT_LOG1("********* Buffer is out *********\n");
 
 	DUMP_ARRAY(outbuffer, BUFLEN, "debugData/outXXX.csv", count2, 10, audio_ptr, -1);
 	count2++;
@@ -321,16 +321,15 @@ void dumpFloatArray(float* buf, size_t size, const char* name, int count, int ma
 		char* fileName = (char*) malloc(sizeof(char)*len);
 		strcpy(fileName, name);
 
-		if (max != -1)
-		{
-			fileName[len - 7] = (int)(count/100) + 48;
-			fileName[len - 6] = (int)(count/10) + 48;
-			fileName[len - 5] = (int)(count % 10) + 48;
-		}
+		// fileName[len - 9] = (int)(count/1000) % 1000 + 48;
+		// fileName[len - 8] = (int)(count/100) % 100 + 48;
+		// fileName[len - 7] = (int)((count/10) % 10) + 48;
+		// fileName[len - 6] = (int)(count%10) + 48;
 
-		// Open file to append data
+		// Open file to append data. Clear if it's the first entry
 		FILE *outfile;
-		outfile = fopen(fileName, "w");
+		if (!count) { outfile = fopen(fileName, "w"); }
+		else { outfile = fopen(fileName, "a"); }
 
 		// Store in a format understandable by numpy in python
 		for (size_t i = 0; i < size; i++){
