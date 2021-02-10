@@ -29,6 +29,12 @@ typedef struct  WAV_HEADER
 
 #pragma pack(pop)
 
+#pragma once
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 // Function prototypes 
 int      getFileSize(FILE *inFile); 
 void     printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead);
@@ -36,5 +42,9 @@ void     separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* righ
 wav_hdr  makeHeaderMono(wav_hdr header);
 int16_t* readWav(unsigned long *sizeData, char* filePath);
 void     writeWav(int16_t* audio, char* inputFilePath, char* outputFilePath);
+
+#ifdef __cplusplus
+} // extern C
+#endif
 
 #endif // WAVIO_H

@@ -27,9 +27,9 @@ if(KISSFFT_FLOAT)
 else()
     set(fftw3_pkg fftw3)
 endif()
-pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET ${fftw3_pkg})
-add_kissfft_test_executable(bm_fftw benchfftw.c)
-target_link_libraries(bm_fftw PRIVATE PkgConfig::fftw3)
+# pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET ${fftw3_pkg})
+# add_kissfft_test_executable(bm_fftw benchfftw.c)
+# target_link_libraries(bm_fftw PRIVATE PkgConfig::fftw3)
 
 add_kissfft_test_executable(st twotonetest.c)
 

@@ -17,7 +17,7 @@
 #define INGAIN     1
 #define OUTGAIN    2.5
 #define FSAMP      44100
-#define PDEBUG                          // Print debug information
+// #define PDEBUG                          // Print debug information
 #define SIMULATION                      // This is a simulation of the device
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
@@ -37,11 +37,21 @@
 #endif
 
 // Function declaration
+#pragma once
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void buffer_interrupt(int sig);
 void sigalrm_handler(int sig);
 void process_buffer();
 float* load_distortion_coefficients(size_t* coeff_size);
 void dumpFloatArray(float* buf, size_t size, const char* name, int count, int max, int auP, int auPMax);
+
+#ifdef __cplusplus
+} // extern C
+#endif
 
 #endif // MAIN_H
 

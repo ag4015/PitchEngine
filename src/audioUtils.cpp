@@ -1,5 +1,6 @@
 
 #include "audioUtils.h"
+#include "main.h"
 #include <algorithm>
 #include "Tuple.h"
 #include <iostream>
@@ -20,10 +21,10 @@ float argc(kiss_fft_cpx *a)
 	std::complex<float> z(a->r,a->i);
 	return std::arg(z);
 }
-void expc(kiss_fft_cpx *a, float& mag, float& phase)
+void expc(kiss_fft_cpx *a, float* mag, float* phase)
 {
-	a->r = std::real(std::polar(mag, phase));
-	a->i = std::imag(std::polar(mag, phase));
+	a->r = std::real(std::polar(*mag, *phase));
+	a->i = std::imag(std::polar(*mag, *phase));
 }
 
 void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s, float* phi_sPrev,
@@ -98,7 +99,7 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 
 	for(uint16_t k = 0; k < bufLen; k++)
 	{
-		expc(&input[k], mag[k], phi_s[k]);
+		expc(&input[k], &mag[k], &phi_s[k]);
 	}
 
 	// DUMP_ARRAY(mag, BUFLEN, "debugData/magxxxxx.csv" , count3, 10, 1, -1);
