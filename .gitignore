@@ -2,3 +2,9 @@ bin/*
 *.swp
 *.swo
 *.csv
+bin/*
+.vscode/
+.vs/
+resources/debugData/*
+resources/inputAudio/*
+resources/outputAudio/*

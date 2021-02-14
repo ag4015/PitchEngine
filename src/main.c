@@ -49,27 +49,28 @@ int main(int argc, char **argv)
 	char* inputFilePath; 
 	char* outputFilePath; 
 	var = 0;
+
 	if (argc > 1)
 	{
-		inputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/" ) + (int)strlen(argv[1]) + 1);
-		strcpy(inputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/");
+		inputFilePath = (char*) malloc( sizeof( INPUT_AUDIO_DIR ) + (int)strlen(argv[1]) + 1);
+		strcpy(inputFilePath, INPUT_AUDIO_DIR);
 		strcat(inputFilePath, argv[1]);
 	}
 	else
 	{
-		inputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/constant_guitar.wav" ) );
-		strcpy(inputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/constant_guitar.wav");
+		inputFilePath = (char*) malloc( sizeof( INPUT_AUDIO_DIR "constant_guitar.wav") );
+		strcpy(inputFilePath, INPUT_AUDIO_DIR "constant_guitar.wav");
 	}
 	if (argc > 2)
 	{
-		outputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/") + (int)strlen(argv[2]) + 1);
-		strcpy(outputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/");
+		outputFilePath = (char*) malloc( sizeof( OUTPUT_AUDIO_DIR ) + (int)strlen(argv[2]) + 1);
+		strcpy(outputFilePath, OUTPUT_AUDIO_DIR);
 		strcat(outputFilePath, argv[2]);
 	}
 	else
 	{
-		outputFilePath = (char*) malloc( sizeof( "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/output.wav"));
-		strcpy(outputFilePath, "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/output/output.wav");
+		outputFilePath = (char*) malloc( sizeof( OUTPUT_AUDIO_DIR "output.wav" ));
+		strcpy(outputFilePath, OUTPUT_AUDIO_DIR "output.wav" );
 	}
 	if (argc > 3)
 	{
@@ -236,22 +237,22 @@ void process_buffer()
 
 /************ PROCESSING STAGE *********************/
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxInXXXXX.csv", count, 5, audio_ptr, -1);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, DEBUG_DIR "cpxInXXXXX.csv", count, 5, audio_ptr, -1);
 
 		kiss_fft( cfg , cpxIn , cpxOut );
 
 		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN, var);
 
-		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, "debugData/cpxOutXXXXX.csv", count, 40, audio_ptr,     -1);
-		// DUMP_ARRAY(inbuffer      , BUFLEN, "debugData/inbuffer.csv"  , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(inwin         , BUFLEN, "debugData/inwin.csv"     , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(outwin        , BUFLEN, "debugData/outwin.csv"    , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(phi_a         , BUFLEN, "debugData/phi_a.csv"     , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(phi_s         , BUFLEN, "debugData/phi_s.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, DEBUG_DIR "cpxOutXXXXX.csv", count, 40, audio_ptr,     -1);
+		// DUMP_ARRAY(inbuffer      , BUFLEN, DEBUG_DIR "inbuffer.csv"  , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(inwin         , BUFLEN, DEBUG_DIR "inwin.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(outwin        , BUFLEN, DEBUG_DIR "outwin.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(phi_a         , BUFLEN, DEBUG_DIR "phi_a.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(phi_s         , BUFLEN, DEBUG_DIR "phi_s.csv"     , count, -1, audio_ptr, BUFLEN);
 
 		kiss_fft( cfgInv , cpxOut , cpxIn );
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, "debugData/cpxOutXXXXX.csv", count, 5, audio_ptr,     -1);
+		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, DEBUG_DIR "cpxOutXXXXX.csv", count, 5, audio_ptr,     -1);
 
 		COPY(cpxOut[k].r, cpxIn[k].r * outwin[k]/BUFLEN, BUFLEN);
 
@@ -261,7 +262,7 @@ void process_buffer()
 		COPY(mag[k], cpxOut[k].r, BUFLEN);
 		strechFrame(vTime, mag, &cleanIdx, hopS, frameNum, vTimeIdx, sizeVTime, BUFLEN);
 
-		// DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, "debugData/vTimeXXX.csv", count, 40, audio_ptr, -1);
+		// DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, DEBUG_DIR "vTimeXXX.csv", count, 40, audio_ptr, -1);
 
 		if ((++frameNum) >= NUMFRAMES) frameNum = 0;
 		count++;
@@ -274,7 +275,7 @@ void process_buffer()
 
 	// PRINT_LOG1("********* Buffer is out *********\n");
 
-	DUMP_ARRAY(outbuffer, BUFLEN, "debugData/outXXX.csv", count2, 10, audio_ptr, -1);
+	DUMP_ARRAY(outbuffer, BUFLEN, DEBUG_DIR "outXXX.csv", count2, 10, audio_ptr, -1);
 	count2++;
 
 	elapsed_time = clock() - elapsed_time;

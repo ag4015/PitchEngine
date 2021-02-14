@@ -1,6 +1,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include "DSPConfig.h"
 #include <math.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -35,6 +36,10 @@
        #define DUMP_ARRAY(a,b,c,d,e,f,g)
        #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g)
 #endif
+
+#define INPUT_AUDIO_DIR RESOURCES_DIR "inputAudio/"
+#define OUTPUT_AUDIO_DIR RESOURCES_DIR "outputAudio/"
+#define DEBUG_DIR RESOURCES_DIR "debugData/"
 
 // Function declaration
 #pragma once

@@ -102,10 +102,10 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 		expc(&input[k], &mag[k], &phi_s[k]);
 	}
 
-	// DUMP_ARRAY(mag, BUFLEN, "debugData/magxxxxx.csv" , count3, 10, 1, -1);
-	// DUMP_ARRAY(phi_a, BUFLEN, "debugData/phi_axxxxx.csv" , count3, 10, 1, -1);
-	// DUMP_ARRAY(phi_s, BUFLEN, "debugData/phi_sxxxxx.csv" , count3, 10, 1, -1);
-	// DUMP_ARRAY(phi_sPrev, BUFLEN, "debugData/phi_sPrevxxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(mag, BUFLEN, DEBUG_DIR "magxxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(phi_a, BUFLEN, DEBUG_DIR "phi_axxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(phi_s, BUFLEN, DEBUG_DIR "phi_sxxxxx.csv" , count3, 10, 1, -1);
+	// DUMP_ARRAY(phi_sPrev, BUFLEN, DEBUG_DIR "phi_sPrevxxxxx.csv" , count3, 10, 1, -1);
 	count3++;
 }
 
@@ -171,8 +171,8 @@ void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* 
 			delta_f[i] = 0;
 		}
 	}
-	DUMP_ARRAY(delta_f, BUFLEN, "debugData/delta_f.csv" , count3, -1, 1, -1);
-	DUMP_ARRAY(delta_t, BUFLEN, "debugData/delta_t.csv" , count3, -1, 1, -1);
+	DUMP_ARRAY(delta_f, BUFLEN, DEBUG_DIR "delta_f.csv" , count3, -1, 1, -1);
+	DUMP_ARRAY(delta_t, BUFLEN, DEBUG_DIR "delta_t.csv" , count3, -1, 1, -1);
 	return;
 }
 
