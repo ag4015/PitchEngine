@@ -1,22 +1,25 @@
 
-# set(RESOURCES_DIR "../resources/")
-SET(RESOURCES_DIR    ${PROJECT_SOURCE_DIR}/resources/      CACHE PATH "This is the resources directory")
+# option(PDEBUG "Activate debug logs and store variables in csv files" OFF)
+# if(PDEBUG)
+#   add_definitions(-DPDEBUG)
+# endif()
+add_definitions(${PDEBUG})
 
 configure_file(DSPConfig.h.in ${CMAKE_CURRENT_SOURCE_DIR}/DSPConfig.h)
 
 add_subdirectory(kissfft)
 
 # add the executable
-add_executable(DSPSimulator
+add_executable(DSPSim
                main.c
                wavio.c
                audioUtils.cpp
                )
 
-target_compile_options(DSPSimulator PUBLIC -Wall)
+target_compile_options(DSPSim PUBLIC -Wall -pedantic -g)
 
-target_include_directories(DSPSimulator PUBLIC
+target_include_directories(DSPSim PUBLIC
                            src/
                            )
 
-target_link_libraries(DSPSimulator PUBLIC kissfft)
+target_link_libraries(DSPSim PUBLIC kissfft)
