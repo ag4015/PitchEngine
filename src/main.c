@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 	cleanIdx = hopS*NUMFRAMES;
 	sizeVTime = NUMFRAMES * hopS * 2;
 
-	PRINT_LOG2("Input file: %s\n\n", inputFilePath);
+	printf("Input file: %s\n\n", inputFilePath);
 	audio16 = readWav(&sizeData, inputFilePath);                                  // Get input audio from wav file and fetch the size
 	NUM_SAMP = sizeData/sizeof(*audio16);                                    // Number of samples
 

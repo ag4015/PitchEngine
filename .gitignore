@@ -8,3 +8,4 @@ bin/*
 resources/debugData/*
 resources/inputAudio/*
 resources/outputAudio/*
+CMakeSettings.json

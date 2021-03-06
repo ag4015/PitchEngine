@@ -93,18 +93,18 @@ function(add_kissfft_executable NAME)
         OUTPUT_NAME "${NAME}_${KISSFFT_DATATYPE}")
 endfunction()
 
-option(KISSFFT_TOOLS "Build kissfft tools" ON)
+option(KISSFFT_TOOLS "Build kissfft tools" OFF)
 if(KISSFFT_TOOLS)
     add_subdirectory(tools)
 endif()
 
-option(KISSFFT_TEST "Build and enable kissfft tests" ON)
+option(KISSFFT_TEST "Build and enable kissfft tests" OFF)
 if(KISSFFT_TEST)
     enable_testing()
     add_subdirectory(test)
 endif()
 
-option(KISSFFT_INSTALL "Enable kissfft install" ON)
+option(KISSFFT_INSTALL "Enable kissfft install" OFF)
 if (KISSFFT_INSTALL)
     include(GNUInstallDirs)
     install(TARGETS kissfft EXPORT kissfft
