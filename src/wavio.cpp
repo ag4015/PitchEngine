@@ -1,5 +1,10 @@
 
 #include "wavio.h"
+#include "main.h"
+#include <iostream>
+#include <system_error>
+#include "wave/file.h"
+
 
 // Find the file size 
 int getFileSize(FILE *inFile){
@@ -35,7 +40,7 @@ wav_hdr makeHeaderMono(wav_hdr header){
 }
 
 // Print header information
-void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){
+void printHeader(wav_hdr wavHeader){
 
     printf("Data size: %d.\n", wavHeader.ChunkSize);
     printf("Sampling Rate              : %d Hz. \n", wavHeader.SamplesPerSec);
@@ -50,79 +55,35 @@ void printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead){
     printf("**************************************\n");
 }
 
-int16_t* readWav(unsigned long *sizeData, char* filePath){
-
-    int16_t* audio;
-    wav_hdr wavHeader;
-    FILE *wavFile;
-    int headerSize = sizeof(wav_hdr);
-    
-    wavFile = fopen( filePath , "r" );
-
-    if(wavFile == NULL){
-        printf("Could not open wave file\n");
-        exit(EXIT_FAILURE);
+float* readWav(uint32_t *numSamp, char* filePath)
+{
+	wave::File read_file;
+	wave::Error err = read_file.Open(filePath, wave::kIn);
+	if (err) {
+		std::cout << "Error, cannot open file: " << filePath << std::endl;
+        std::cout << "Error code: " << err << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	std::vector<float> content;
+	err = read_file.Read(&content);
+	if (err) {
+		std::cout << "Error, could not read file: " << filePath << std::endl;
+        std::cout << "Error code: " << err << std::endl;
+		exit(EXIT_FAILURE);
+	}
+    *numSamp = content.size();
+    float* audio = new float[content.size()];
+    // Move contents from vector to array
+    for (uint32_t i = 0; i < content.size(); i++) {
+        audio[i] = content[i];
     }
-
-    fread(&wavHeader,headerSize,1,wavFile);
-#ifdef DEBUG
-    // Read the header
-    size_t bytesRead = fread(&wavHeader,headerSize,1,wavFile);
-    printHeader(wavFile, wavHeader, bytesRead);
-#endif
-	fclose(wavFile);
-
-    // Re-open file to load all the data
-    wavFile = fopen(filePath , "rb");
-
-    if(wavFile == NULL){
-        printf("Can not able to open wave file\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    *sizeData = wavHeader.ChunkSize - 36;
-
-    // Allocate SIZE_DATA plus headerSize number of bytes to store the wav file
-    int8_t* data = (int8_t*)calloc((headerSize + *sizeData), sizeof(int8_t));
-    fread(data,(headerSize + *sizeData),1,wavFile);
-
-    // Separate header from audio data
-    audio = (int16_t*)(data + 44);
-
-    // If audio is stereo separate the channels
-    if(wavHeader.NumOfChan == 2){
-        // Allocate memory for right and left channels
-        int16_t* left_channel = (int16_t*)calloc((*sizeData / 2), 1);
-        // int16_t* right_channel = (int16_t*)calloc((*sizeData / 2), 1);
-        
-        // Get two audio arrays for each stereo channel
-        separateChannels(audio, left_channel/*, right_channel*/, *sizeData);
-
-        // The audio is now mono so the size of the data is halved
-        *sizeData = *sizeData/2;
-
-        // Ignore right_channel
-        // audio = left_channel;
-
-        // free(right_channel);
-        free(data);
-		fclose(wavFile);
-        return left_channel;
-    }
-    else
-    {
-        int16_t* mono = (int16_t*)calloc(*sizeData, sizeof(int16_t));
-        for (unsigned int i = 0; i < *sizeData/2; i++){
-            mono[i] = audio[i];
-        }
-        free(data);
-		fclose(wavFile);
-        return mono;
-    }
+    return audio;
 }
 
-void writeWav(int16_t* audio, char* inputFilePath, char* outputFilePath){
-
+#ifndef USE_WAVE_LIBRARY
+void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
+    
+    printf("Using Wave library\n");
     wav_hdr wavHeader;
     wav_hdr outWavHeader;
     FILE *wavFile;
@@ -131,6 +92,7 @@ void writeWav(int16_t* audio, char* inputFilePath, char* outputFilePath){
 
     // const char* outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
 	printf("Output file: %s\n", outputFilePath);
+	printf("Number of samples: %i\n", numSamp);
 
     wavFile = fopen( inputFilePath , "r" );
 
@@ -206,3 +168,32 @@ void writeWav(int16_t* audio, char* inputFilePath, char* outputFilePath){
 
     return;
 }
+#else
+void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
+
+	wave::File read_file;
+	wave::Error err = read_file.Open(inputFilePath, wave::kIn);
+
+	wave::File write_file;
+    err = write_file.Open(outputFilePath, wave::kOut);
+	if (err) {
+		std::cout << "Error, couldn't open output file: " << outputFilePath << std::endl;
+        exit(EXIT_FAILURE);
+	}
+
+	write_file.set_sample_rate(read_file.sample_rate());
+	write_file.set_bits_per_sample(read_file.bits_per_sample());
+	write_file.set_channel_number(read_file.channel_number());
+
+	std::vector<float> content;
+    content.reserve(numSamp);
+    for (int i = 0; i < numSamp; i++) {
+        content.push_back(audio[i]);
+    }
+	err = write_file.Write(content);
+	if (err) {
+		std::cout << "Error, couldn't write to output file: " << outputFilePath << std::endl;
+        exit(EXIT_FAILURE);
+	}
+}
+#endif

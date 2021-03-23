@@ -7,12 +7,19 @@ add_definitions(${PDEBUG})
 
 configure_file(DSPConfig.h.in ${CMAKE_CURRENT_SOURCE_DIR}/DSPConfig.h)
 
+option(USE_WAVE_LIBRARY "Use the wave library for .wav files." OFF)
+if(USE_WAVE_LIBRARY)
+add_definitions(-DUSE_WAVE_LIBRARY)
+endif()
+
 add_subdirectory(kissfft)
+add_subdirectory(wave)
 
 # add the executable
 add_executable(DSPSim
                main.c
-               wavio.c
+               wavio.cpp
+               audioData.c
                audioUtils.cpp
                )
 
@@ -22,4 +29,6 @@ target_include_directories(DSPSim PUBLIC
                            src/
                            )
 
-target_link_libraries(DSPSim PUBLIC kissfft)
+target_link_libraries(DSPSim PUBLIC
+                        kissfft
+                        wave)

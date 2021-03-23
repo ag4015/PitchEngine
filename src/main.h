@@ -2,6 +2,7 @@
 #define MAIN_H
 
 #include "DSPConfig.h"
+#include "audioData.h"
 #include <math.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -9,14 +10,14 @@
 #define BUFLEN     2048
 #define PI         (float)3.1415926535 
 #define NFREQ      (1 + BUFLEN/2)       // Number of unique frequency bins
-#define HOPA       256
-#define NUMFRAMES  (int)BUFLEN/HOPA     // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
+#define HOPA       (uint32_t)256
+#define NUMFRAMES  (uint32_t)BUFLEN/HOPA     // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
 #define MAXVAL16   32768/1.5            // Maximum
 #define WINCONST   0.85185              // Constant used for the hamming window
 #define HAMCONST   0.53836              // Constant used for the hamming window
 #define DISTORTION 0                    // DISTORTION = 1: Apply a polynomial function to the input audio
 #define INGAIN     1
-#define OUTGAIN    2.5
+#define OUTGAIN    1
 #define FSAMP      44100
 // #define PDEBUG                          // Print debug information
 #define SIMULATION                      // This is a simulation of the device
@@ -48,11 +49,11 @@ extern "C"
 {
 #endif
 
-void buffer_interrupt(int sig);
-void sigalrm_handler(int sig);
-void process_buffer();
-float* load_distortion_coefficients(size_t* coeff_size);
+void process_buffer(audio_data_t* audat, buffer_data_t* bf, uint8_t frameNum,
+	uint32_t audio_ptr, uint32_t vTimeIdx, uint32_t* cleanIdx, float pOutBuffLastSample);
+void load_distortion_coefficients(float* coeffs, size_t* coeff_size);
 void dumpFloatArray(float* buf, size_t size, const char* name, int count, int max, int auP, int auPMax);
+void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, float var);
 
 #ifdef __cplusplus
 } // extern C

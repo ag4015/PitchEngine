@@ -4,163 +4,83 @@
 #include "wavio.h"
 #include "audioUtils.h"
 
-// Global variables declaration
-float *inbuffer, *outbuffer;              // Input and output buffers
-float *inframe;                           // Pointer to the current frame
-float *inwin, *outwin;                    // Input and output windows
-float *vTime;                             // Overlap-add signal
-float *in_audio, *out_audio;              // Complete audio data from wav file for input and output
-float *mag, *magPrev;                     // Pointer to the magnitude of the current and previous frame
-float *mag_ping, *mag_pong;               // Frame magnitude ping-pong buffers
-float *phi_a;                             // Frame analysis phase
-float *phi_s, *phi_sPrev;                 // Phase adjusted for synthesis stage of the current and previous frame
-float *phi_ping, *phi_pong;               // Frame phase ping-pong buffers
-float* delta_t, *delta_tPrev, *delta_f;   // Frame phase time and frequency derivatives
-float *delta_t_ping, *delta_t_pong;       // Frame phase time derivative ping-pong buffers
-float *coeffs = 0;                        // Coefficients from the distortion polynomial
-size_t coeff_size;                        // Number of coefficients pointed at by coeffs
-int16_t *audio16;                         // 16 bit integer representation of the audio
-unsigned long int audio_ptr = 0;          // Wav file sample pointer
-unsigned long NUM_SAMP;                   // Total number of samples in wave file
-float avg_time = 0;                       // Average time taken to compute a frame
-float elapsed_time = 0;                   // Time spent computing the current frame
-float N = 1;                              // Number of samples processed
-uint8_t frameNum = 0;                     // Frame index. It's circular.
-int vTimeIdx = 0;                         // Circular buffer for vTime
-float steps;                              // Number of semitones by which to shift the signal
-float* vTimePtr;                          // Pointer to the ping-pong vTime array
-float shift;
-int hopA;
-int hopS;
-int cleanIdx;
-int count = 0;
-int count2 = 0;
-int sizeVTime;
-float pOutBuffLastSample = 0; 
-kiss_fft_cpx *cpxIn, *cpxOut;             // Complex variable for FFT 
-kiss_fft_cfg cfg;
-kiss_fft_cfg cfgInv;
-float var;
+// Global variable declaration
+float avg_time     = 0;                          // Average time taken to compute a frame
+float elapsed_time = 0;                          // Time spent computing the current frame
+float N            = 1;                          // Number of samples processed
+int32_t count      = 0;
+int32_t count2     = 0;
+float var          = 0;
 
 int main(int argc, char **argv)
 {
-	// Variable declaration
-	unsigned long sizeData;                                 //Size of audio data in bytes
-	char* inputFilePath; 
-	char* outputFilePath; 
-	var = 0;
+	// Local variable declaration
+	char* inputFilePath      = 0; 
+	char* outputFilePath     = 0; 
+	float *coeffs            = 0;                 // Coefficients from the distortion polynomial
+	uint32_t audio_ptr       = 0;                 // Wav file sample pointer
+	uint8_t frameNum         = 0;                 // Frame index. It's circular.
+	uint32_t vTimeIdx        = 0;                 // Circular buffer for vTime
+	float pOutBuffLastSample = 0;
+	uint32_t cleanIdx        = 0;
 
-	if (argc > 1)
-	{
-		inputFilePath = (char*) malloc( sizeof( INPUT_AUDIO_DIR ) + (int)strlen(argv[1]) + 1);
-		strcpy(inputFilePath, INPUT_AUDIO_DIR);
-		strcat(inputFilePath, argv[1]);
-	}
-	else
-	{
-		inputFilePath = (char*) malloc( sizeof( INPUT_AUDIO_DIR "constant_guitar.wav") );
-		strcpy(inputFilePath, INPUT_AUDIO_DIR "constant_guitar.wav");
-	}
-	if (argc > 2)
-	{
-		outputFilePath = (char*) malloc( sizeof( OUTPUT_AUDIO_DIR ) + (int)strlen(argv[2]) + 1);
-		strcpy(outputFilePath, OUTPUT_AUDIO_DIR);
-		strcat(outputFilePath, argv[2]);
-	}
-	else
-	{
-		outputFilePath = (char*) malloc( sizeof( OUTPUT_AUDIO_DIR "output.wav" ));
-		strcpy(outputFilePath, OUTPUT_AUDIO_DIR "output.wav" );
-	}
-	if (argc > 3)
-	{
-		var = atof(argv[3]);
-	}
+	buffer_data_t bf;
+	audio_data_t audat;
+
+	parse_arguments(argc, argv, &inputFilePath, &outputFilePath, var);
+
+	// Load contents of wave file
+	printf("Input file: %s\n\n", inputFilePath);
+	uint32_t numSamp;
+	float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
 	// Pitch variables
-	steps = 12;
-	shift = pow(2, steps/12);
+	uint8_t steps = 12;
+	float shift = powf(2, steps/12);
+	uint32_t hopS = (int32_t)roundf((float)(HOPA * shift));
 
-	hopA = HOPA;
-	hopS = (int)round(hopA * shift);
-	cleanIdx = hopS*NUMFRAMES;
-	sizeVTime = NUMFRAMES * hopS * 2;
+	// Initialize structures
+	initialize_audio_data(&audat, hopS, NUMFRAMES, numSamp, BUFLEN, in_audio);
+	initialize_buffer_data(&bf, &audat, shift, hopS, steps, HOPA, BUFLEN);
 
-	printf("Input file: %s\n\n", inputFilePath);
-	audio16 = readWav(&sizeData, inputFilePath);                                  // Get input audio from wav file and fetch the size
-	NUM_SAMP = sizeData/sizeof(*audio16);                                    // Number of samples
-
-	// Allocate and zero fill arrays 
-	inbuffer     = (float *)      calloc(BUFLEN,      sizeof(float));        // Input array 
-	outbuffer    = (float *)      calloc(BUFLEN,      sizeof(float));        // Output array 
-	inframe      = (float *)      calloc(BUFLEN,      sizeof(float));        // Input frame
-	vTime        = (float *)      calloc(sizeVTime,   sizeof(float));        // Overlap-add signal. Times two because of ping-pong.
-	inwin        = (float *)      calloc(BUFLEN,      sizeof(float));        // Input window
-	outwin       = (float *)      calloc(BUFLEN,      sizeof(float));        // Output window
-	phi_a        = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase of current frame
-	phi_ping     = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase adjusted for synthesis stage
-	phi_pong     = (float *)      calloc(BUFLEN,      sizeof(float));        // Phase adjusted for synthesis stage
-	delta_t_ping = (float *)      calloc(BUFLEN,      sizeof(float));        // Backward phase derivative in time domain
-	delta_t_pong = (float *)      calloc(BUFLEN,      sizeof(float));        // Backward phase derivative in time domain
-	delta_f      = (float *)      calloc(BUFLEN,      sizeof(float));        // Centered phase derivative in frequency domain
-	mag_ping     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of frame
-	mag_pong     = (float *)      calloc(BUFLEN,      sizeof(float));        // Magnitude of frame
-	cpxIn        = (kiss_fft_cpx*)calloc(BUFLEN,      sizeof(kiss_fft_cpx)); // Complex variable for FFT 
-	cpxOut       = (kiss_fft_cpx*)calloc(BUFLEN,      sizeof(kiss_fft_cpx)); // Complex variable for FFT 
-	in_audio     = (float *)      calloc(NUM_SAMP,    sizeof(float));        // Total input audio
-	out_audio    = (float *)      calloc(NUM_SAMP,    sizeof(float));        // Total output audio
-
-	cfg    = kiss_fft_alloc( BUFLEN, 0, 0, 0);
-	cfgInv = kiss_fft_alloc( BUFLEN, 1, 0, 0);
-
-	// Initialize the magnitude pointers
-	mag = mag_ping;
-	magPrev = mag_pong;
-
-	// Initialize the synthesis phase pointers
-	phi_s = phi_ping;
-	phi_sPrev = phi_pong;
-
-	// Initialize the time phase derivative pointers
-	delta_t = delta_t_ping;
-	delta_tPrev = delta_t_pong;
+	cleanIdx  = bf.hopS * NUMFRAMES;
 
 	// Initialize input and output window functions
-	for(int k = 0; k < BUFLEN; k++){
-		inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopA)/2);
-		outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrt((BUFLEN/hopS)/2);
-	}
-	
-	// Convert 16bit audio to floating point
-	for (unsigned long i = 0; i < NUM_SAMP; i++){
-		in_audio[i] = ((float)audio16[i])/MAXVAL16;
+	for(uint16_t k = 0; k < BUFLEN; k++){
+		audat.inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrtf((BUFLEN/bf.hopA)/2);
+		audat.outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrtf((BUFLEN/bf.hopS)/2);
 	}
 
+	for (uint32_t i = 0; i < audat.numSamp; i++){
+		audat.in_audio[i] = audat.in_audio[i] / MAXVAL16;
+	}
+	
 	PRINT_LOG2("Buffer length: %i.\n", BUFLEN);
 
 	// The first buffer isn't processed but it is stored
 	for (uint8_t f = 0; f < NUMFRAMES; f++)
 	{
-		for (int k = 0; k < hopA; k++)
+		for (uint32_t k = 0; k < bf.hopA; k++)
 		{
-			inframe[f * hopA + k] = in_audio[audio_ptr + k + f*hopA] * INGAIN;
+			audat.inframe[f * bf.hopA + k] = audat.in_audio[audio_ptr + k + f*bf.hopA] * INGAIN;
 		}
 	}
 	audio_ptr += BUFLEN;
-	while(audio_ptr < (NUM_SAMP - BUFLEN))
+	while(audio_ptr < (audat.numSamp - BUFLEN))
 	{
-		for (int k = 0; k < BUFLEN; k++)
+		for (int16_t k = 0; k < BUFLEN; k++)
 		{
-			inbuffer[k] = in_audio[audio_ptr + k] * INGAIN;
+			audat.inbuffer[k] = audat.in_audio[audio_ptr + k] * INGAIN;
+			audat.outbuffer[k] = audat.inbuffer[k];
 		}
-		process_buffer();
-		for (int k = 0; k < BUFLEN; k++)
+		process_buffer(&audat, &bf, frameNum, audio_ptr, vTimeIdx, &cleanIdx, pOutBuffLastSample);
+		for (int16_t k = 0; k < BUFLEN; k++)
 		{
-			out_audio[audio_ptr + k] = outbuffer[k] * OUTGAIN;
+			audat.out_audio[audio_ptr + k] = audat.outbuffer[k] * OUTGAIN;
 			// Avoid uint16_t overflow and clip the signal instead.
-			if (abs(out_audio[audio_ptr + k]) > 1)
+			if (abs(audat.out_audio[audio_ptr + k]) > 1)
 			{
-				out_audio[audio_ptr + k] = (out_audio[audio_ptr + k] < 0) ? -1 : 1;
+				audat.out_audio[audio_ptr + k] = (audat.out_audio[audio_ptr + k] < 0) ? -1 : 1;
 			}
 		}
 		audio_ptr += BUFLEN;
@@ -169,100 +89,81 @@ int main(int argc, char **argv)
 	printf("It took an average time of %f ms to process each frame.\n", 1000*avg_time/CLOCKS_PER_SEC);
 
 	// Reconvert floating point audio to 16bit
-	for (unsigned long i = 0; i < NUM_SAMP; i++)
+	for (uint32_t i = 0; i < audat.numSamp; i++)
 	{
-		audio16[i] = (uint16_t)(out_audio[i]*MAXVAL16);
+		audat.out_audio[i] = audat.out_audio[i] * MAXVAL16;
 	}
 
 	// Save the processed audio to the output file
-	writeWav(audio16, inputFilePath, outputFilePath);
+	writeWav(audat.out_audio, inputFilePath, outputFilePath, audat.numSamp);
 
-	// Deallocate allocated memory
-	free(audio16);
-	free(inbuffer);
-	free(outbuffer);
-	free(inframe);
-	free(vTime);
-	free(inwin);
-	free(outwin);
-	free(phi_a);
-	free(delta_t_ping);
-	free(delta_t_pong);
-	free(delta_f);
-	free(mag_ping);
-	free(mag_pong);
-	free(phi_ping);
-	free(phi_pong);
-	free(cpxIn);
-	free(cpxOut);
-	free(in_audio);
-	free(out_audio);
+	// Deallocate memory
+	free_audio_data(&audat);
+	free_buffer_data(&bf);
 	free(coeffs);
 	free(inputFilePath);
 	free(outputFilePath);
-	kiss_fft_free(cfg);
-	kiss_fft_free(cfgInv);
 
 	return 0;
 
 }
 
-void process_buffer()
+void process_buffer(audio_data_t* audat, buffer_data_t* bf, uint8_t frameNum,
+	uint32_t audio_ptr, uint32_t vTimeIdx, uint32_t* cleanIdx, float pOutBuffLastSample)
 {
-	// mag, magPrev, mag_ping, mag_pong, inbuffer, inframe, hopA, frameNum, numFrames, cpxIn, inwin
-
 	elapsed_time = clock();
 
 	for (uint8_t f = 0; f < NUMFRAMES; f++)
 	{
 		
+		//swap_ping_pong_buffer_data(&bf, &audat);
 		// Update magnitude pointers
-		magPrev = mag;
-		mag = (mag == mag_ping) ? mag_pong : mag_ping;
+		bf->magPrev = bf->mag;
+		bf->mag = (bf->mag == audat->mag_ping) ? audat->mag_pong : audat->mag_ping;
 
 		// Update phase pointers
-		phi_sPrev = phi_s;
-		phi_s = (phi_s == phi_ping) ? phi_pong : phi_ping;
+		bf->phi_sPrev = bf->phi_s;
+		bf->phi_s = (bf->phi_s == audat->phi_ping) ? audat->phi_pong : audat->phi_ping;
 
 		// Update time phase derivative pointers
-		delta_tPrev = delta_t;
-		delta_t = (delta_t == delta_t_ping) ? delta_t_pong : delta_t_ping;
+		bf->delta_tPrev = bf->delta_t;
+		bf->delta_t = (bf->delta_t == audat->delta_t_ping) ? audat->delta_t_pong : audat->delta_t_ping;
 
 /************ ANALYSIS STAGE ***********************/
 
 		// Using mag as output buffer, nothing to do with magnitude
-		overlapAdd(inbuffer, inframe, mag, hopA, frameNum, NUMFRAMES);  
-		COPY(cpxIn[k].r, mag[k] * inwin[k], BUFLEN);
-		COPY(cpxIn[k].i, 0, BUFLEN);
+		overlapAdd(audat->inbuffer, audat->inframe, bf->mag, bf->hopA, frameNum, NUMFRAMES);  
+		COPY(bf->cpxIn[k].r, bf->mag[k] * audat->inwin[k], BUFLEN);
+		COPY(bf->cpxIn[k].i, 0, BUFLEN);
 
 /************ PROCESSING STAGE *********************/
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, DEBUG_DIR "cpxInXXXXX.csv", count, 5, audio_ptr, -1);
+		DUMP_ARRAY_COMPLEX(bf->cpxIn, BUFLEN, DEBUG_DIR "cpxInXXXXX.csv", count, 5, audio_ptr, -1);
 
-		kiss_fft( cfg , cpxIn , cpxOut );
+		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
 
-		process_frame(cpxOut, mag, magPrev, phi_a, phi_s, phi_sPrev, delta_t, delta_tPrev, delta_f, hopA, hopS, shift, BUFLEN, var);
+		/* process_frame(bf->cpxOut, bf->mag, bf->magPrev, bf->phi_a, bf->phi_s, bf->phi_sPrev, bf->delta_t, bf->delta_tPrev, bf->delta_f, bf->hopA, bf->hopS, shift, BUFLEN, var); */
 
-		// DUMP_ARRAY_COMPLEX(cpxOut, BUFLEN, DEBUG_DIR "cpxOutXXXXX.csv", count, 40, audio_ptr,     -1);
-		// DUMP_ARRAY(inbuffer      , BUFLEN, DEBUG_DIR "inbuffer.csv"  , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(inwin         , BUFLEN, DEBUG_DIR "inwin.csv"     , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(outwin        , BUFLEN, DEBUG_DIR "outwin.csv"    , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(phi_a         , BUFLEN, DEBUG_DIR "phi_a.csv"     , count, -1, audio_ptr, BUFLEN);
-		// DUMP_ARRAY(phi_s         , BUFLEN, DEBUG_DIR "phi_s.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY_COMPLEX(bf->cpxOut, BUFLEN, DEBUG_DIR "cpxOutXXXXX.csv", count, 40, audio_ptr,     -1);
+		// DUMP_ARRAY(audat->inbuffer      , BUFLEN, DEBUG_DIR "inbuffer.csv"  , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(audat->inwin         , BUFLEN, DEBUG_DIR "inwin.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(audat->outwin        , BUFLEN, DEBUG_DIR "outwin.csv"    , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(bf->phi_a         , BUFLEN, DEBUG_DIR "phi_a.csv"     , count, -1, audio_ptr, BUFLEN);
+		// DUMP_ARRAY(bf->phi_s         , BUFLEN, DEBUG_DIR "phi_s.csv"     , count, -1, audio_ptr, BUFLEN);
 
-		kiss_fft( cfgInv , cpxOut , cpxIn );
+		kiss_fft( bf->cfgInv , bf->cpxOut , bf->cpxIn );
 
-		DUMP_ARRAY_COMPLEX(cpxIn, BUFLEN, DEBUG_DIR "cpxOutXXXXX.csv", count, 5, audio_ptr,     -1);
+		DUMP_ARRAY_COMPLEX(bf->cpxIn, BUFLEN, DEBUG_DIR "cpxOutXXXXX.csv", count, 5, audio_ptr,     -1);
 
-		COPY(cpxOut[k].r, cpxIn[k].r * outwin[k]/BUFLEN, BUFLEN);
+		COPY(bf->cpxOut[k].r, bf->cpxIn[k].r * audat->outwin[k]/BUFLEN, BUFLEN);
 
 
 /************ SYNTHESIS STAGE ***********************/
 
-		COPY(mag[k], cpxOut[k].r, BUFLEN);
-		strechFrame(vTime, mag, &cleanIdx, hopS, frameNum, vTimeIdx, sizeVTime, BUFLEN);
+		COPY(bf->mag[k], bf->cpxOut[k].r, BUFLEN);
+		strechFrame(audat->vTime, bf->mag, cleanIdx, bf->hopS, frameNum, vTimeIdx, NUMFRAMES * bf->hopS * 2, BUFLEN);
 
-		// DUMP_ARRAY(vTime, NUMFRAMES*hopS*2, DEBUG_DIR "vTimeXXX.csv", count, 40, audio_ptr, -1);
+		// DUMP_ARRAY(audat->vTime, NUMFRAMES*hopS*2, DEBUG_DIR "vTimeXXX.csv", count, 40, audio_ptr, -1);
 
 		if ((++frameNum) >= NUMFRAMES) frameNum = 0;
 		count++;
@@ -271,22 +172,22 @@ void process_buffer()
 
 /************* LINEAR INTERPOLATION *****************/
 
-	interpolate(outbuffer, vTime, steps, shift, vTimeIdx, pOutBuffLastSample, hopS, BUFLEN);
+	interpolate(audat->outbuffer, audat->vTime, bf->steps, bf->shift, vTimeIdx, pOutBuffLastSample, bf->hopS, BUFLEN);
 
 	// PRINT_LOG1("********* Buffer is out *********\n");
 
-	DUMP_ARRAY(outbuffer, BUFLEN, DEBUG_DIR "outXXX.csv", count2, 10, audio_ptr, -1);
+	DUMP_ARRAY(audat->outbuffer, BUFLEN, DEBUG_DIR "outXXX.csv", count2, 10, audio_ptr, -1);
 	count2++;
 
 	elapsed_time = clock() - elapsed_time;
 	avg_time = avg_time + (elapsed_time - avg_time)/N;
 	N++;
-	vTimeIdx += NUMFRAMES * hopS;
-	if ((vTimeIdx) >= NUMFRAMES*hopS*2) vTimeIdx = 0;
+	vTimeIdx += NUMFRAMES * bf->hopS;
+	if ((vTimeIdx) >= NUMFRAMES * bf->hopS * 2) vTimeIdx = 0;
 
 }
 
-float* load_distortion_coefficients(size_t* coeff_size)
+void load_distortion_coefficients(float* coeffs, size_t* coeff_size)
 {
 	FILE* inFile = fopen("polyCoeff.csv", "r");
 	float coeff;
@@ -309,9 +210,6 @@ float* load_distortion_coefficients(size_t* coeff_size)
 		n++;
 	}
 	fclose(inFile);
-
-	return coeffs;
-
 }
 
 void dumpFloatArray(float* buf, size_t size, const char* name, int count, int max, int auP, int auPMax)
@@ -335,5 +233,36 @@ void dumpFloatArray(float* buf, size_t size, const char* name, int count, int ma
 		fprintf(outfile, "\n");
 		free(fileName);
 		fclose(outfile);
+}
+
+void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, float var)
+{
+	if (argc > 1)
+	{
+		*inputFilePath = (char*) malloc( sizeof( INPUT_AUDIO_DIR ) + (int)strlen(argv[1]) + 1);
+		strcpy(*inputFilePath, INPUT_AUDIO_DIR);
+		strcat(*inputFilePath, argv[1]);
+	}
+	else
+	{
+		*inputFilePath = (char*) malloc( sizeof( INPUT_AUDIO_DIR "sine_tester_short.wav") );
+		strcpy(*inputFilePath, INPUT_AUDIO_DIR "sine_tester_short.wav");
+	}
+	if (argc > 2)
+	{
+		*outputFilePath = (char*) malloc( sizeof( OUTPUT_AUDIO_DIR ) + (int)strlen(argv[2]) + 1);
+		strcpy(*outputFilePath, OUTPUT_AUDIO_DIR);
+		strcat(*outputFilePath, argv[2]);
+	}
+	else
+	{
+		*outputFilePath = (char*) malloc( sizeof( OUTPUT_AUDIO_DIR "output.wav" ));
+		strcpy(*outputFilePath, OUTPUT_AUDIO_DIR "output.wav" );
+	}
+	if (argc > 3)
+	{
+		char* tmpPtr;
+		var = strtof(argv[3], &tmpPtr);
+	}
 }
 

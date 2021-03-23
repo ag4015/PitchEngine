@@ -27,8 +27,7 @@ void expc(kiss_fft_cpx *a, float* mag, float* phase)
 	a->i = std::imag(std::polar(*mag, *phase));
 }
 
-void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a, float* phi_s, float* phi_sPrev,
-                   float* delta_t, float* delta_tPrev, float* delta_f, int hopA, int hopS, float shift, int bufLen, float var)
+void process_frame(buffer_data_t* bf, float var)
 {
 	float current_phi_a;
 	float phi_diff;
@@ -43,35 +42,35 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 	float delta_f_back;
 	float delta_f_fwd;
 	float b_a = 1;
-	float b_s = b_a * shift;
+	float b_s = b_a * bf->shift;
 
-	for(uint16_t k = 0; k < bufLen; k++)
+	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		mag[k] = absc(&input[k]);
-		current_phi_a = argc(&input[k]);
+		bf->mag[k] = absc(&bf->input[k]);
+		current_phi_a = argc(&bf->input[k]);
 	}
 
 	// STEP 1
 	float tol     = 1e-4;
-	float maxMag  = get_max(mag, bufLen);
-	float maxPrev = get_max(magPrev, bufLen);
+	float maxMag  = get_max(bf->mag, bf->buflen);
+	float maxPrev = get_max(bf->magPrev, bf->buflen);
 	float abstol  = tol * ((maxMag >= maxPrev) ? (maxMag) : (maxPrev));
 
-	for(uint16_t k = 0; k < bufLen; k++)
+	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
 
 		// Time differentiation
-		phi_diff = current_phi_a - phi_a[k];
-		phi_a[k] = current_phi_a;
-		deltaPhiPrime_t_back = phi_diff - (hopA * 2 * PI * k)/bufLen;
+		phi_diff = current_phi_a - bf->phi_a[k];
+		bf->phi_a[k] = current_phi_a;
+		deltaPhiPrime_t_back = phi_diff - (bf->hopA * 2 * PI * k)/bf->buflen;
 		deltaPhiPrimeMod_t_back = fmod(deltaPhiPrime_t_back + PI , 2 * PI) - PI;
 		// deltaPhiPrimeMod_t_back = fmod(deltaPhiPrime_t_back, 2 * PI);
-		delta_t[k] = deltaPhiPrimeMod_t_back/hopA + (2 * PI * k)/bufLen;
+		bf->delta_t[k] = deltaPhiPrimeMod_t_back/bf->hopA + (2 * PI * k)/bf->buflen;
 
 		// Backward frequency differentiation
-		if (k > 0 && mag[k-1] > abstol)
+		if (k > 0 && bf->mag[k-1] > abstol)
 		{
-			phi_diff = current_phi_a - argc(&input[k - 1]);
+			phi_diff = current_phi_a - argc(&bf->input[k - 1]);
 			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
 			// delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 			delta_f_back = (1/b_a)*(fmod(phi_diff, 2 * PI));
@@ -79,9 +78,9 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 		else { delta_f_back = 0; }
 
 		// Forward frequency differentiation
-		if(k < bufLen - 1 && mag[k+1] > abstol)
+		if(k < bf->buflen - 1 && bf->mag[k+1] > abstol)
 		{
-			phi_diff = argc(&input[k + 1]) - current_phi_a; 
+			phi_diff = argc(&bf->input[k + 1]) - current_phi_a; 
 			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
 			// delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 			delta_f_fwd = (1/b_a)*(fmod(phi_diff, 2 * PI));
@@ -89,17 +88,17 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 		else { delta_f_fwd = 0; }
 
 		// Take the average of fwd and back or whichever is non-zero
-		delta_f[k] = (delta_f_back && delta_f_fwd)
-                   ? (0.5 * (delta_f_back + delta_f_fwd))
+		bf->delta_f[k] = (delta_f_back && delta_f_fwd)
+                   ? (0.5f * (delta_f_back + delta_f_fwd))
 			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 
 	}
 
-	propagate_phase(delta_t, delta_tPrev, delta_f, mag, magPrev, phi_s, phi_sPrev, hopA, shift, bufLen, b_s, abstol);
+	propagate_phase(bf->delta_t, bf->delta_tPrev, bf->delta_f, bf->mag, bf->magPrev, bf->phi_s, bf->phi_sPrev, bf->hopA, bf->shift, bf->buflen, b_s, abstol);
 
-	for(uint16_t k = 0; k < bufLen; k++)
+	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		expc(&input[k], &mag[k], &phi_s[k]);
+		expc(&bf->input[k], &bf->mag[k], &bf->phi_s[k]);
 	}
 
 	// DUMP_ARRAY(mag, BUFLEN, DEBUG_DIR "magxxxxx.csv" , count3, 10, 1, -1);
@@ -109,6 +108,7 @@ void process_frame(kiss_fft_cpx* input, float* mag, float* magPrev, float* phi_a
 	count3++;
 }
 
+// TODO: Create a struct with all these variables
 void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen, float b_s, float abstol)
 {
 	// int count = already;
@@ -146,22 +146,22 @@ void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* 
 				h.push(Tuple(current.m, 1)); // STEP 12
 			}
 		}
-		if (current.n == 1) // STEP 15
-		{
-			if (setI.count(current.m + 1)) // STEP 16
-			{
-				// b_s/b_a = alpha
-				phi_s[current.m + 1] = phi_s[current.m] + (b_s/2) * (delta_f[current.m] + delta_f[current.m + 1]); // STEP 17
-				setI.erase(current.m + 1); // STEP 18
-				h.push(Tuple(current.m + 1, 1)); // STEP 19
-			}
-			if (setI.count(current.m - 1)) // STEP 21
-			{
-				phi_s[current.m - 1] = phi_s[current.m] - (b_s/2) * (delta_f[current.m] + delta_f[current.m - 1]); // STEP 22
-				setI.erase(current.m - 1); // STEP 23
-				h.push(Tuple(current.m - 1, 1)); // STEP 24
-			}
-		}
+		//if (current.n == 1) // STEP 15
+		//{
+		//	if (setI.count(current.m + 1)) // STEP 16
+		//	{
+		//		// b_s/b_a = alpha
+		//		phi_s[current.m + 1] = phi_s[current.m] + (b_s/2) * (delta_f[current.m] + delta_f[current.m + 1]); // STEP 17
+		//		setI.erase(current.m + 1); // STEP 18
+		//		h.push(Tuple(current.m + 1, 1)); // STEP 19
+		//	}
+		//	if (setI.count(current.m - 1)) // STEP 21
+		//	{
+		//		phi_s[current.m - 1] = phi_s[current.m] - (b_s/2) * (delta_f[current.m] + delta_f[current.m - 1]); // STEP 22
+		//		setI.erase(current.m - 1); // STEP 23
+		//		h.push(Tuple(current.m - 1, 1)); // STEP 24
+		//	}
+		//}
 	}
 	for (int i = 0; i < BUFLEN; i++)
 	{
@@ -194,30 +194,32 @@ void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t fram
 	}
 }
 
-void strechFrame(float* output, float* input, int* cleanIdx, int hop, int frameNum, int outputIdx, int outputSize, int bufLen)
+void strechFrame(float* output, float* input, uint32_t* cleanIdx, uint32_t hop,
+	uint8_t frameNum, uint32_t outputIdx, uint32_t outputSize, uint32_t bufLen)
 {
-	int k;
-	for (k = 0; k < hop; k++)
+	for (uint32_t k = 0; k < hop; k++)
 	{
 		output[*cleanIdx] = 0;
-		if (++(*cleanIdx) >= outputSize) *cleanIdx = 0;
+		*cleanIdx = *cleanIdx + 1;
+		if (*cleanIdx >= outputSize) *cleanIdx = 0;
 	}
 
 	// The indexing variable for output has to be circular.
-	int t = outputIdx + hop * frameNum;
+	uint32_t t = outputIdx + hop * frameNum;
 	if (t >= outputSize) t = 0;
 
-	for (k = 0; k < bufLen; k++)
+	for (uint32_t k = 0; k < bufLen; k++)
 	{
 		output[t] += input[k];
 		if ((++t) >= (outputSize)) t = 0;
 	}
 }
 
-void interpolate(float* outbuffer, float* vTime, int steps, float shift,
-		             int vTimeIdx, float pOutBuffLastSample, int hopS, int bufLen)
+// TODO FIX POUTBUFFLASTSAMPLE
+void interpolate(float* outbuffer, float* vTime, uint8_t steps, float shift,
+	uint32_t vTimeIdx, float pOutBuffLastSample, uint32_t hopS, uint32_t bufLen)
 {
-	int k;
+	uint32_t k;
 	if (steps == 12)
 	{
 		for (k = 0; k < BUFLEN; k++)
@@ -230,14 +232,14 @@ void interpolate(float* outbuffer, float* vTime, int steps, float shift,
 		float tShift;
 		float upper;
 		float lower;
-		int lowerIdx;
-		int upperIdx;
+		uint32_t lowerIdx;
+		uint32_t upperIdx;
 		float delta_shift;
 		for (k = vTimeIdx; k < vTimeIdx + BUFLEN; k++)
 		{
 			tShift = (k - vTimeIdx) * shift;
 
-			lowerIdx = (int)(tShift + vTimeIdx);
+			lowerIdx = (uint32_t)(tShift + vTimeIdx);
 			upperIdx = lowerIdx + 1;
 			if (lowerIdx == 0)
 			{

@@ -36,12 +36,12 @@ extern "C"
 #endif
 
 // Function prototypes 
-int      getFileSize(FILE *inFile); 
-void     printHeader(FILE* wavFile, wav_hdr wavHeader, size_t bytesRead);
-void     separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* right_channel,*/ unsigned long size);
-wav_hdr  makeHeaderMono(wav_hdr header);
-int16_t* readWav(unsigned long *sizeData, char* filePath);
-void     writeWav(int16_t* audio, char* inputFilePath, char* outputFilePath);
+int     getFileSize(FILE *inFile); 
+void    printHeader(wav_hdr wavHeader);
+void    separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* right_channel,*/ unsigned long size);
+wav_hdr makeHeaderMono(wav_hdr header);
+float*  readWav(uint32_t *numSamp, char* filePath);
+void    writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp);
 
 #ifdef __cplusplus
 } // extern C

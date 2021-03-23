@@ -1,0 +1,3 @@
+[submodule "src/wave"]
+	path = src/wave
+	url = https://github.com/audionamix/wave
