@@ -21,6 +21,7 @@ add_executable(DSPSim
                wavio.cpp
                audioData.c
                audioUtils.cpp
+               logger.cpp
                )
 
 target_compile_options(DSPSim PUBLIC -Wall -pedantic -g)

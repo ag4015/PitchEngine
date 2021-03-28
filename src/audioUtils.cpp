@@ -1,5 +1,6 @@
 
 #include "audioUtils.h"
+#include "logger.h"
 #include "main.h"
 #include <algorithm>
 #include "Tuple.h"
@@ -8,8 +9,9 @@
 #include <set>
 #include <complex.h>
 
+#define MAGNITUDE_TOLERANCE 1e-4
+
 int count3 = 0;
-bool firstTime = true;
 
 float absc(kiss_fft_cpx *a)
 {
@@ -27,7 +29,7 @@ void expc(kiss_fft_cpx *a, float* mag, float* phase)
 	a->i = std::imag(std::polar(*mag, *phase));
 }
 
-void process_frame(buffer_data_t* bf, float var)
+void process_frame(buffer_data_t* bf, audio_data_t* audat, float var)
 {
 	float current_phi_a;
 	float phi_diff;
@@ -46,15 +48,15 @@ void process_frame(buffer_data_t* bf, float var)
 
 	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		bf->mag[k] = absc(&bf->input[k]);
-		current_phi_a = argc(&bf->input[k]);
+		bf->mag[k] = absc(&bf->cpxOut[k]);
+		current_phi_a = argc(&bf->cpxOut[k]);
 	}
 
 	// STEP 1
-	float tol     = 1e-4;
-	float maxMag  = get_max(bf->mag, bf->buflen);
-	float maxPrev = get_max(bf->magPrev, bf->buflen);
-	float abstol  = tol * ((maxMag >= maxPrev) ? (maxMag) : (maxPrev));
+	float tol = MAGNITUDE_TOLERANCE;
+	float maxMag     = *std::max_element(bf->mag, bf->mag + bf->buflen);
+	float maxMagPrev = *std::max_element(bf->magPrev, bf->magPrev + bf->buflen);
+	float abstol  = tol * ((maxMag >= maxMagPrev) ? (maxMag) : (maxMagPrev));
 
 	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
@@ -70,7 +72,7 @@ void process_frame(buffer_data_t* bf, float var)
 		// Backward frequency differentiation
 		if (k > 0 && bf->mag[k-1] > abstol)
 		{
-			phi_diff = current_phi_a - argc(&bf->input[k - 1]);
+			phi_diff = current_phi_a - argc(&bf->cpxOut[k - 1]);
 			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
 			// delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 			delta_f_back = (1/b_a)*(fmod(phi_diff, 2 * PI));
@@ -80,7 +82,7 @@ void process_frame(buffer_data_t* bf, float var)
 		// Forward frequency differentiation
 		if(k < bf->buflen - 1 && bf->mag[k+1] > abstol)
 		{
-			phi_diff = argc(&bf->input[k + 1]) - current_phi_a; 
+			phi_diff = argc(&bf->cpxOut[k + 1]) - current_phi_a; 
 			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
 			// delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 			delta_f_fwd = (1/b_a)*(fmod(phi_diff, 2 * PI));
@@ -94,38 +96,38 @@ void process_frame(buffer_data_t* bf, float var)
 
 	}
 
-	propagate_phase(bf->delta_t, bf->delta_tPrev, bf->delta_f, bf->mag, bf->magPrev, bf->phi_s, bf->phi_sPrev, bf->hopA, bf->shift, bf->buflen, b_s, abstol);
+	propagate_phase(bf, audat, b_s, abstol);
 
 	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		expc(&bf->input[k], &bf->mag[k], &bf->phi_s[k]);
+		expc(&bf->cpxOut[k], &bf->mag[k], &bf->phi_s[k]);
 	}
 
-	// DUMP_ARRAY(mag, BUFLEN, DEBUG_DIR "magxxxxx.csv" , count3, 10, 1, -1);
-	// DUMP_ARRAY(phi_a, BUFLEN, DEBUG_DIR "phi_axxxxx.csv" , count3, 10, 1, -1);
-	// DUMP_ARRAY(phi_s, BUFLEN, DEBUG_DIR "phi_sxxxxx.csv" , count3, 10, 1, -1);
-	// DUMP_ARRAY(phi_sPrev, BUFLEN, DEBUG_DIR "phi_sPrevxxxxx.csv" , count3, 10, 1, -1);
+	 DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "magxxxxx.csv"       , count3, 10, 1, -1);
+	 DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_axxxxx.csv"     , count3, 10, 1, -1);
+	 DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_sxxxxx.csv"     , count3, 10, 1, -1);
+	 DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrevxxxxx.csv" , count3, 10, 1, -1);
 	count3++;
 }
 
 // TODO: Create a struct with all these variables
-void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* mag, float* magPrev, float* phi_s, float* phi_sPrev, float hopA, float shift, int bufLen, float b_s, float abstol)
+void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float abstol)
 {
 	// int count = already;
 	std::set<uint16_t> setI, setICopy;
 	std::vector<Tuple> container;
 	container.reserve(1024);
-	TupleCompareObject cmp(mag, magPrev);
+	TupleCompareObject cmp(bf->mag, bf->magPrev);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject> h{cmp, std::move(container)}; // STEP 4
 
-	for (int m = 0; m < bufLen; m++)
+	for (int m = 0; m < bf->buflen; m++)
 	{
-		if (mag[m] > abstol)
+		if (bf->mag[m] > abstol)
 		{ 
 			setI.insert(m); // STEP 2
 			h.push(Tuple(m, 0)); // STEP 5
 		}
-		else { phi_s[m] = (std::rand()/(float)RAND_MAX) * 2 * PI - PI; } // STEP 3
+		else { bf->phi_s[m] = (std::rand()/(float)RAND_MAX) * 2 * PI - PI; } // STEP 3
 	}
 	setICopy = setI;
 
@@ -141,7 +143,7 @@ void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* 
 		{
 			if(setI.count(current.m)) // STEP 9
 			{
-				phi_s[current.m] = phi_sPrev[current.m] + (hopA/2)*(delta_tPrev[current.m] + delta_t[current.m]); // STEP 10
+				bf->phi_s[current.m] = bf->phi_sPrev[current.m] + (bf->hopA/2)*(bf->delta_tPrev[current.m] + bf->delta_t[current.m]); // STEP 10
 				setI.erase(current.m); // STEP 11
 				h.push(Tuple(current.m, 1)); // STEP 12
 			}
@@ -151,28 +153,28 @@ void propagate_phase(float* delta_t, float* delta_tPrev, float* delta_f, float* 
 		//	if (setI.count(current.m + 1)) // STEP 16
 		//	{
 		//		// b_s/b_a = alpha
-		//		phi_s[current.m + 1] = phi_s[current.m] + (b_s/2) * (delta_f[current.m] + delta_f[current.m + 1]); // STEP 17
+		//		bf->phi_s[current.m + 1] = bf->phi_s[current.m] + (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m + 1]); // STEP 17
 		//		setI.erase(current.m + 1); // STEP 18
 		//		h.push(Tuple(current.m + 1, 1)); // STEP 19
 		//	}
 		//	if (setI.count(current.m - 1)) // STEP 21
 		//	{
-		//		phi_s[current.m - 1] = phi_s[current.m] - (b_s/2) * (delta_f[current.m] + delta_f[current.m - 1]); // STEP 22
+		//		bf->phi_s[current.m - 1] = bf->phi_s[current.m] - (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m - 1]); // STEP 22
 		//		setI.erase(current.m - 1); // STEP 23
 		//		h.push(Tuple(current.m - 1, 1)); // STEP 24
 		//	}
 		//}
 	}
-	for (int i = 0; i < BUFLEN; i++)
+	for (int i = 0; i < bf->buflen; i++)
 	{
 		if(!setICopy.count(i))
 		{
-			delta_t[i] = 0;
-			delta_f[i] = 0;
+			bf->delta_t[i] = 0;
+			bf->delta_f[i] = 0;
 		}
 	}
-	DUMP_ARRAY(delta_f, BUFLEN, DEBUG_DIR "delta_f.csv" , count3, -1, 1, -1);
-	DUMP_ARRAY(delta_t, BUFLEN, DEBUG_DIR "delta_t.csv" , count3, -1, 1, -1);
+	DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count3, -1, 1, -1);
+	DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count3, -1, 1, -1);
 	return;
 }
 
@@ -216,15 +218,14 @@ void strechFrame(float* output, float* input, uint32_t* cleanIdx, uint32_t hop,
 }
 
 // TODO FIX POUTBUFFLASTSAMPLE
-void interpolate(float* outbuffer, float* vTime, uint8_t steps, float shift,
-	uint32_t vTimeIdx, float pOutBuffLastSample, uint32_t hopS, uint32_t bufLen)
+void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, float pOutBuffLastSample)
 {
 	uint32_t k;
-	if (steps == 12)
+	if (bf->steps == 12)
 	{
-		for (k = 0; k < BUFLEN; k++)
+		for (k = 0; k < bf->buflen; k++)
 		{
-			outbuffer[k] = vTime[vTimeIdx + k * 2];
+			audat->outbuffer[k] = audat->vTime[vTimeIdx + k * 2];
 		}
 	}
 	else
@@ -235,46 +236,119 @@ void interpolate(float* outbuffer, float* vTime, uint8_t steps, float shift,
 		uint32_t lowerIdx;
 		uint32_t upperIdx;
 		float delta_shift;
-		for (k = vTimeIdx; k < vTimeIdx + BUFLEN; k++)
+		for (k = vTimeIdx; k < vTimeIdx + bf->buflen; k++)
 		{
-			tShift = (k - vTimeIdx) * shift;
+			tShift = (k - vTimeIdx) * bf->shift;
 
 			lowerIdx = (uint32_t)(tShift + vTimeIdx);
 			upperIdx = lowerIdx + 1;
 			if (lowerIdx == 0)
 			{
-				lower = vTime[lowerIdx + 1];
-				upper = vTime[upperIdx + 1];
-				outbuffer[k - vTimeIdx + 1] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
-				delta_shift = (outbuffer[k - vTimeIdx + 1] - pOutBuffLastSample) / 2;
-				outbuffer[k - vTimeIdx] = outbuffer[k - vTimeIdx + 1] - delta_shift;
+				lower = audat->vTime[lowerIdx + 1];
+				upper = audat->vTime[upperIdx + 1];
+				audat->outbuffer[k - vTimeIdx + 1] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
+				delta_shift = (audat->outbuffer[k - vTimeIdx + 1] - pOutBuffLastSample) / 2;
+				audat->outbuffer[k - vTimeIdx] = audat->outbuffer[k - vTimeIdx + 1] - delta_shift;
 			}
-			if (upperIdx == 2*hopS*NUMFRAMES)
+			if (upperIdx == 2*bf->hopS*audat->numFrames)
 			{
-				delta_shift = (shift*(lower - outbuffer[k - vTimeIdx - 1]))/(lowerIdx - tShift + shift);
-				outbuffer[k - vTimeIdx] = delta_shift + outbuffer[k - vTimeIdx - 1];
+				delta_shift = (bf->shift*(lower - audat->outbuffer[k - vTimeIdx - 1]))/(lowerIdx - tShift + bf->shift);
+				audat->outbuffer[k - vTimeIdx] = delta_shift + audat->outbuffer[k - vTimeIdx - 1];
 				continue;
 			}
-			if (upperIdx == 2*hopS*NUMFRAMES + 1 && lowerIdx == 2*hopS*NUMFRAMES)
+			if (upperIdx == 2*bf->hopS*audat->numFrames + 1 && lowerIdx == 2*bf->hopS*audat->numFrames)
 			{
-				delta_shift = (shift*(lower - outbuffer[k - vTimeIdx - 1]))/(lowerIdx - tShift + shift);
-				outbuffer[k - vTimeIdx] = delta_shift + outbuffer[k - vTimeIdx - 1];
+				delta_shift = (bf->shift*(lower - audat->outbuffer[k - vTimeIdx - 1]))/(lowerIdx - tShift + bf->shift);
+				audat->outbuffer[k - vTimeIdx] = delta_shift + audat->outbuffer[k - vTimeIdx - 1];
 				continue;
 			}
-			lower = vTime[lowerIdx];
-			upper = vTime[upperIdx];
-			outbuffer[k - vTimeIdx] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
+			lower = audat->vTime[lowerIdx];
+			upper = audat->vTime[upperIdx];
+			audat->outbuffer[k - vTimeIdx] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
 		}
-		pOutBuffLastSample = outbuffer[k - vTimeIdx - 1];
+		pOutBuffLastSample = audat->outbuffer[k - vTimeIdx - 1];
 	}
 }
 
-float get_max(const float* in, int size)
+void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
+	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, float pOutBuffLastSample, float var)
 {
-	float max = 0;
-	for (int k = 0; k < size; k++)
+#ifdef PDEBUG
+	static counter_1 = 0;
+	static counter_2 = 0;
+	static sample_counter = 0;
+#endif
+
+	for (uint8_t f = 0; f < audat->numFrames; f++)
 	{
-		if (in[k] > max) { max = in[k]; }
+		
+		swap_ping_pong_buffer_data(bf, audat);
+
+        /************ ANALYSIS STAGE ***********************/
+
+		// Using mag as output buffer, nothing to do with magnitude
+		overlapAdd(audat->inbuffer, audat->inframe, bf->mag, bf->hopA, frameNum, audat->numFrames);  
+
+		for (uint32_t k = 0; k < bf->buflen; k++)
+		{
+			bf->cpxIn[k].r = bf->mag[k] * audat->inwin[k];
+			bf->cpxIn[k].i = 0;
+		}
+
+        /************ PROCESSING STAGE *********************/
+
+		DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxIn.csv"  , count,  5, sample_counter, -1);
+
+		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
+
+		process_frame(bf, audat, var);
+
+		DUMP_ARRAY(bf->cpxOut      , bf->buflen, DEBUG_DIR "cpxOut.csv"  , count, 40, sample_counter , -1);
+		DUMP_ARRAY(audat->inbuffer , bf->buflen, DEBUG_DIR "inbuffer.csv", count, -1, sample_counter , bf->buflen);
+		DUMP_ARRAY(audat->inwin    , bf->buflen, DEBUG_DIR "inwin.csv"   , count, -1, sample_counter , bf->buflen);
+		DUMP_ARRAY(audat->outwin   , bf->buflen, DEBUG_DIR "outwin.csv"  , count, -1, sample_counter , bf->buflen);
+		DUMP_ARRAY(bf->phi_a       , bf->buflen, DEBUG_DIR "phi_a.csv"   , count, -1, sample_counter , bf->buflen);
+		DUMP_ARRAY(bf->phi_s       , bf->buflen, DEBUG_DIR "phi_s.csv"   , count, -1, sample_counter , bf->buflen);
+
+		kiss_fft( bf->cfgInv , bf->cpxOut , bf->cpxIn );
+
+		DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxOut.csv"  , count, 5, sample_counter, -1);
+
+		for (uint32_t k = 0; k < bf->buflen; k++)
+		{
+			bf->cpxOut[k].r = bf->cpxIn[k].r * audat->outwin[k] / bf->buflen;
+		}
+
+        /************ SYNTHESIS STAGE ***********************/
+
+		for (uint32_t k = 0; k < bf->buflen; k++)
+		{
+			bf->mag[k] = bf->cpxOut[k].r;
+		}
+		
+		strechFrame(audat->vTime, bf->mag, cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
+
+		DUMP_ARRAY(audat->vTime, audat->numFrames*hopS*2, DEBUG_DIR "vTimeXXX.csv", count, 40, sample_counter, -1);
+
+		if ((++frameNum) >= audat->numFrames) frameNum = 0;
+
+#ifdef PDEBUG
+		counter_1++;
+#endif
+
 	}
-	return max;
+
+    /************* LINEAR INTERPOLATION *****************/
+
+	interpolate(bf, audat, *vTimeIdx, pOutBuffLastSample);
+
+	DUMP_ARRAY(audat->outbuffer, bf->buflen, DEBUG_DIR "outXXX.csv", count2, 10, audio_ptr, -1);
+
+	*vTimeIdx += audat->numFrames * bf->hopS;
+	if ((*vTimeIdx) >= audat->numFrames * bf->hopS * 2) *vTimeIdx = 0;
+
+#ifdef PDEBUG
+	counter_2++;
+#endif
+
 }

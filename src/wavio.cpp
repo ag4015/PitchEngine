@@ -1,6 +1,5 @@
 
 #include "wavio.h"
-#include "main.h"
 #include <iostream>
 #include <system_error>
 #include "wave/file.h"
@@ -72,7 +71,7 @@ float* readWav(uint32_t *numSamp, char* filePath)
 		exit(EXIT_FAILURE);
 	}
     *numSamp = content.size();
-    float* audio = new float[content.size()];
+    float* audio = (float*) calloc(content.size(), sizeof(float));
     // Move contents from vector to array
     for (uint32_t i = 0; i < content.size(); i++) {
         audio[i] = content[i];

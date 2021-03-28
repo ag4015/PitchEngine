@@ -2,6 +2,16 @@
 #include "stdint.h"
 #include "kissfft/kiss_fft.h"
 
+#define HOPA       (uint32_t) 256             // Size of the frame in the analysis stage
+#define NUMFRAMES  (uint32_t) BUFLEN/HOPA     // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
+#define BUFLEN     (uint32_t) 2048            // Size of the buffer
+#define MAXVAL16   (float)32768/1.5           // Maximum
+#define WINCONST   0.85185                    // Constant used for the hamming window
+#define HAMCONST   0.53836                    // Constant used for the hamming window
+#define PI         (float)3.1415926535        // Pi constant
+
+typedef kiss_fft_cpx cpx;
+
 typedef struct audio_data
 {
 	float *inbuffer, *outbuffer;              // Input and output buffers
@@ -12,14 +22,14 @@ typedef struct audio_data
     float *mag_ping, *mag_pong;               // Frame magnitude ping-pong buffers
     float *phi_ping, *phi_pong;               // Frame phase ping-pong buffers
 	float *delta_t_ping, *delta_t_pong;       // Frame phase time derivative ping-pong buffers
-    uint32_t numSamp;                         // Total number of samples in wave file
+	uint32_t cleanIdx;                        // Circular index where vTime is reset.
+	uint8_t numFrames;                        // Number of frames
 } audio_data_t;
 
 typedef struct buffer_data 
 {
-	kiss_fft_cpx* input;
-	kiss_fft_cpx* cpxIn;
-	kiss_fft_cpx* cpxOut;
+	cpx* cpxIn;
+	cpx* cpxOut;
 	float* mag;
 	float* magPrev;
 	float* phi_a;
@@ -37,6 +47,7 @@ typedef struct buffer_data
 	kiss_fft_cfg cfgInv;
 } buffer_data_t;
 
+void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, float* in_audio);
 void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat);
 void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t bufLen, float* in_audio);
 void initialize_buffer_data(buffer_data_t* bf, audio_data_t* audat, float shift, uint32_t hopS, uint8_t steps, uint32_t hopA, uint32_t bufLen);
