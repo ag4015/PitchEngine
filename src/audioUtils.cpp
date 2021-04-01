@@ -1,7 +1,7 @@
 
 #include "audioUtils.h"
+#include "audioData.h"
 #include "logger.h"
-#include "main.h"
 #include <algorithm>
 #include "Tuple.h"
 #include <iostream>
@@ -13,17 +13,17 @@
 
 int count3 = 0;
 
-float absc(kiss_fft_cpx *a)
+float absc(cpx *a)
 {
 	return sqrt(pow(a->i, 2) + pow(a->r, 2));
 }
-float argc(kiss_fft_cpx *a)
+float argc(cpx *a)
 {
 	// float complex z;
 	std::complex<float> z(a->r,a->i);
 	return std::arg(z);
 }
-void expc(kiss_fft_cpx *a, float* mag, float* phase)
+void expc(cpx *a, float* mag, float* phase)
 {
 	a->r = std::real(std::polar(*mag, *phase));
 	a->i = std::imag(std::polar(*mag, *phase));
@@ -120,7 +120,7 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 	TupleCompareObject cmp(bf->mag, bf->magPrev);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject> h{cmp, std::move(container)}; // STEP 4
 
-	for (int m = 0; m < bf->buflen; m++)
+	for (uint32_t m = 0; m < bf->buflen; m++)
 	{
 		if (bf->mag[m] > abstol)
 		{ 
@@ -165,7 +165,7 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 		//	}
 		//}
 	}
-	for (int i = 0; i < bf->buflen; i++)
+	for (uint32_t i = 0; i < bf->buflen; i++)
 	{
 		if(!setICopy.count(i))
 		{
@@ -202,8 +202,7 @@ void strechFrame(float* output, float* input, uint32_t* cleanIdx, uint32_t hop,
 	for (uint32_t k = 0; k < hop; k++)
 	{
 		output[*cleanIdx] = 0;
-		*cleanIdx = *cleanIdx + 1;
-		if (*cleanIdx >= outputSize) *cleanIdx = 0;
+		if (++(*cleanIdx) >= outputSize) *cleanIdx = 0;
 	}
 
 	// The indexing variable for output has to be circular.
@@ -299,7 +298,10 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxIn.csv"  , count,  5, sample_counter, -1);
 
-		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
+		cpx* complexInput  = bf->cpxIn;
+		cpx* complexOutput = bf->cpxOut;
+
+		kiss_fft( bf->cfg , complexInput , complexOutput );
 
 		process_frame(bf, audat, var);
 
@@ -310,23 +312,25 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		DUMP_ARRAY(bf->phi_a       , bf->buflen, DEBUG_DIR "phi_a.csv"   , count, -1, sample_counter , bf->buflen);
 		DUMP_ARRAY(bf->phi_s       , bf->buflen, DEBUG_DIR "phi_s.csv"   , count, -1, sample_counter , bf->buflen);
 
-		kiss_fft( bf->cfgInv , bf->cpxOut , bf->cpxIn );
+		std::swap(complexInput, complexOutput);
+
+		kiss_fft( bf->cfgInv , complexInput, complexOutput);
 
 		DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxOut.csv"  , count, 5, sample_counter, -1);
 
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
-			bf->cpxOut[k].r = bf->cpxIn[k].r * audat->outwin[k] / bf->buflen;
+			complexOutput[k].r = complexOutput[k].r * audat->outwin[k] / bf->buflen;
 		}
 
         /************ SYNTHESIS STAGE ***********************/
 
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
-			bf->mag[k] = bf->cpxOut[k].r;
+			bf->mag[k] = complexOutput[k].r;
 		}
 		
-		strechFrame(audat->vTime, bf->mag, cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
+		strechFrame(audat->vTime, bf->mag, &audat->cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
 
 		DUMP_ARRAY(audat->vTime, audat->numFrames*hopS*2, DEBUG_DIR "vTimeXXX.csv", count, 40, sample_counter, -1);
 

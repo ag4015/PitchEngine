@@ -3,16 +3,20 @@
 #include <time.h>
 #include "wavio.h"
 #include "audioUtils.h"
-#include <stdint.h>
+#include "DSPConfig.h"
+#include "stdint.h"
 
 //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
 #define DEFAULT_INPUT_FILENAME "sine_tester_short.wav"
 #define DEFAULT_OUTPUT_FILENAME "output.wav"
 
+#define INGAIN     1
+#define OUTGAIN    1
+
 int main(int argc, char **argv)
 {
 
-#ifdef DEBUG
+#ifdef DSPDEBUG
 	float avg_time     = 0;                      // Average time taken to compute a frame
 	float elapsed_time = 0;
 	float var          = 0;
@@ -35,11 +39,13 @@ int main(int argc, char **argv)
 
 	parse_arguments(argc, argv, &inputFilePath, &outputFilePath, var);
 
+	PRINT_LOG2("Input file: %s\n", inputFilePath);
+	PRINT_LOG2("Output file: %s\n", outputFilePath);
+
 	// Load contents of wave file
-	printf("Input file: %s\n\n", inputFilePath);
 	float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
-	init_variables(&bf, &audat, numSamp, in_audio);
+	init_variables(&bf, &audat, numSamp, in_audio, 12);
 	
 	PRINT_LOG2("Buffer length: %i.\n", bf.buflen);
 
@@ -57,15 +63,15 @@ int main(int argc, char **argv)
 		for (int16_t k = 0; k < bf.buflen; k++)
 		{
 			audat.inbuffer[k] = audat.in_audio[audio_ptr + k] * INGAIN;
-			audat.outbuffer[k] = audat.inbuffer[k];
+			//audat.outbuffer[k] = audat.inbuffer[k];
 		}
-#ifdef DEBUG
+#ifdef DSPDEBUG
 		elapsed_time = clock();
 #endif
 
 		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, pOutBuffLastSample, var);
 
-#ifdef DEBUG
+#ifdef DSPDEBUG
 		elapsed_time = clock() - elapsed_time;
 		avg_time = avg_time + (elapsed_time - avg_time)/N;
 		N++;

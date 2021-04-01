@@ -1,5 +1,6 @@
 
 #include "wavio.h"
+#include "main.h"
 #include <iostream>
 #include <system_error>
 #include "wave/file.h"
@@ -82,16 +83,11 @@ float* readWav(uint32_t *numSamp, char* filePath)
 #ifndef USE_WAVE_LIBRARY
 void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
     
-    printf("Using Wave library\n");
     wav_hdr wavHeader;
     wav_hdr outWavHeader;
     FILE *wavFile;
     FILE *outWavFile;
     int headerSize = sizeof(wav_hdr);
-
-    // const char* outputFilePath = "/mnt/c/Users/alexg/Google Drive/Projects/Denoiser/output.wav";
-	printf("Output file: %s\n", outputFilePath);
-	printf("Number of samples: %i\n", numSamp);
 
     wavFile = fopen( inputFilePath , "r" );
 
@@ -186,7 +182,7 @@ void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t 
 
 	std::vector<float> content;
     content.reserve(numSamp);
-    for (int i = 0; i < numSamp; i++) {
+    for (uint32_t i = 0; i < numSamp; i++) {
         content.push_back(audio[i]);
     }
 	err = write_file.Write(content);

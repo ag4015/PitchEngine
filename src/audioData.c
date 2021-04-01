@@ -1,10 +1,10 @@
 
 #include "audioData.h"
+#include "DSPConfig.h"
 
-void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, float* in_audio)
+void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, float* in_audio, uint8_t steps)
 {
 	// Pitch variables
-	uint8_t steps = 12;
 	float shift = powf(2, steps/12);
 	uint32_t hopS = (int32_t)roundf((float)(HOPA * shift));
 

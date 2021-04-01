@@ -7,13 +7,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define NFREQ      (1 + BUFLEN/2)       // Number of unique frequency bins
-#define DISTORTION 0                    // DISTORTION = 1: Apply a polynomial function to the input audio
-#define INGAIN     1
-#define OUTGAIN    1
-#define FSAMP      44100
 // #define PDEBUG                          // Print debug information
-#define DEBUG     0
+#define DSPDEBUG   0
 #define SIMULATION                      // This is a simulation of the device
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
@@ -31,6 +26,8 @@
 #define INPUT_AUDIO_DIR RESOURCES_DIR "inputAudio/"
 #define OUTPUT_AUDIO_DIR RESOURCES_DIR "outputAudio/"
 #define DEBUG_DIR RESOURCES_DIR "debugData/"
+
+#define USE_WAVE_LIBRARY
 
 
 // Function declaration
