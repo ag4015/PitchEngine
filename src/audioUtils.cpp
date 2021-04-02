@@ -11,28 +11,25 @@
 
 #define MAGNITUDE_TOLERANCE 1e-4
 
-int count3 = 0;
-
-float absc(cpx *a)
+inline float absc(cpx *a)
 {
 	return sqrt(pow(a->i, 2) + pow(a->r, 2));
 }
-float argc(cpx *a)
+inline float argc(cpx *a)
 {
 	// float complex z;
 	std::complex<float> z(a->r,a->i);
 	return std::arg(z);
 }
-void expc(cpx *a, float* mag, float* phase)
-{
-	a->r = std::real(std::polar(*mag, *phase));
-	a->i = std::imag(std::polar(*mag, *phase));
-}
 
 void process_frame(buffer_data_t* bf, audio_data_t* audat, float var)
 {
+#ifdef PDEBUG
+	static int count = 0;
+#endif
 	float current_phi_a;
 	float phi_diff;
+	const std::complex<float> i(0, 1);
 	/*
 	 Time differentiation variables.
 	 Can't do forward differentiation because the algorithm is real time
@@ -66,26 +63,21 @@ void process_frame(buffer_data_t* bf, audio_data_t* audat, float var)
 		bf->phi_a[k] = current_phi_a;
 		deltaPhiPrime_t_back = phi_diff - (bf->hopA * 2 * PI * k)/bf->buflen;
 		deltaPhiPrimeMod_t_back = fmod(deltaPhiPrime_t_back + PI , 2 * PI) - PI;
-		// deltaPhiPrimeMod_t_back = fmod(deltaPhiPrime_t_back, 2 * PI);
 		bf->delta_t[k] = deltaPhiPrimeMod_t_back/bf->hopA + (2 * PI * k)/bf->buflen;
 
 		// Backward frequency differentiation
 		if (k > 0 && bf->mag[k-1] > abstol)
 		{
 			phi_diff = current_phi_a - argc(&bf->cpxOut[k - 1]);
-			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
-			// delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
-			delta_f_back = (1/b_a)*(fmod(phi_diff, 2 * PI));
+			delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 		}
 		else { delta_f_back = 0; }
 
 		// Forward frequency differentiation
-		if(k < bf->buflen - 1 && bf->mag[k+1] > abstol)
+		if(k < (bf->buflen - 1) && bf->mag[k+1] > abstol)
 		{
 			phi_diff = argc(&bf->cpxOut[k + 1]) - current_phi_a; 
-			phi_diff = (phi_diff >= 0) ? phi_diff : -phi_diff;
-			// delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
-			delta_f_fwd = (1/b_a)*(fmod(phi_diff, 2 * PI));
+			delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
 		}
 		else { delta_f_fwd = 0; }
 
@@ -95,25 +87,37 @@ void process_frame(buffer_data_t* bf, audio_data_t* audat, float var)
 			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 
 	}
-
+	
+#ifdef SIMPLE_PV
+	for (uint32_t k = 0; k < bf->buflen; k++)
+	{
+		bf->phi_s[k] += bf->hopS * bf->delta_t[k];
+	}
+#else
 	propagate_phase(bf, audat, b_s, abstol);
+#endif
 
 	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		expc(&bf->cpxOut[k], &bf->mag[k], &bf->phi_s[k]);
+		std::complex z = bf->mag[k] * std::exp(i*bf->phi_s[k]);
+		bf->cpxOut[k].r = std::real(z);
+		bf->cpxOut[k].i = std::imag(z);
 	}
 
-	 DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "magxxxxx.csv"       , count3, 10, 1, -1);
-	 DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_axxxxx.csv"     , count3, 10, 1, -1);
-	 DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_sxxxxx.csv"     , count3, 10, 1, -1);
-	 DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrevxxxxx.csv" , count3, 10, 1, -1);
-	count3++;
+	DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "magxxxxx.csv"       , count, 10, 1, -1);
+	DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_axxxxx.csv"     , count, 10, 1, -1);
+	DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_sxxxxx.csv"     , count, 10, 1, -1);
+	DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrevxxxxx.csv" , count, 10, 1, -1);
+#ifdef PDEBUG
+	count++;
+#endif
 }
 
-// TODO: Create a struct with all these variables
 void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float abstol)
 {
-	// int count = already;
+#ifdef PDEBUG
+	static int count = 0;
+#endif
 	std::set<uint16_t> setI, setICopy;
 	std::vector<Tuple> container;
 	container.reserve(1024);
@@ -131,8 +135,6 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 	}
 	setICopy = setI;
 
-	// PRINT_LOG2("I size: %lu\n", setI.size());
-
 	while(!setI.empty()) // STEP 6
 	{
 		// STEP 7
@@ -148,22 +150,22 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 				h.push(Tuple(current.m, 1)); // STEP 12
 			}
 		}
-		//if (current.n == 1) // STEP 15
-		//{
-		//	if (setI.count(current.m + 1)) // STEP 16
-		//	{
-		//		// b_s/b_a = alpha
-		//		bf->phi_s[current.m + 1] = bf->phi_s[current.m] + (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m + 1]); // STEP 17
-		//		setI.erase(current.m + 1); // STEP 18
-		//		h.push(Tuple(current.m + 1, 1)); // STEP 19
-		//	}
-		//	if (setI.count(current.m - 1)) // STEP 21
-		//	{
-		//		bf->phi_s[current.m - 1] = bf->phi_s[current.m] - (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m - 1]); // STEP 22
-		//		setI.erase(current.m - 1); // STEP 23
-		//		h.push(Tuple(current.m - 1, 1)); // STEP 24
-		//	}
-		//}
+		if (current.n == 1) // STEP 15
+		{
+			if (setI.count(current.m + 1)) // STEP 16
+			{
+				// b_s/b_a = alpha
+				bf->phi_s[current.m + 1] = bf->phi_s[current.m] + (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m + 1]); // STEP 17
+				setI.erase(current.m + 1); // STEP 18
+				h.push(Tuple(current.m + 1, 1)); // STEP 19
+			}
+			if (setI.count(current.m - 1)) // STEP 21
+			{
+				bf->phi_s[current.m - 1] = bf->phi_s[current.m] - (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m - 1]); // STEP 22
+				setI.erase(current.m - 1); // STEP 23
+				h.push(Tuple(current.m - 1, 1)); // STEP 24
+			}
+		}
 	}
 	for (uint32_t i = 0; i < bf->buflen; i++)
 	{
@@ -173,8 +175,11 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 			bf->delta_f[i] = 0;
 		}
 	}
-	DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count3, -1, 1, -1);
-	DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count3, -1, 1, -1);
+	DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count, -1, 1, -1);
+	DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count, -1, 1, -1);
+#ifdef PDEBUG
+	count++;
+#endif
 	return;
 }
 
@@ -273,9 +278,9 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, float pOutBuffLastSample, float var)
 {
 #ifdef PDEBUG
-	static counter_1 = 0;
-	static counter_2 = 0;
-	static sample_counter = 0;
+	static int counter_1 = 0;
+	static int counter_2 = 0;
+	static int sample_counter = 0;
 #endif
 
 	for (uint8_t f = 0; f < audat->numFrames; f++)
@@ -298,10 +303,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxIn.csv"  , count,  5, sample_counter, -1);
 
-		cpx* complexInput  = bf->cpxIn;
-		cpx* complexOutput = bf->cpxOut;
-
-		kiss_fft( bf->cfg , complexInput , complexOutput );
+		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
 
 		process_frame(bf, audat, var);
 
@@ -312,22 +314,22 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		DUMP_ARRAY(bf->phi_a       , bf->buflen, DEBUG_DIR "phi_a.csv"   , count, -1, sample_counter , bf->buflen);
 		DUMP_ARRAY(bf->phi_s       , bf->buflen, DEBUG_DIR "phi_s.csv"   , count, -1, sample_counter , bf->buflen);
 
-		std::swap(complexInput, complexOutput);
+		std::swap(bf->cpxIn, bf->cpxOut);
 
-		kiss_fft( bf->cfgInv , complexInput, complexOutput);
+		kiss_fft( bf->cfgInv , bf->cpxIn, bf->cpxOut);
 
 		DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxOut.csv"  , count, 5, sample_counter, -1);
 
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
-			complexOutput[k].r = complexOutput[k].r * audat->outwin[k] / bf->buflen;
+			bf->cpxOut[k].r = bf->cpxOut[k].r * audat->outwin[k] / bf->buflen;
 		}
 
         /************ SYNTHESIS STAGE ***********************/
 
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
-			bf->mag[k] = complexOutput[k].r;
+			bf->mag[k] = bf->cpxOut[k].r;
 		}
 		
 		strechFrame(audat->vTime, bf->mag, &audat->cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);

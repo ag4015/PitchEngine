@@ -8,8 +8,9 @@
 #include <stddef.h>
 
 // #define PDEBUG                          // Print debug information
-#define DSPDEBUG   0
+#define DSPDEBUG   1
 #define SIMULATION                      // This is a simulation of the device
+#define PDEBUG
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
 

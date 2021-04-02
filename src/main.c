@@ -7,7 +7,7 @@
 #include "stdint.h"
 
 //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
-#define DEFAULT_INPUT_FILENAME "sine_tester_short.wav"
+#define DEFAULT_INPUT_FILENAME "constant_guitar.wav"
 #define DEFAULT_OUTPUT_FILENAME "output.wav"
 
 #define INGAIN     1
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	// Load contents of wave file
 	float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
-	init_variables(&bf, &audat, numSamp, in_audio, 12);
+	init_variables(&bf, &audat, numSamp, in_audio, 0);
 	
 	PRINT_LOG2("Buffer length: %i.\n", bf.buflen);
 
@@ -63,7 +63,6 @@ int main(int argc, char **argv)
 		for (int16_t k = 0; k < bf.buflen; k++)
 		{
 			audat.inbuffer[k] = audat.in_audio[audio_ptr + k] * INGAIN;
-			//audat.outbuffer[k] = audat.inbuffer[k];
 		}
 #ifdef DSPDEBUG
 		elapsed_time = clock();
@@ -73,8 +72,7 @@ int main(int argc, char **argv)
 
 #ifdef DSPDEBUG
 		elapsed_time = clock() - elapsed_time;
-		avg_time = avg_time + (elapsed_time - avg_time)/N;
-		N++;
+		avg_time = avg_time + (elapsed_time - avg_time)/++N;
 #endif
 
 		for (int16_t k = 0; k < bf.buflen; k++)
