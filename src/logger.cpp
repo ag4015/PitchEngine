@@ -3,7 +3,7 @@
 #include <fstream>
 
 template<typename T>
-void dump_array(T* buf, size_t size, std::string&& fileName, int count, int max, int auP, int auPMax)
+void dump_array(T* buf, uint32_t size, std::string&& fileName, int count, int max, int auP, int auPMax)
 {
 	static_assert(std::is_floating_point<T>::value || isComplex<T>::value);
 

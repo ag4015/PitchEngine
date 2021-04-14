@@ -7,14 +7,13 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// #define PDEBUG                          // Print debug information
-#define DSPDEBUG   1
+ //#define PDEBUG                          // Print debug information
+//#define DSPDEBUG
 #define SIMULATION                      // This is a simulation of the device
-#define PDEBUG
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
 
-#ifdef PDEBUG
+#ifdef DEBUG_LOG
        #define PRINT_LOG1(x)       printf(x)
        #define PRINT_LOG2(x,y)     printf(x,y)
        #define PRINT_LOG3(x,y,z)   printf(x,y,z)

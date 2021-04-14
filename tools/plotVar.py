@@ -7,16 +7,17 @@ import os
 import glob
 import pdb
 
-path = "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/debugData/"
+# path = "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/debugData/"
+path = "/mnt/c/Users/alexg/source/repos/DSPSim/resources/debugData/"
 extension = 'csv'
 os.chdir(path)
 
-FFTLEN = 2048
+FFTLEN = 1024
 NFREQ = 1 + FFTLEN/2
 FSAMP = 44100
 TFRAME = (1/FSAMP)*FFTLEN
 hopA = 256
-steps = 4 
+steps = 0 
 numFrames = int(FFTLEN/hopA)
 hopS = int(hopA*2**(steps/12))
 
@@ -52,4 +53,4 @@ def plot_delta():
 
 
 
-plot_delta()
+plot_everything()

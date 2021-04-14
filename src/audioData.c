@@ -5,8 +5,8 @@
 void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, float* in_audio, uint8_t steps)
 {
 	// Pitch variables
-	float shift = powf(2, steps/12);
-	uint32_t hopS = (int32_t)roundf((float)(HOPA * shift));
+	float shift = powf(2, ((float)steps)/12);
+	uint32_t hopS = (int32_t)roundf(HOPA * shift);
 
 	// Initialize structures
 	initialize_audio_data(audat, hopS, NUMFRAMES, numSamp, BUFLEN, in_audio);
@@ -14,13 +14,15 @@ void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, fl
 
 	// Initialize input and output window functions
 	for(uint16_t k = 0; k < BUFLEN; k++){
-		audat->inwin[k]   =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrtf((BUFLEN/bf->hopA)/2);
-		audat->outwin[k]  =  HAMCONST * (1 - cos(2 * PI * k/BUFLEN))/sqrtf((BUFLEN/bf->hopS)/2);
+		audat->inwin[k] = WINCONST * (1 - cos(2 * PI * k / BUFLEN));
+		audat->outwin[k] = WINCONST * (1 - cos(2 * PI * k / BUFLEN));
+		//audat->inwin[k] = 0.5;
+		//audat->outwin[k] = 0.5;
 	}
 
-	for (uint32_t i = 0; i < numSamp; i++){
-		audat->in_audio[i] = audat->in_audio[i] / MAXVAL16;
-	}
+	//for (uint32_t i = 0; i < numSamp; i++){
+	//	audat->in_audio[i] = audat->in_audio[i] / MAXVAL16;
+	//}
 }
 
 void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat)
@@ -29,9 +31,9 @@ void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat)
 	bf->magPrev = bf->mag;
 	bf->mag = (bf->mag == audat->mag_ping) ? audat->mag_pong : audat->mag_ping;
 
-	// Update phase pointers
-	bf->phi_sPrev = bf->phi_s;
-	bf->phi_s = (bf->phi_s == audat->phi_ping) ? audat->phi_pong : audat->phi_ping;
+	// Phase pointers are not updated
+	//bf->phi_sPrev = bf->phi_s;
+	//bf->phi_s = (bf->phi_s == audat->phi_ping) ? audat->phi_pong : audat->phi_ping;
 
 	// Update time phase derivative pointers
 	bf->delta_tPrev = bf->delta_t;
@@ -55,6 +57,7 @@ void initialize_buffer_data(buffer_data_t* bf, audio_data_t* audat, float shift,
 	bf->shift = shift;
 	bf->steps = steps;
 	bf->buflen = bufLen;
+	bf->maxMagPrev = 0;
 
 	// Initialize the magnitude pointers
 	bf->mag = audat->mag_ping;
@@ -76,6 +79,7 @@ audio_data_t alloc_audio_data(uint32_t vTimeSize, uint32_t numSamp, uint32_t buf
 	audat.inbuffer     = (float *)  calloc(bufLen,    sizeof(float));
 	audat.outbuffer    = (float *)  calloc(bufLen,    sizeof(float));
 	audat.inframe      = (float *)  calloc(bufLen,    sizeof(float));
+	audat.outframe     = (float *)  calloc(bufLen,    sizeof(float));
 	audat.inwin        = (float *)  calloc(bufLen,    sizeof(float));
 	audat.outwin       = (float *)  calloc(bufLen,    sizeof(float));
 	audat.phi_ping     = (float *)  calloc(bufLen,    sizeof(float));
@@ -92,6 +96,7 @@ buffer_data_t alloc_buffer_data(uint32_t bufLen)
 {
 	buffer_data_t bf;
 	bf.phi_a           = (float *)       calloc(bufLen, sizeof(float));
+	bf.phi_aPrev       = (float *)       calloc(bufLen, sizeof(float));
 	bf.delta_f         = (float *)       calloc(bufLen, sizeof(float));
 	bf.cpxIn           = (kiss_fft_cpx*) calloc(bufLen, sizeof(kiss_fft_cpx));
 	bf.cpxOut          = (kiss_fft_cpx*) calloc(bufLen, sizeof(kiss_fft_cpx));
@@ -105,6 +110,7 @@ void free_audio_data(audio_data_t* audat)
 	free(audat->inbuffer);
 	free(audat->outbuffer);
 	free(audat->inframe);
+	free(audat->outframe);
 	free(audat->vTime);
 	free(audat->inwin);
 	free(audat->outwin);
@@ -121,9 +127,30 @@ void free_audio_data(audio_data_t* audat)
 void free_buffer_data(buffer_data_t* bf)
 {
 	free(bf->phi_a);
+	free(bf->phi_aPrev);
 	free(bf->delta_f);
 	free(bf->cpxIn);
 	free(bf->cpxOut);
 	kiss_fft_free(bf->cfg);
 	kiss_fft_free(bf->cfgInv);
+}
+
+void reset_buffer_data_arrays(buffer_data_t* bf)
+{
+	for (uint32_t k = 0; k < bf->buflen; k++)
+	{
+		bf->cpxIn[k].r = 0;
+		bf->cpxIn[k].i = 0;
+		bf->cpxOut[k].r = 0;
+		bf->cpxOut[k].i = 0;
+		bf->mag[k] = 0;
+		bf->magPrev[k] = 0;
+		bf->phi_a[k] = 0;
+		bf->phi_aPrev[k] = 0;
+		bf->phi_s[k] = 0;
+		bf->phi_sPrev[k] = 0;
+		bf->delta_t[k] = 0;
+		bf->delta_tPrev[k] = 0;
+		bf->delta_f[k] = 0;
+	}
 }

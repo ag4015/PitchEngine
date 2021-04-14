@@ -6,12 +6,13 @@
 #include "DSPConfig.h"
 #include "stdint.h"
 
-//#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
 #define DEFAULT_INPUT_FILENAME "constant_guitar.wav"
-#define DEFAULT_OUTPUT_FILENAME "output.wav"
+//#define DEFAULT_INPUT_FILENAME "sine_short.wav"
+#define DEFAULT_OUTPUT_FILENAME "output3.wav"
 
 #define INGAIN     1
 #define OUTGAIN    1
+#define STEPS      12
 
 int main(int argc, char **argv)
 {
@@ -19,9 +20,9 @@ int main(int argc, char **argv)
 #ifdef DSPDEBUG
 	float avg_time     = 0;                      // Average time taken to compute a frame
 	float elapsed_time = 0;
-	float var          = 0;
 	uint32_t N         = 0;
 #endif
+	float var          = 0;
 
 	// Local variable declaration
 	char* inputFilePath      = 0; 
@@ -45,28 +46,21 @@ int main(int argc, char **argv)
 	// Load contents of wave file
 	float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
-	init_variables(&bf, &audat, numSamp, in_audio, 0);
+	init_variables(&bf, &audat, numSamp, in_audio, STEPS);
 	
 	PRINT_LOG2("Buffer length: %i.\n", bf.buflen);
 
-	// The first buffer isn't processed but it is stored
-	for (uint8_t f = 0; f < audat.numFrames; f++)
-	{
-		for (uint32_t k = 0; k < bf.hopA; k++)
-		{
-			audat.inframe[f * bf.hopA + k] = audat.in_audio[audio_ptr + k + f*bf.hopA] * INGAIN;
-		}
-	}
-	audio_ptr += bf.buflen;
 	while(audio_ptr < (numSamp - bf.buflen))
 	{
 		for (int16_t k = 0; k < bf.buflen; k++)
 		{
 			audat.inbuffer[k] = audat.in_audio[audio_ptr + k] * INGAIN;
 		}
+
 #ifdef DSPDEBUG
 		elapsed_time = clock();
 #endif
+		printf("\r%i%%", 100 * audio_ptr/numSamp);
 
 		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, pOutBuffLastSample, var);
 
@@ -88,14 +82,15 @@ int main(int argc, char **argv)
 		}
 		audio_ptr += bf.buflen;
 	}
-
+#ifdef DSPDEBUG
 	PRINT_LOG2("It took an average of %f ms to process each frame.\n", 1000.0 * avg_time/CLOCKS_PER_SEC);
+#endif
 
 	// Reconvert floating point audio to 16bit
-	for (uint32_t i = 0; i < numSamp; i++)
-	{
-		audat.out_audio[i] = audat.out_audio[i] * MAXVAL16;
-	}
+	//for (uint32_t i = 0; i < numSamp; i++)
+	//{
+	//	audat.out_audio[i] = audat.out_audio[i] * MAXVAL16;
+	//}
 
 	// Save the processed audio to the output file
 	writeWav(audat.out_audio, inputFilePath, outputFilePath, numSamp);

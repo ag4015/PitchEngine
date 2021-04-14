@@ -1,4 +1,5 @@
 
+#include "DSPConfig.h"
 #include "wavio.h"
 #include "main.h"
 #include <iostream>
@@ -71,12 +72,28 @@ float* readWav(uint32_t *numSamp, char* filePath)
         std::cout << "Error code: " << err << std::endl;
 		exit(EXIT_FAILURE);
 	}
-    *numSamp = content.size();
-    float* audio = (float*) calloc(content.size(), sizeof(float));
-    // Move contents from vector to array
-    for (uint32_t i = 0; i < content.size(); i++) {
-        audio[i] = content[i];
+    int numChannels = read_file.channel_number();
+    if (numChannels == 2)
+    {
+        *numSamp = *numSamp/2;
+        PRINT_LOG1("Converting stereo to mono.\n");
+        // Average the two channels
+        for (size_t k = 0; k < content.size(); k += 2)
+        {
+            content[k] = (content[k] + content[k + 1]) / 2;
+        }
+        *numSamp = content.size()/2;
     }
+    else if(numChannels > 2)
+    {
+        std::cout << "Error: Unsupported number of channels: " << numChannels << std::endl;
+		exit(EXIT_FAILURE);
+    }
+    float* audio = (float*) calloc(*numSamp, sizeof(float));
+	for (uint32_t i = 0; i < *numSamp; i++) {
+		audio[i] = (numChannels == 2) ? content[i*2] : content[i];
+	}
+	PRINT_LOG2("Number of samples: %i\n", *numSamp);
     return audio;
 }
 
@@ -178,7 +195,7 @@ void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t 
 
 	write_file.set_sample_rate(read_file.sample_rate());
 	write_file.set_bits_per_sample(read_file.bits_per_sample());
-	write_file.set_channel_number(read_file.channel_number());
+	write_file.set_channel_number(1);
 
 	std::vector<float> content;
     content.reserve(numSamp);

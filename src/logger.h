@@ -1,10 +1,12 @@
 #pragma once
+#include "DSPConfig.h"
 #include "audioData.h"
+#include "main.h"
 #include <string>
 
-#ifdef PDEBUG
+#ifdef DEBUG_DUMP
        #define DUMP_ARRAY(a,b,c,d,e,f,g) dump_array(a,b,c,d,e,f,g)
-       #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g) COPY(mag[k], a[k].r, b); dump_array(mag,b,c,d,e,f,g)
+       #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g) { float tmp_[BUFLEN]; COPY(tmp_[k], a[k].r, BUFLEN); dump_array(tmp_,b,c,d,e,f,g); }
 #else
        #define DUMP_ARRAY(a,b,c,d,e,f,g)
        #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g)
@@ -25,7 +27,7 @@ public:
 };
 
 template<typename T>
-void dump_array(T* buf, size_t size, std::string&& fileName, int count, int max, int auP, int auPMax);
+void dump_array(T* buf, uint32_t size, std::string&& fileName, int count, int max, int auP, int auPMax);
 
 
 #ifdef __cplusplus
