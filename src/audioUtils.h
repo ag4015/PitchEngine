@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "DSPConfig.h"
 #include <math.h>
 #include <stdint.h>
 #include "kissfft/kiss_fft.h"
@@ -14,17 +15,17 @@ extern "C"
 #include "audioData.h"
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, float pOutBuffLastSample, float var);
-void process_frame(buffer_data_t* bf, audio_data_t* audat, float var);
-void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float abstol);
+	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample, my_float var);
+void process_frame(buffer_data_t* bf, audio_data_t* audat, my_float var);
+void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_float abstol);
 
-void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t frameNum, int numFrames);
+void overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint8_t frameNum, int numFrames);
 
-//void strechFrame(float* output, float* input, int* cleanIdx, int hop, int frameNum, int outputIdx, int outputSize, int bufLen);
-void strechFrame(float* output, float* input, uint32_t* cleanIdx, uint32_t hop,
+//void strechFrame(my_float* output, my_float* input, int* cleanIdx, int hop, int frameNum, int outputIdx, int outputSize, int bufLen);
+void strechFrame(my_float* output, my_float* input, uint32_t* cleanIdx, uint32_t hop,
 	uint8_t frameNum, uint32_t outputIdx, uint32_t outputSize, uint32_t bufLen);
 
-void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, float pOutBuffLastSample);
+void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, my_float* pOutBuffLastSample);
 
 
 #ifdef __cplusplus

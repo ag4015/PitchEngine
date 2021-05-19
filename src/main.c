@@ -6,9 +6,9 @@
 #include "DSPConfig.h"
 #include "stdint.h"
 
-#define DEFAULT_INPUT_FILENAME "constant_guitar.wav"
+#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
 //#define DEFAULT_INPUT_FILENAME "sine_short.wav"
-#define DEFAULT_OUTPUT_FILENAME "output3.wav"
+#define DEFAULT_OUTPUT_FILENAME "output4.wav"
 
 #define INGAIN     1
 #define OUTGAIN    1
@@ -18,35 +18,35 @@ int main(int argc, char **argv)
 {
 
 #ifdef DSPDEBUG
-	float avg_time     = 0;                      // Average time taken to compute a frame
-	float elapsed_time = 0;
+	my_float avg_time     = 0;                      // Average time taken to compute a frame
+	my_float elapsed_time = 0;
 	uint32_t N         = 0;
 #endif
-	float var          = 0;
+	my_float var          = 0;
 
 	// Local variable declaration
 	char* inputFilePath      = 0; 
 	char* outputFilePath     = 0; 
-	float *coeffs            = 0;                 // Coefficients from the distortion polynomial
+	my_float *coeffs         = 0;                 // Coefficients from the distortion polynomial
 	uint32_t audio_ptr       = 0;                 // Wav file sample pointer
 	uint8_t frameNum         = 0;                 // Frame index. It's circular.
 	uint32_t vTimeIdx        = 0;                 // Circular buffer for vTime
 	uint32_t cleanIdx        = 0;                 // Circular buffer for reseting the vTime array
-	float pOutBuffLastSample = 0;
+	my_float pOutBuffLastSample = 0;
     uint32_t numSamp;                             // Total number of samples in wave file
 
 	buffer_data_t bf;
 	audio_data_t audat;
 
-	parse_arguments(argc, argv, &inputFilePath, &outputFilePath, var);
+	parse_arguments(argc, argv, &inputFilePath, &outputFilePath, &var);
 
 	PRINT_LOG2("Input file: %s\n", inputFilePath);
 	PRINT_LOG2("Output file: %s\n", outputFilePath);
 
 	// Load contents of wave file
-	float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
+	my_float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
-	init_variables(&bf, &audat, numSamp, in_audio, STEPS);
+	init_variables(&bf, &audat, numSamp, in_audio, STEPS, BUFLEN);
 	
 	PRINT_LOG2("Buffer length: %i.\n", bf.buflen);
 
@@ -60,9 +60,9 @@ int main(int argc, char **argv)
 #ifdef DSPDEBUG
 		elapsed_time = clock();
 #endif
-		printf("\r%i%%", 100 * audio_ptr/numSamp);
+		//printf("\r%i%%", 100 * audio_ptr/numSamp);
 
-		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, pOutBuffLastSample, var);
+		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, &pOutBuffLastSample, var);
 
 #ifdef DSPDEBUG
 		elapsed_time = clock() - elapsed_time;
@@ -106,10 +106,10 @@ int main(int argc, char **argv)
 
 }
 
-void load_distortion_coefficients(float* coeffs, size_t* coeff_size)
+void load_distortion_coefficients(my_float* coeffs, size_t* coeff_size)
 {
 	FILE* inFile = fopen("polyCoeff.csv", "r");
-	float coeff;
+	my_float coeff;
 	*coeff_size = 0;
 	size_t n = 0;
 
@@ -119,7 +119,7 @@ void load_distortion_coefficients(float* coeffs, size_t* coeff_size)
         exit(1);
 	}
 	while( fscanf(inFile, "%f\n", &coeff) != EOF )
-	coeffs = (float *) calloc(*coeff_size, sizeof(float));
+	coeffs = (my_float *) calloc(*coeff_size, sizeof(my_float));
 	PRINT_LOG1("Coefficients:\n");
 
 	while( fscanf(inFile, "%f\n", &coeff) != EOF )
@@ -131,7 +131,7 @@ void load_distortion_coefficients(float* coeffs, size_t* coeff_size)
 	fclose(inFile);
 }
 
-void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, float var)
+void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, my_float* var)
 {
 	if (argc > 1)
 	{
@@ -157,8 +157,12 @@ void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputF
 	}
 	if (argc > 3)
 	{
+#ifdef USE_DOUBLE
+		*var = atof(argv[3]);
+#else
 		char* tmpPtr;
-		var = strtof(argv[3], &tmpPtr);
+		*var = strtof(argv[3], &tmpPtr);
+#endif
 	}
 }
 

@@ -4,6 +4,9 @@
 #   add_definitions(-DPDEBUG)
 # endif()
 add_definitions(${PDEBUG})
+add_compile_definitions(USE_DOUBLE)
+#add_compile_definitions(SIMPLE_PV)
+#add_definitions(-DUSE_DOUBLE=${USE_DOUBLE})
 
 configure_file(DSPConfig.h.in ${CMAKE_CURRENT_SOURCE_DIR}/DSPConfig.h)
 
@@ -24,6 +27,12 @@ add_executable(DSPSim
                logger.cpp
                )
 
+add_executable(DSPSimTest
+               test.cpp
+               audioData.c
+               audioUtils.cpp
+               logger.cpp
+               )
 target_compile_options(DSPSim PUBLIC -Wall -pedantic -g)
 
 target_include_directories(DSPSim PUBLIC
@@ -33,3 +42,6 @@ target_include_directories(DSPSim PUBLIC
 target_link_libraries(DSPSim PUBLIC
                         kissfft
                         wave)
+
+target_link_libraries(DSPSimTest PUBLIC
+                        kissfft)

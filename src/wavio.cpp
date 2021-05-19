@@ -1,5 +1,4 @@
 
-#include "DSPConfig.h"
 #include "wavio.h"
 #include "main.h"
 #include <iostream>
@@ -56,7 +55,7 @@ void printHeader(wav_hdr wavHeader){
     printf("**************************************\n");
 }
 
-float* readWav(uint32_t *numSamp, char* filePath)
+my_float* readWav(uint32_t *numSamp, char* filePath)
 {
 	wave::File read_file;
 	wave::Error err = read_file.Open(filePath, wave::kIn);
@@ -89,7 +88,7 @@ float* readWav(uint32_t *numSamp, char* filePath)
         std::cout << "Error: Unsupported number of channels: " << numChannels << std::endl;
 		exit(EXIT_FAILURE);
     }
-    float* audio = (float*) calloc(*numSamp, sizeof(float));
+    my_float* audio = (my_float*) calloc(*numSamp, sizeof(my_float));
 	for (uint32_t i = 0; i < *numSamp; i++) {
 		audio[i] = (numChannels == 2) ? content[i*2] : content[i];
 	}
@@ -98,7 +97,7 @@ float* readWav(uint32_t *numSamp, char* filePath)
 }
 
 #ifndef USE_WAVE_LIBRARY
-void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
+void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
     
     wav_hdr wavHeader;
     wav_hdr outWavHeader;
@@ -181,7 +180,7 @@ void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t 
     return;
 }
 #else
-void writeWav(float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
+void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
 
 	wave::File read_file;
 	wave::Error err = read_file.Open(inputFilePath, wave::kIn);

@@ -27,7 +27,7 @@ void dump_array(T* buf, uint32_t size, std::string&& fileName, int count, int ma
 	outFile.close();
 }
 
-void template_float_dump_array(float* buf, size_t size, const char* fileName, int count, int max, int auP, int auPMax)
+void template_float_dump_array(my_float* buf, size_t size, const char* fileName, int count, int max, int auP, int auPMax)
 {
 	dump_array(buf, size, fileName, count, max, auP, auPMax);
 }

@@ -37,8 +37,8 @@ extern "C"
 {
 #endif
 
-void load_distortion_coefficients(float* coeffs, size_t* coeff_size);
-void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, float var);
+void load_distortion_coefficients(my_float* coeffs, size_t* coeff_size);
+void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, my_float* var);
 
 #ifdef __cplusplus
 } // extern C

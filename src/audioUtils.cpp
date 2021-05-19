@@ -9,67 +9,66 @@
 #include <queue>
 #include <set>
 #include <complex.h>
+#include <random>
 
 #define MAGNITUDE_TOLERANCE 1e-4
-#define SIMPLE_PV
+//#define SIMPLE_PV
 
-void process_frame(buffer_data_t* bf, audio_data_t* audat, float var)
+void process_frame(buffer_data_t* bf, audio_data_t* audat, my_float var)
 {
 #ifdef DEBUG_DUMP
 	static int count = 0;
 #endif
-	//float current_phi_a;
-	float phi_diff;
-	const std::complex<float> i(0, 1);
+	//my_float current_phi_a;
+	my_float phi_diff;
+	const std::complex<my_float> i(0, 1);
 
 	// Time differentiation variables.
 	// Can't do forward differentiation because the algorithm is real time
-	float deltaPhiPrime_t_back[1024];
-	float deltaPhiPrimeMod_t_back[1024];
+	my_float deltaPhiPrime_t_back[BUFLEN];
+	my_float deltaPhiPrimeMod_t_back[BUFLEN];
 
 	// Frequency differentiation variables
-	float delta_f_back;
-	float delta_f_fwd;
-	float b_a = 1;
-	float b_s = b_a * bf->shift;
+	my_float delta_f_back;
+	my_float delta_f_fwd;
+	my_float b_a = 1; // b_a/b_s = shift; The value of b_a has no effect on the result
+	my_float b_s = b_a * bf->shift;
 
-	for(uint16_t k = 0; k < bf->buflen; k++)
+	for(uint32_t k = 0; k < bf->buflen; k++)
 	{
-		bf->phi_sPrev[k] = bf->phi_s[k];
-		bf->mag[k] = std::abs(std::complex<float>{bf->cpxOut[k].r, bf->cpxOut[k].i});
+		bf->mag[k] = std::abs(std::complex<my_float>{bf->cpxOut[k].r, bf->cpxOut[k].i});
 		bf->phi_aPrev[k] = bf->phi_a[k];
-		bf->phi_a[k] = std::arg(std::complex<float>{bf->cpxOut[k].r, bf->cpxOut[k].i});
+		bf->phi_a[k] = std::arg(std::complex<my_float>{bf->cpxOut[k].r, bf->cpxOut[k].i});
 	}
 
 	// STEP 1
-	float tol = MAGNITUDE_TOLERANCE;
-	float maxMag     = *std::max_element(bf->mag, bf->mag + bf->buflen);
-	float abstol  = tol * ((maxMag >= bf->maxMagPrev) ? (maxMag) : (bf->maxMagPrev));
+	my_float tol = MAGNITUDE_TOLERANCE;
+	my_float maxMag     = *std::max_element(bf->mag, bf->mag + bf->buflen);
+	my_float abstol  = tol * ((maxMag >= bf->maxMagPrev) ? (maxMag) : (bf->maxMagPrev));
 	bf->maxMagPrev = maxMag;
 
-	for(uint16_t k = 0; k < bf->buflen; k++)
+	for(uint32_t k = 0; k < bf->buflen; k++)
 	{
 
 		// Time differentiation
 		phi_diff = bf->phi_a[k] - bf->phi_aPrev[k];
-		bf->phi_a[k] = bf->phi_a[k];
 		deltaPhiPrime_t_back[k] = phi_diff - (bf->hopA * 2 * PI * k)/bf->buflen;
 		deltaPhiPrimeMod_t_back[k] = std::remainder(deltaPhiPrime_t_back[k], 2 * PI);
 		bf->delta_t[k] = deltaPhiPrimeMod_t_back[k]/bf->hopA + (2 * PI * k)/bf->buflen;
 
 		// Backward frequency differentiation
-		if (k > 0 && bf->mag[k-1] > abstol)
+		if (k > 0)
 		{
-			phi_diff = bf->phi_a[k] - std::arg(std::complex<float>{bf->cpxOut[k - 1].r, bf->cpxOut[k - 1].i});
-			delta_f_back = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
+			phi_diff = bf->phi_a[k] - bf->phi_a[k - 1];
+			delta_f_back = (1 / b_a) * std::remainder(phi_diff, 2 * PI);
 		}
 		else { delta_f_back = 0; }
 
 		// Forward frequency differentiation
-		if(k < (bf->buflen - 1) && bf->mag[k+1] > abstol)
+		if(k < (bf->buflen - 1))
 		{
-			phi_diff = std::arg(std::complex<float>{bf->cpxOut[k + 1].r, bf->cpxOut[k + 1].i}) - bf->phi_a[k]; 
-			delta_f_fwd = (1/b_a)*(fmod(phi_diff + PI, 2 * PI) - PI);
+			phi_diff = bf->phi_a[k + 1] - bf->phi_a[k]; 
+			delta_f_fwd = (1 / b_a) * std::remainder(phi_diff, 2 * PI);
 		}
 		else { delta_f_fwd = 0; }
 
@@ -83,40 +82,39 @@ void process_frame(buffer_data_t* bf, audio_data_t* audat, float var)
 #ifdef SIMPLE_PV
 	for (uint32_t k = 0; k < bf->buflen; k++)
 	{
-		bf->phi_s[k] = bf->phi_s[k] + bf->hopS * bf->delta_t[k];
+		bf->phi_s[k] = bf->phi_sPrev[k] + (bf->hopS / 2) * (bf->delta_t[k] + bf->delta_tPrev[k]);
 	}
 #else
-	propagate_phase(bf, audat, b_s, abstol);
+	propagate_phase(bf, audat, b_s , abstol);
 #endif
-	std::complex<float> z[1024];
+	std::complex<my_float> z[BUFLEN];
 
 	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		z[k] = bf->mag[k] * std::exp(std::complex{0.f, bf->phi_s[k]});
-		//std::complex z = bf->mag[k] * std::exp(i * bf->phi_s[k]);
+		z[k] = bf->mag[k] * std::exp(std::complex<my_float>{0.f, bf->phi_s[k]});
 		bf->cpxOut[k].r = std::real(z[k]);
 		bf->cpxOut[k].i = std::imag(z[k]);
 	}
 
-	DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "magxxxxx.csv"       , count, 10, 1, -1);
-	DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_axxxxx.csv"     , count, 10, 1, -1);
-	DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_sxxxxx.csv"     , count, 10, 1, -1);
-	DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrevxxxxx.csv" , count, 10, 1, -1);
+	DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "mag.csv"       , count, -1, 1, -1);
+	DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_a.csv"     , count, -1, 1, -1);
+	DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_s.csv"     , count, -1, 1, -1);
+	DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrev.csv" , count, -1, 1, -1);
 #ifdef DEBUG_DUMP
 	count++;
 #endif
 }
 
-void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float abstol)
+void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_float abstol)
 {
 #ifdef DEBUG_DUMP
 	static int count = 0;
 #endif
-	std::set<uint16_t> setI, setICopy;
+	std::set<uint16_t> setI;
 	std::vector<Tuple> container;
-	container.reserve(1024);
+	container.reserve(BUFLEN);
 	TupleCompareObject cmp(bf->mag, bf->magPrev);
-	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject> h{cmp, std::move(container)}; // STEP 4
+	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject<my_float> > h{cmp, std::move(container)}; // STEP 4
 
 	for (uint32_t m = 0; m < bf->buflen; m++)
 	{
@@ -125,9 +123,11 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 			setI.insert(m); // STEP 2
 			h.push(Tuple(m, 0)); // STEP 5
 		}
-		else { bf->phi_s[m] = (std::rand()/(float)RAND_MAX) * 2 * PI - PI; } // STEP 3
+		else // STEP 3
+		{
+			bf->phi_s[m] = (std::rand()/(my_float)RAND_MAX) * 2 * PI - PI;
+		}
 	}
-	setICopy = setI;
 
 	while(!setI.empty()) // STEP 6
 	{
@@ -139,7 +139,7 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 		{
 			if(setI.count(current.m)) // STEP 9
 			{
-				bf->phi_s[current.m] = bf->phi_sPrev[current.m] + (bf->hopA/2)*(bf->delta_tPrev[current.m] + bf->delta_t[current.m]); // STEP 10
+				bf->phi_s[current.m] = bf->phi_sPrev[current.m] + (bf->hopS/2)*(bf->delta_tPrev[current.m] + bf->delta_t[current.m]); // STEP 10
 				setI.erase(current.m); // STEP 11
 				h.push(Tuple(current.m, 1)); // STEP 12
 			}
@@ -148,7 +148,6 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 		{
 			if (setI.count(current.m + 1)) // STEP 16
 			{
-				// b_s/b_a = alpha
 				bf->phi_s[current.m + 1] = bf->phi_s[current.m] + (b_s/2) * (bf->delta_f[current.m] + bf->delta_f[current.m + 1]); // STEP 17
 				setI.erase(current.m + 1); // STEP 18
 				h.push(Tuple(current.m + 1, 1)); // STEP 19
@@ -161,14 +160,15 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 			}
 		}
 	}
-	for (uint32_t i = 0; i < bf->buflen; i++)
-	{
-		if(!setICopy.count(i))
-		{
-			bf->delta_t[i] = 0;
-			bf->delta_f[i] = 0;
-		}
-	}
+
+	//for (uint32_t i = 0; i < bf->buflen; i++)
+	//{
+	//	if(!setICopy.count(i))
+	//	{
+	//		bf->delta_t[i] = 0;
+	//		bf->delta_f[i] = 0;
+	//	}
+	//}
 	DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count, -1, 1, -1);
 	DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count, -1, 1, -1);
 #ifdef DEBUG_DUMP
@@ -177,7 +177,7 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, float b_s, float ab
 	return;
 }
 
-void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t frameNum, int numFrames)
+void overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint8_t frameNum, int numFrames)
 {
 	for (int k = 0; k < hop; k++)
 	{
@@ -195,7 +195,7 @@ void overlapAdd(float* input, float* frame, float* output, int hop, uint8_t fram
 	}
 }
 
-void strechFrame(float* output, float* input, uint32_t* cleanIdx, uint32_t hop,
+void strechFrame(my_float* output, my_float* input, uint32_t* cleanIdx, uint32_t hop,
 	uint8_t frameNum, uint32_t outputIdx, uint32_t outputSize, uint32_t bufLen)
 {
 	for (uint32_t k = 0; k < hop; k++)
@@ -214,28 +214,9 @@ void strechFrame(float* output, float* input, uint32_t* cleanIdx, uint32_t hop,
 		if ((++t) >= (outputSize)) t = 0;
 	}
 }
-//void strechFrame(float* output, float* input, int* cleanIdx, int hop, int frameNum, int outputIdx, int outputSize, int bufLen)
-//{
-//	int k;
-//	for (k = 0; k < hop; k++)
-//	{
-//		output[*cleanIdx] = 0;
-//		if (++(*cleanIdx) >= outputSize) *cleanIdx = 0;
-//	}
-//
-//	// The indexing variable for output has to be circular.
-//	int t = outputIdx + hop * frameNum;
-//	if (t >= outputSize) t = 0;
-//
-//	for (k = 0; k < bufLen; k++)
-//	{
-//		output[t] += input[k];
-//		if ((++t) >= (outputSize)) t = 0;
-//	}
-//}
 
-// TODO FIX POUTBUFFLASTSAMPLE
-void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, float pOutBuffLastSample)
+// TODO: IMPROVE
+void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, my_float* pOutBuffLastSample)
 {
 	uint32_t k;
 	if (bf->steps == 12)
@@ -247,12 +228,12 @@ void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, floa
 	}
 	else
 	{
-		float tShift;
-		float upper;
-		float lower;
+		my_float tShift;
+		my_float upper;
+		my_float lower;
 		uint32_t lowerIdx;
 		uint32_t upperIdx;
-		float delta_shift;
+		my_float delta_shift;
 		for (k = vTimeIdx; k < vTimeIdx + bf->buflen; k++)
 		{
 			tShift = (k - vTimeIdx) * bf->shift;
@@ -264,7 +245,7 @@ void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, floa
 				lower = audat->vTime[lowerIdx + 1];
 				upper = audat->vTime[upperIdx + 1];
 				audat->outbuffer[k - vTimeIdx + 1] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
-				delta_shift = (audat->outbuffer[k - vTimeIdx + 1] - pOutBuffLastSample) / 2;
+				delta_shift = (audat->outbuffer[k - vTimeIdx + 1] - *pOutBuffLastSample) / 2;
 				audat->outbuffer[k - vTimeIdx] = audat->outbuffer[k - vTimeIdx + 1] - delta_shift;
 			}
 			if (upperIdx == 2*bf->hopS*audat->numFrames)
@@ -283,22 +264,22 @@ void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, floa
 			upper = audat->vTime[upperIdx];
 			audat->outbuffer[k - vTimeIdx] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
 		}
-		pOutBuffLastSample = audat->outbuffer[k - vTimeIdx - 1];
+		*pOutBuffLastSample = audat->outbuffer[k - vTimeIdx - 1];
 	}
 }
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, float pOutBuffLastSample, float var)
+	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample, my_float var)
 {
 #ifdef DEBUG_DUMP
 	static int counter_1 = 0;
 	static int counter_2 = 0;
 	static int sample_counter = 0;
 #endif
-	static int reset_counter = 0;
+	//static int reset_counter = 0;
 
-	float inwinScale = sqrt(((bf->buflen / bf->hopA) / 2));
-	float outwinScale = sqrt(((bf->buflen / bf->hopS) / 2));
+	my_float inwinScale = sqrt(((bf->buflen / bf->hopA) / 2));
+	my_float outwinScale = sqrt(((bf->buflen / bf->hopS) / 2));
 
 	for (uint8_t f = 0; f < audat->numFrames; f++)
 	{
@@ -311,11 +292,11 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		overlapAdd(audat->inbuffer, audat->inframe, audat->outframe, bf->hopA, frameNum, audat->numFrames);  
 
 		// TODO: Need to fix this
-		if (++reset_counter == 256)
-		{
-			reset_buffer_data_arrays(bf);
-			reset_counter = 0;
-		}
+		//if (++reset_counter == 256)
+		//{
+		//	reset_buffer_data_arrays(bf);
+		//	reset_counter = 0;
+		//}
 
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
