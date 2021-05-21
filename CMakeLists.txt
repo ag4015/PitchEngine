@@ -12,4 +12,8 @@ set(RESOURCES_DIR  ${PROJECT_SOURCE_DIR}/resources  CACHE PATH "This is the reso
 file(MAKE_DIRECTORY ${RESOURCES_DIR}/debugData)
 file(MAKE_DIRECTORY ${RESOURCES_DIR}/outputAudio)
 
+macro(SET_OPTION option value)
+  set(${option} ${value} CACHE "" INTERNAL FORCE)
+endmacro()
+
 add_subdirectory(src)
