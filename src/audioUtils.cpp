@@ -161,14 +161,6 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_fl
 		}
 	}
 
-	//for (uint32_t i = 0; i < bf->buflen; i++)
-	//{
-	//	if(!setICopy.count(i))
-	//	{
-	//		bf->delta_t[i] = 0;
-	//		bf->delta_f[i] = 0;
-	//	}
-	//}
 	DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count, -1, 1, -1);
 	DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count, -1, 1, -1);
 #ifdef DEBUG_DUMP
@@ -291,7 +283,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		// Using mag as output buffer, nothing to do with magnitude
 		overlapAdd(audat->inbuffer, audat->inframe, audat->outframe, bf->hopA, frameNum, audat->numFrames);  
 
-		// TODO: Need to fix this
+		// TODO: Need to fix this for floats
 		//if (++reset_counter == 256)
 		//{
 		//	reset_buffer_data_arrays(bf);

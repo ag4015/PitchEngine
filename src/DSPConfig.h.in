@@ -7,5 +7,8 @@ typedef double my_float;
 typedef float my_float;
 #endif
 
+#cmakedefine DEBUG_DUMP
+#cmakedefine SIMPLE_PV
+
 // #define DEBUG_DUMP
 
