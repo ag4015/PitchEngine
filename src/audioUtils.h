@@ -15,8 +15,8 @@ extern "C"
 #include "audioData.h"
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample, my_float var);
-void process_frame(buffer_data_t* bf, audio_data_t* audat, my_float var);
+	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample);
+void process_frame(buffer_data_t* bf, audio_data_t* audat);
 void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_float abstol);
 
 void overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint8_t frameNum, int numFrames);

@@ -24,8 +24,9 @@ typedef struct audio_data
     my_float *mag_ping, *mag_pong;               // Frame magnitude ping-pong buffers
     my_float *phi_ping, *phi_pong;               // Frame phase ping-pong buffers
 	my_float *delta_t_ping, *delta_t_pong;       // Frame phase time derivative ping-pong buffers
-	uint32_t cleanIdx;                        // Circular index where vTime is reset.
-	uint8_t numFrames;                        // Number of frames
+	uint32_t cleanIdx;                           // Circular index where vTime is reset.
+	uint8_t numFrames;                           // Number of frames
+	uint32_t sampleRate;                         // Sample rate of input audio
 } audio_data_t;
 
 typedef struct buffer_data 
@@ -51,9 +52,9 @@ typedef struct buffer_data
 	kiss_fft_cfg cfgInv;
 } buffer_data_t;
 
-void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint8_t steps, uint32_t buflen);
+void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint32_t sampleRate, uint8_t steps, uint32_t buflen);
 void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat);
-void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t bufLen, my_float* in_audio);
+void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t sampleRate, uint32_t bufLen, my_float* in_audio);
 void initialize_buffer_data(buffer_data_t* bf, audio_data_t* audat, my_float shift, uint32_t hopS, uint8_t steps, uint32_t hopA, uint32_t bufLen);
 audio_data_t alloc_audio_data(uint32_t vTimeSize, uint32_t numSamp, uint32_t bufLen);
 buffer_data_t alloc_buffer_data(uint32_t bufLen);

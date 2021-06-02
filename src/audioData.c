@@ -2,7 +2,7 @@
 #include "audioData.h"
 #include "DSPConfig.h"
 
-void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint8_t steps, uint32_t buflen)
+void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint32_t sampleRate, uint8_t steps, uint32_t buflen)
 {
 	// Pitch variables
 	my_float shift = powf(2, ((my_float)steps)/12);
@@ -10,7 +10,7 @@ void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my
 	uint32_t numFrames = (uint32_t) (BUFLEN / HOPA); // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
 
 	// Initialize structures
-	initialize_audio_data(audat, hopS, numFrames, numSamp, buflen, in_audio);
+	initialize_audio_data(audat, hopS, numFrames, numSamp, sampleRate, buflen, in_audio);
 	initialize_buffer_data(bf, audat, shift, hopS, steps, HOPA, buflen);
 
 	// Initialize input and output window functions
@@ -35,13 +35,14 @@ void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat)
 	bf->delta_tPrev = bf->delta_t;
 	bf->delta_t = (bf->delta_t == audat->delta_t_ping) ? audat->delta_t_pong : audat->delta_t_ping;
 }
-void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t bufLen, my_float* in_audio)
+void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t sampleRate, uint32_t bufLen, my_float* in_audio)
 {
 	// Allocate and zero fill arrays 
 	*audat = alloc_audio_data(hopS * numFrames * 2, numSamp, bufLen);
 	audat->in_audio = in_audio;
 	audat->numFrames = numFrames;
 	audat->cleanIdx = hopS * numFrames;
+	audat->sampleRate = sampleRate;
 }
 
 void initialize_buffer_data(buffer_data_t* bf, audio_data_t* audat, my_float shift, uint32_t hopS, uint8_t steps, uint32_t hopA, uint32_t bufLen)

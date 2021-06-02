@@ -1,3 +1,5 @@
+#ifndef DSP_CONFIG_H
+#define DSP_CONFIG_H
 // the configured options and settings for Tutorial
 #define RESOURCES_DIR "@RESOURCES_DIR@/"
 
@@ -9,6 +11,7 @@ typedef float my_float;
 
 #cmakedefine DEBUG_DUMP
 #cmakedefine SIMPLE_PV
+#cmakedefine DEBUG_DUMP
+#cmakedefine CONSTANT_Q_T
 
-// #define DEBUG_DUMP
-
+#endif // DSP_CONFIG_H

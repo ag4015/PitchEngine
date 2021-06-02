@@ -3,8 +3,12 @@
 #include "audioUtils.h"
 #include "audioData.h"
 #include "logger.h"
-#include <algorithm>
 #include "Tuple.h"
+#ifdef CONSTANT_Q_T
+#include "ConstantQ.h"
+#include "CQInverse.h"
+#endif
+#include <algorithm>
 #include <iostream>
 #include <queue>
 #include <set>
@@ -14,7 +18,7 @@
 #define MAGNITUDE_TOLERANCE 1e-4
 //#define SIMPLE_PV
 
-void process_frame(buffer_data_t* bf, audio_data_t* audat, my_float var)
+void process_frame(buffer_data_t* bf, audio_data_t* audat)
 {
 #ifdef DEBUG_DUMP
 	static int count = 0;
@@ -112,7 +116,7 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_fl
 #endif
 	std::set<uint16_t> setI;
 	std::vector<Tuple> container;
-	container.reserve(BUFLEN);
+	container.reserve(bf->buflen);
 	TupleCompareObject cmp(bf->mag, bf->magPrev);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject<my_float> > h{cmp, std::move(container)}; // STEP 4
 
@@ -261,14 +265,27 @@ void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, my_f
 }
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample, my_float var)
+	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample)
 {
 #ifdef DEBUG_DUMP
 	static int counter_1 = 0;
 	static int counter_2 = 0;
 	static int sample_counter = 0;
 #endif
-	//static int reset_counter = 0;
+#ifdef RESET_BUFFER
+	static int reset_counter = 0;
+#endif
+
+	// Constant Q variable initialization
+	uint32_t minFreq = 40;
+	uint32_t maxFreq = 1000;
+	uint8_t  bpo = 64;
+
+#ifdef CONSTANT_Q_T
+	CQParameters params(audat->sampleRate, minFreq, maxFreq, bpo);
+	ConstantQ cq(params);
+	CQInverse cqi(params);
+#endif
 
 	my_float inwinScale = sqrt(((bf->buflen / bf->hopA) / 2));
 	my_float outwinScale = sqrt(((bf->buflen / bf->hopS) / 2));
@@ -284,17 +301,30 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		overlapAdd(audat->inbuffer, audat->inframe, audat->outframe, bf->hopA, frameNum, audat->numFrames);  
 
 		// TODO: Need to fix this for floats
-		//if (++reset_counter == 256)
-		//{
-		//	reset_buffer_data_arrays(bf);
-		//	reset_counter = 0;
-		//}
+#ifdef RESET_BUFFER
+		if (++reset_counter == 256)
+		{
+			reset_buffer_data_arrays(bf);
+			reset_counter = 0;
+		}
+#endif
 
+#ifdef CONSTANT_Q_T
+		std::vector<my_float> cqin;
+		cqin.reserve(bf->buflen);
+
+		for (uint32_t k = 0; k < bf->buflen; k++)
+		{
+			cqin.push_back((audat->outframe[k] * audat->inwin[k]) / inwinScale);
+		}
+		ConstantQ::ComplexBlock cqCoeff = cq.process(cqin);
+#else
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
 			bf->cpxIn[k].r = (audat->outframe[k] * audat->inwin[k]) / inwinScale;
 			bf->cpxIn[k].i = 0;
 		}
+#endif
 
         /************ PROCESSING STAGE *********************/
 
@@ -302,7 +332,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
 
-		process_frame(bf, audat, var);
+		process_frame(bf, audat);
 
 		DUMP_ARRAY_COMPLEX(bf->cpxOut, bf->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 40, sample_counter , -1);
 		// DUMP_ARRAY(audat->inbuffer , bf->buflen, DEBUG_DIR "inbuffer.csv", counter_1, -1, sample_counter , bf->buflen);
@@ -317,10 +347,17 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		// DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 5, sample_counter, -1);
 
+//#ifdef CONSTANT_Q_T
+//		for (uint32_t k = 0; k < bf->buflen && k < cqout.size(); k++)
+//		{
+//			audat->outframe[k] = cqout[k] * (audat->outwin[k] / bf->buflen) / outwinScale;
+//		}
+//#else
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
 			audat->outframe[k] = bf->cpxOut[k].r * (audat->outwin[k] / bf->buflen) / outwinScale;
 		}
+//#endif
 
         /************ SYNTHESIS STAGE ***********************/
 

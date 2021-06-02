@@ -17,4 +17,4 @@ macro(SET_OPTION option value)
 endmacro()
 
 add_subdirectory(src)
-add_subdirectory(tools)
+#add_subdirectory(tools)

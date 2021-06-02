@@ -4,6 +4,7 @@ option(USE_DOUBLE "Floating point double" ON)
 option(USE_WAVE_LIBRARY "Use the wave library for .wav files." OFF)
 option(SIMPLE_PV "Pitch shift with a simple phase vocoder" OFF)
 option(KISSFFT_DATATYPE "Float or double" double)
+option(CONSTANT_Q_T "Use the Constant Q transform." ON)
 
 if(DEBUG_DUMP)
     message("CSV dumping of variables is active.")
@@ -29,6 +30,11 @@ else()
     SET_OPTION(KISSFFT_FLOAT_TYPE  "float")
 endif()
 
+if(CONSTANT_Q_T)
+    message("Using the constant Q transform")
+    add_compile_definitions(CONSTANT_Q_T)
+endif()
+
 configure_file(DSPConfig.h.in ${CMAKE_CURRENT_SOURCE_DIR}/DSPConfig.h)
 
 # Override the default option in the kissfft subidrectory
@@ -36,20 +42,26 @@ SET_OPTION(KISSFFT_TOOLS  ON) # Build kissfft/tools/
 
 add_subdirectory(kissfft)
 add_subdirectory(wave)
+#add_subdirectory(libsndfile)
 
-set(CONSTANT_CQ_SOURCE_FILES
-               constant-q-cpp/src/Chromagram.cpp;
-               constant-q-cpp/src/CQSpectrogram.cpp;
-               constant-q-cpp/src/ConstantQ.cpp;
-               constant-q-cpp/src/CQInverse.cpp;
-               constant-q-cpp/src/CQKernel.cpp;
-               constant-q-cpp/src/Pitch.cpp;
-               constant-q-cpp/src/dsp/FFT.cpp;
-               constant-q-cpp/src/dsp/MathUtilities.cpp;
-               constant-q-cpp/src/dsp/Resampler.cpp;
-               constant-q-cpp/src/dsp/SincWindow.cpp;
-               constant-q-cpp/src/dsp/KaiserWindow.cpp;
-               )
+if(CONSTANT_Q_T)
+	set(CONSTANT_CQ_SOURCE_FILES
+				   constant-q-cpp/src/Chromagram.cpp;
+				   constant-q-cpp/src/CQSpectrogram.cpp;
+				   constant-q-cpp/src/ConstantQ.cpp;
+				   constant-q-cpp/src/CQInverse.cpp;
+				   constant-q-cpp/src/CQKernel.cpp;
+				   constant-q-cpp/src/Pitch.cpp;
+				   constant-q-cpp/src/dsp/FFT.cpp;
+				   constant-q-cpp/src/dsp/MathUtilities.cpp;
+				   constant-q-cpp/src/dsp/Resampler.cpp;
+				   constant-q-cpp/src/dsp/SincWindow.cpp;
+				   constant-q-cpp/src/dsp/KaiserWindow.cpp;
+				   )
+else()
+	set(CONSTANT_CQ_SOURCE_FILES "")
+endif()
+
 
 set(KISSFFT_EXTRA_SOURCE_FILES
                kissfft/tools/kiss_fftr.c
@@ -61,23 +73,26 @@ add_executable(DSPSim
                wavio.cpp
                audioData.c
                audioUtils.cpp
+               PitchEngine.cpp
+               PVEngine.cpp
                logger.cpp
                ${CONSTANT_CQ_SOURCE_FILES}
                ${KISSFFT_EXTRA_SOURCE_FILES}
                )
 
+if(CONSTANT_Q_T)
 target_include_directories(DSPSim PUBLIC
-                           constant-q-cpp/cq)
+                           constant-q-cpp/cq
+                           constant-q-cpp/src
+                           )
+endif()
 
-target_include_directories(DSPSim PUBLIC
-                           constant-q-cpp/src)
-
-add_executable(DSPSimTest
-               test.cpp
-               audioData.c
-               audioUtils.cpp
-               logger.cpp
-               )
+# add_executable(DSPSimTest
+#                test.cpp
+#                audioData.c
+#                audioUtils.cpp
+#                logger.cpp
+#                )
 target_compile_options(DSPSim PUBLIC -Wall -pedantic -g)
 
 target_include_directories(DSPSim PUBLIC
@@ -89,7 +104,20 @@ target_link_libraries(DSPSim PUBLIC
                         kissfft
                         wave)
 
-target_link_libraries(DSPSimTest PUBLIC
-                        kissfft)
+# target_link_libraries(DSPSimTest PUBLIC
+#                         kissfft)
+
+#add_executable(processfile_cq
+#                constant-q-cpp/test/processfile.cpp
+#                ${CONSTANT_CQ_SOURCE_FILES}
+#                ${KISSFFT_EXTRA_SOURCE_FILES})
+
+#target_include_directories(processfile_cq PUBLIC
+#                           constant-q-cpp/src/
+#                           constant-q-cpp/cq/
+#                           kissfft/
+#                           kissfft/tools)
+
+#target_link_libraries(processfile_cq sndfile)
 
 

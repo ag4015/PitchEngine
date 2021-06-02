@@ -3,11 +3,10 @@
 #include <time.h>
 #include "wavio.h"
 #include "audioUtils.h"
-#include "DSPConfig.h"
 #include "stdint.h"
 
-#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
-//#define DEFAULT_INPUT_FILENAME "sine_short.wav"
+// #define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
+#define DEFAULT_INPUT_FILENAME "sine_short.wav"
 #define DEFAULT_OUTPUT_FILENAME "output4.wav"
 
 #define INGAIN     1
@@ -34,6 +33,7 @@ int main(int argc, char **argv)
 	uint32_t cleanIdx        = 0;                 // Circular buffer for reseting the vTime array
 	my_float pOutBuffLastSample = 0;
     uint32_t numSamp;                             // Total number of samples in wave file
+	uint32_t sampleRate      = 44100;
 
 	buffer_data_t bf;
 	audio_data_t audat;
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	// Load contents of wave file
 	my_float* in_audio = readWav(&numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
-	init_variables(&bf, &audat, numSamp, in_audio, STEPS, BUFLEN);
+	init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
 	
 	PRINT_LOG2("Buffer length: %i.\n", bf.buflen);
 
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 #endif
 		//printf("\r%i%%", 100 * audio_ptr/numSamp);
 
-		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, &pOutBuffLastSample, var);
+		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, &pOutBuffLastSample);
 
 #ifdef DSPDEBUG
 		elapsed_time = clock() - elapsed_time;
@@ -118,11 +118,11 @@ void load_distortion_coefficients(my_float* coeffs, size_t* coeff_size)
         PRINT_LOG1("Error opening file\n");
         exit(1);
 	}
-	while( fscanf(inFile, "%f\n", &coeff) != EOF )
+	while( fscanf(inFile, "%lf\n", &coeff) != EOF )
 	coeffs = (my_float *) calloc(*coeff_size, sizeof(my_float));
 	PRINT_LOG1("Coefficients:\n");
 
-	while( fscanf(inFile, "%f\n", &coeff) != EOF )
+	while( fscanf(inFile, "%lf\n", &coeff) != EOF )
 	{
 		coeffs[n] = coeff;
 		PRINT_LOG2("%f\n", coeffs[n]);
