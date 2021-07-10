@@ -1,7 +1,6 @@
 #pragma once
 #include "DSPConfig.h"
 #include "audioData.h"
-#include "main.h"
 #include <string>
 
 #ifdef DEBUG_DUMP
@@ -10,6 +9,16 @@
 #else
        #define DUMP_ARRAY(a,b,c,d,e,f,g)
        #define DUMP_ARRAY_COMPLEX(a,b,c,d,e,f,g)
+#endif
+
+#ifdef DEBUG_LOG
+       #define PRINT_LOG1(x)       printf(x)
+       #define PRINT_LOG2(x,y)     printf(x,y)
+       #define PRINT_LOG3(x,y,z)   printf(x,y,z)
+#else
+       #define PRINT_LOG1(x) 
+       #define PRINT_LOG2(x,y) 
+       #define PRINT_LOG3(x,y,z) 
 #endif
 
 template <typename T>

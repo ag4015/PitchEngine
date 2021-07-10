@@ -1,6 +1,5 @@
 
 #include "audioData.h"
-#include "DSPConfig.h"
 
 void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint32_t sampleRate, uint8_t steps, uint32_t buflen)
 {

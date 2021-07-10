@@ -1,9 +1,9 @@
 
 #include "wavio.h"
-#include "main.h"
+#include "wave/file.h"
+#include "logger.h"
 #include <iostream>
 #include <system_error>
-#include "wave/file.h"
 
 
 // Find the file size 

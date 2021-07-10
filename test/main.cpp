@@ -4,6 +4,12 @@
 #include "wavio.h"
 #include "audioUtils.h"
 #include "stdint.h"
+#include "CQPVEngine.h"
+#include "PVDREngine.h"
+#include "PVEngine.h"
+#include "PitchEngine.h"
+#include "logger.h"
+#include <cmath>
 
 // #define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
 #define DEFAULT_INPUT_FILENAME "sine_short.wav"
@@ -50,6 +56,8 @@ int main(int argc, char **argv)
 	
 	PRINT_LOG2("Buffer length: %i.\n", bf.buflen);
 
+
+
 	while(audio_ptr < (numSamp - bf.buflen))
 	{
 		for (int16_t k = 0; k < bf.buflen; k++)
@@ -60,7 +68,7 @@ int main(int argc, char **argv)
 #ifdef DSPDEBUG
 		elapsed_time = clock();
 #endif
-		//printf("\r%i%%", 100 * audio_ptr/numSamp);
+		printf("\r%i%%", 100 * audio_ptr/numSamp);
 
 		process_buffer(&bf, &audat, frameNum, audio_ptr, &vTimeIdx, &cleanIdx, &pOutBuffLastSample);
 
@@ -75,7 +83,7 @@ int main(int argc, char **argv)
 			audat.out_audio[audio_ptr + k] = audat.outbuffer[k] * OUTGAIN;
 
 			// Avoid uint16_t overflow and clip the signal instead.
-			if (abs(audat.out_audio[audio_ptr + k]) > 1)
+			if (std::abs(audat.out_audio[audio_ptr + k]) > 1)
 			{
 				audat.out_audio[audio_ptr + k] = (audat.out_audio[audio_ptr + k] < 0) ? -1 : 1;
 			}

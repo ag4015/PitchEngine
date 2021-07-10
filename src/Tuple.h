@@ -1,6 +1,4 @@
 
-#include "main.h"
-
 struct Tuple
 {
 	uint16_t m;

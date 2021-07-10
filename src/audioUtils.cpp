@@ -281,11 +281,11 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 	uint32_t maxFreq = 1000;
 	uint8_t  bpo = 64;
 
-#ifdef CONSTANT_Q_T
-	CQParameters params(audat->sampleRate, minFreq, maxFreq, bpo);
-	ConstantQ cq(params);
-	CQInverse cqi(params);
-#endif
+//#ifdef CONSTANT_Q_T
+//	CQParameters params(audat->sampleRate, minFreq, maxFreq, bpo);
+//	ConstantQ cq(params);
+//	CQInverse cqi(params);
+//#endif
 
 	my_float inwinScale = sqrt(((bf->buflen / bf->hopA) / 2));
 	my_float outwinScale = sqrt(((bf->buflen / bf->hopS) / 2));
@@ -309,22 +309,22 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		}
 #endif
 
-#ifdef CONSTANT_Q_T
-		std::vector<my_float> cqin;
-		cqin.reserve(bf->buflen);
-
-		for (uint32_t k = 0; k < bf->buflen; k++)
-		{
-			cqin.push_back((audat->outframe[k] * audat->inwin[k]) / inwinScale);
-		}
-		ConstantQ::ComplexBlock cqCoeff = cq.process(cqin);
-#else
+//#ifdef CONSTANT_Q_T
+//		std::vector<my_float> cqin;
+//		cqin.reserve(bf->buflen);
+//
+//		for (uint32_t k = 0; k < bf->buflen; k++)
+//		{
+//			cqin.push_back((audat->outframe[k] * audat->inwin[k]) / inwinScale);
+//		}
+//		ConstantQ::ComplexBlock cqCoeff = cq.process(cqin);
+//#else
 		for (uint32_t k = 0; k < bf->buflen; k++)
 		{
 			bf->cpxIn[k].r = (audat->outframe[k] * audat->inwin[k]) / inwinScale;
 			bf->cpxIn[k].i = 0;
 		}
-#endif
+//#endif
 
         /************ PROCESSING STAGE *********************/
 

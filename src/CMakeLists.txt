@@ -67,18 +67,20 @@ set(KISSFFT_EXTRA_SOURCE_FILES
                kissfft/tools/kiss_fftr.c
                )
 
-# add the executable
-add_executable(DSPSim
-               main.c
+set(DSPSIM_SOURCE_FILES
                wavio.cpp
                audioData.c
                audioUtils.cpp
                PitchEngine.cpp
                PVEngine.cpp
+               PVDREngine.cpp
+               CQPVEngine.cpp
                logger.cpp
                ${CONSTANT_CQ_SOURCE_FILES}
                ${KISSFFT_EXTRA_SOURCE_FILES}
                )
+
+add_library(DSPSim STATIC ${DSPSIM_SOURCE_FILES})
 
 if(CONSTANT_Q_T)
 target_include_directories(DSPSim PUBLIC
@@ -87,12 +89,6 @@ target_include_directories(DSPSim PUBLIC
                            )
 endif()
 
-# add_executable(DSPSimTest
-#                test.cpp
-#                audioData.c
-#                audioUtils.cpp
-#                logger.cpp
-#                )
 target_compile_options(DSPSim PUBLIC -Wall -pedantic -g)
 
 target_include_directories(DSPSim PUBLIC
@@ -103,21 +99,5 @@ target_include_directories(DSPSim PUBLIC
 target_link_libraries(DSPSim PUBLIC
                         kissfft
                         wave)
-
-# target_link_libraries(DSPSimTest PUBLIC
-#                         kissfft)
-
-#add_executable(processfile_cq
-#                constant-q-cpp/test/processfile.cpp
-#                ${CONSTANT_CQ_SOURCE_FILES}
-#                ${KISSFFT_EXTRA_SOURCE_FILES})
-
-#target_include_directories(processfile_cq PUBLIC
-#                           constant-q-cpp/src/
-#                           constant-q-cpp/cq/
-#                           kissfft/
-#                           kissfft/tools)
-
-#target_link_libraries(processfile_cq sndfile)
 
 

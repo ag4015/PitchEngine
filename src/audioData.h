@@ -6,7 +6,7 @@
 
 #define WINCONST   0.5                        // Constant used for the hamming window
 #define HAMCONST   (my_float)0.53836             // Constant used for the hamming window
-#define BUFLEN     (uint32_t) 4096           // Size of the buffer
+#define BUFLEN     (uint32_t) 2048           // Size of the buffer
 #define HOPA       (uint32_t) 256           // Size of the frame in the analysis stage
 //#define NUMFRAMES  (uint32_t) BUFLEN/HOPA     
 #define PI         (my_float)3.1415926535        // Pi constant
@@ -52,6 +52,11 @@ typedef struct buffer_data
 	kiss_fft_cfg cfgInv;
 } buffer_data_t;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint32_t sampleRate, uint8_t steps, uint32_t buflen);
 void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat);
 void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t sampleRate, uint32_t bufLen, my_float* in_audio);
@@ -61,3 +66,7 @@ buffer_data_t alloc_buffer_data(uint32_t bufLen);
 void free_audio_data(audio_data_t* audat);
 void free_buffer_data(buffer_data_t* bf);
 void reset_buffer_data_arrays(buffer_data_t* bf);
+
+#ifdef __cplusplus
+}
+#endif

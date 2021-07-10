@@ -1,7 +1,7 @@
 #ifndef DSP_CONFIG_H
 #define DSP_CONFIG_H
 // the configured options and settings for Tutorial
-#define RESOURCES_DIR "/mnt/c/Users/alexg/source/repos/DSPSim/resources/"
+#define RESOURCES_DIR "C:/Users/alexg/source/repos/DSPSim/resources/"
 
 #ifdef USE_DOUBLE
 typedef double my_float;

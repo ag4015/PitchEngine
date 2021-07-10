@@ -13,16 +13,6 @@
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
 
-#ifdef DEBUG_LOG
-       #define PRINT_LOG1(x)       printf(x)
-       #define PRINT_LOG2(x,y)     printf(x,y)
-       #define PRINT_LOG3(x,y,z)   printf(x,y,z)
-#else
-       #define PRINT_LOG1(x) 
-       #define PRINT_LOG2(x,y) 
-       #define PRINT_LOG3(x,y,z) 
-#endif
-
 #define INPUT_AUDIO_DIR RESOURCES_DIR "inputAudio/"
 #define OUTPUT_AUDIO_DIR RESOURCES_DIR "outputAudio/"
 #define DEBUG_DIR RESOURCES_DIR "debugData/"

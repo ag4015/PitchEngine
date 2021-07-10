@@ -21,7 +21,6 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_fl
 
 void overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint8_t frameNum, int numFrames);
 
-//void strechFrame(my_float* output, my_float* input, int* cleanIdx, int hop, int frameNum, int outputIdx, int outputSize, int bufLen);
 void strechFrame(my_float* output, my_float* input, uint32_t* cleanIdx, uint32_t hop,
 	uint8_t frameNum, uint32_t outputIdx, uint32_t outputSize, uint32_t bufLen);
 
