@@ -67,20 +67,25 @@ else()
     set(KISSFFT_LIB_NAME "")
 endif()
 
-
-set(CONSTANT_CQ_SOURCE_FILES
-			   constant-q-cpp/src/Chromagram.cpp;
-			   constant-q-cpp/src/CQSpectrogram.cpp;
-			   constant-q-cpp/src/ConstantQ.cpp;
-			   constant-q-cpp/src/CQInverse.cpp;
-			   constant-q-cpp/src/CQKernel.cpp;
-			   constant-q-cpp/src/Pitch.cpp;
-			   constant-q-cpp/src/dsp/FFT.cpp;
-			   constant-q-cpp/src/dsp/MathUtilities.cpp;
-			   constant-q-cpp/src/dsp/Resampler.cpp;
-			   constant-q-cpp/src/dsp/SincWindow.cpp;
-			   constant-q-cpp/src/dsp/KaiserWindow.cpp;
+set(CONSTANT_Q_LIB_DIR constant-q-cpp/)
+set(CONSTANT_Q_SRC_DIR ${CONSTANT_Q_LIB_DIR}src/)
+set(CONSTANT_Q_CQ_DIR ${CONSTANT_Q_LIB_DIR}cq/)
+set(CONSTANT_Q_SRC_DSP_DIR ${CONSTANT_Q_SRC_DIR}dsp/)
+set(CONSTANT_Q_SOURCE_FILES
+			   ${CONSTANT_Q_SRC_DIR}Chromagram.cpp;
+			   ${CONSTANT_Q_SRC_DIR}CQSpectrogram.cpp;
+			   ${CONSTANT_Q_SRC_DIR}ConstantQ.cpp;
+			   ${CONSTANT_Q_SRC_DIR}CQInverse.cpp;
+			   ${CONSTANT_Q_SRC_DIR}CQKernel.cpp;
+			   ${CONSTANT_Q_SRC_DIR}Pitch.cpp;
+			   ${CONSTANT_Q_SRC_DIR}dsp/FFT.cpp;
+			   ${CONSTANT_Q_SRC_DSP_DIR}MathUtilities.cpp;
+			   ${CONSTANT_Q_SRC_DSP_DIR}Resampler.cpp;
+			   ${CONSTANT_Q_SRC_DSP_DIR}SincWindow.cpp;
+			   ${CONSTANT_Q_SRC_DSP_DIR}KaiserWindow.cpp;
 			   )
+
+configure_file(${CONSTANT_Q_LIB_DIR}ConstantQConfig.h.in ${CONSTANT_Q_CQ_DIR}ConstantQConfig.h)
 
 set(DSPSIM_SOURCE_FILES
                audioData.c
@@ -92,7 +97,7 @@ set(DSPSIM_SOURCE_FILES
                wavio.cpp
                Dumper.cpp
                DumperContainer.cpp
-               ${CONSTANT_CQ_SOURCE_FILES}
+               ${CONSTANT_Q_SOURCE_FILES}
                ${KISSFFT_EXTRA_SOURCE_FILES}
                )
 
