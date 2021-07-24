@@ -1,7 +1,7 @@
 #pragma once
 #include "PVEngine.h"
 
-#define MAGNITUDE_TOLERANCE 1e-4
+#define MAGNITUDE_TOLERANCE static_cast<my_float>(1e-4)
 
 // Phase Vocoder Done Right
 class PVDREngine : public PVEngine

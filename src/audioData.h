@@ -4,8 +4,8 @@
 #include "stdint.h"
 #include "kiss_fft.h"
 
-#define WINCONST   0.5                        // Constant used for the hamming window
-#define HAMCONST   (my_float)0.53836             // Constant used for the hamming window
+#define WINCONST   (my_float)0.5            // Constant used for the hamming window
+#define HAMCONST   (my_float)0.53836        // Constant used for the hamming window
 #define BUFLEN     (uint32_t) 1024          // Size of the buffer
 #define HOPA       (uint32_t) 256           // Size of the frame in the analysis stage
 //#define NUMFRAMES  (uint32_t) BUFLEN/HOPA     
@@ -25,7 +25,7 @@ typedef struct audio_data
     my_float *phi_ping, *phi_pong;               // Frame phase ping-pong buffers
 	my_float *delta_t_ping, *delta_t_pong;       // Frame phase time derivative ping-pong buffers
 	uint32_t cleanIdx;                           // Circular index where vTime is reset.
-	uint32_t numFrames;                           // Number of frames
+	uint32_t numFrames;                          // Number of frames
 	uint32_t sampleRate;                         // Sample rate of input audio
 } audio_data_t;
 

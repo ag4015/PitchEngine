@@ -19,8 +19,13 @@ PVEngine::PVEngine(buffer_data_t* bf, audio_data_t* audat)
    , cleanIdx_(0)
    , pOutBuffLastSample_(0)
 {
+#ifdef USE_DOUBLE
 	inWinScale_ = sqrt(((bf->buflen / bf->hopA) / 2));
 	outWinScale_ = sqrt(((bf->buflen / bf->hopS) / 2));
+#else
+	inWinScale_  = sqrtf(((static_cast<my_float>(bf->buflen) / static_cast<my_float>(bf->hopA)) / 2));
+	outWinScale_ = sqrtf(((static_cast<my_float>(bf->buflen) / static_cast<my_float>(bf->hopS)) / 2));
+#endif
 }
 
 void PVEngine::process()

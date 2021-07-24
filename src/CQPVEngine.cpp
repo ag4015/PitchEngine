@@ -10,13 +10,11 @@ CQPVEngine::~CQPVEngine()
 
 CQPVEngine::CQPVEngine(buffer_data_t* bf, audio_data_t* audat) :
 	PVDREngine(bf, audat)
+  , minFreq_(40)
+  , maxFreq_(1000)
+  , bpo_(64)
 {
-	// Constant Q variable initialization
-	uint32_t minFreq = 40;
-	uint32_t maxFreq = 1000;
-	uint8_t  bpo = 64;
-
-	CQParameters params(audat->sampleRate, minFreq, maxFreq, bpo);
+	CQParameters params(static_cast<my_float>(audat->sampleRate), minFreq_, maxFreq_, bpo_);
 	ConstantQ cq(params);
 	CQInverse cqi(params);
 

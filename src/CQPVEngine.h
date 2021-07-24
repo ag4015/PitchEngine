@@ -11,8 +11,8 @@ public:
 
 protected:
 
-	uint32_t minFreq_;
-	uint32_t maxFreq_;
+	my_float minFreq_;
+	my_float maxFreq_;
 	uint8_t  bpo_;
 
 };

@@ -24,8 +24,8 @@ void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my
 		audat->inwin[k] = WINCONST * (1 - cos(2 * PI * k / buflen));
 		audat->outwin[k] = WINCONST * (1 - cos(2 * PI * k / buflen));
 #else
-		audat->inwin[k] = WINCONST * (1 - cosf(2 * PI * k / buflen));
-		audat->outwin[k] = WINCONST * (1 - cosf(2 * PI * k / buflen));
+		audat->inwin[k]  = (my_float) (WINCONST * (1 - cosf(2 * PI * k / buflen)));
+		audat->outwin[k] = (my_float) (WINCONST * (1 - cosf(2 * PI * k / buflen)));
 #endif
 	}
 }

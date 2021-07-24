@@ -39,6 +39,9 @@ int main(int argc, char **argv)
 	uint32_t audio_ptr       = 0;                 // Wav file sample pointer
     uint32_t numSamp;                             // Total number of samples in wave file
 	uint32_t sampleRate      = 44100;
+	uint8_t frameNum         = 0;                 // Frame index. It's circular.
+	uint32_t vTimeIdx        = 0;                 // Circular buffer for vTime
+	my_float pOutBuffLastSample = 0;
 
 	buffer_data_t bf;
 	audio_data_t audat;
@@ -69,8 +72,7 @@ int main(int argc, char **argv)
 		printf("\r%i%%", 100 * audio_ptr/numSamp);
 
 		auto initTime  = std::chrono::high_resolution_clock::now();
-//void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-//	uint32_t* vTimeIdx, my_float* pOutBuffLastSample)
+
 		//process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
 
 		auto finalTime = std::chrono::high_resolution_clock::now();
@@ -93,9 +95,7 @@ int main(int argc, char **argv)
 		}
 		audio_ptr += bf.buflen;
 	}
-#ifdef DSPDEBUG
 	PRINT_LOG("It took an average of %f ms to process each frame.\n", 1000.0 * avg_time/CLOCKS_PER_SEC);
-#endif
 
 	// Reconvert floating point audio to 16bit
 	//for (uint32_t i = 0; i < numSamp; i++)

@@ -16,7 +16,7 @@
 #include <random>
 #include <chrono>
 
-#define MAGNITUDE_TOLERANCE 1e-6
+#define MAGNITUDE_TOLERANCE static_cast<my_float>(1e-6)
 //#define SIMPLE_PV
 
 void process_frame(buffer_data_t* bf)
@@ -293,8 +293,13 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 	CQInverse cqi(params);
 #endif
 
+#ifdef USE_DOUBLE
 	my_float inwinScale = sqrt(((bf->buflen / bf->hopA) / 2));
 	my_float outwinScale = sqrt(((bf->buflen / bf->hopS) / 2));
+#else
+	my_float inwinScale  = sqrtf(((static_cast<my_float>(bf->buflen) / static_cast<my_float>(bf->hopA)) / 2));
+	my_float outwinScale = sqrtf(((static_cast<my_float>(bf->buflen) / static_cast<my_float>(bf->hopS)) / 2));
+#endif
 
 	for (uint8_t f = 0; f < audat->numFrames; f++)
 	{
