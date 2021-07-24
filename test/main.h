@@ -6,10 +6,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stddef.h>
-
- //#define PDEBUG                          // Print debug information
-//#define DSPDEBUG
-#define SIMULATION                      // This is a simulation of the device
+#include <string>
 
 #define COPY(x,y,z) for(uint16_t k = 0; k < z; k++) { x = y; } 
 
@@ -20,6 +17,9 @@
 #define USE_WAVE_LIBRARY
 
 
+void parse_arguments(int argc, char** argv, std::string& inputFilePath, std::string& outputFilePath, my_float* var);
+void initializeLogs(uint32_t & audio_ptr);
+
 // Function declaration
 #pragma once
 #ifdef __cplusplus
@@ -28,7 +28,6 @@ extern "C"
 #endif
 
 void load_distortion_coefficients(my_float* coeffs, size_t* coeff_size);
-void parse_arguments(int argc, char** argv, char** inputFilePath, char** outputFilePath, my_float* var);
 
 #ifdef __cplusplus
 } // extern C

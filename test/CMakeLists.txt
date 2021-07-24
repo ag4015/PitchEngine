@@ -12,5 +12,5 @@ target_include_directories(DSPSimTs PUBLIC
 
 target_link_libraries(DSPSimTs PUBLIC
                         DSPSim
-                        kissfft
+#                        kissfft
                         wave)

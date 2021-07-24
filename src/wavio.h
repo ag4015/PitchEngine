@@ -1,10 +1,10 @@
 
-#ifndef WAVIO_H
-#define WAVIO_H
+#pragma once
 #include "DSPConfig.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 #pragma pack(push, 1) // exact fit - align at byte-boundary, no padding
 
@@ -30,22 +30,11 @@ typedef struct  WAV_HEADER
 
 #pragma pack(pop)
 
-#pragma once
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 // Function prototypes 
 int     getFileSize(FILE *inFile); 
 void    printHeader(wav_hdr wavHeader);
 void    separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* right_channel,*/ unsigned long size);
 wav_hdr makeHeaderMono(wav_hdr header);
-my_float*  readWav(uint32_t *numSamp, char* filePath);
-void    writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp);
+my_float*  readWav(uint32_t& numSamp, std::string& filePath);
+void    writeWav(my_float& audio, std::string& inputFilePath, std::string& outputFilePath);
 
-#ifdef __cplusplus
-} // extern C
-#endif
-
-#endif // WAVIO_H

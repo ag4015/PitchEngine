@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.15)
 
 # set the project name
 project(DSPSim)
@@ -13,7 +13,8 @@ file(MAKE_DIRECTORY ${RESOURCES_DIR}/debugData)
 file(MAKE_DIRECTORY ${RESOURCES_DIR}/outputAudio)
 
 macro(SET_OPTION option value)
-  set(${option} ${value} CACHE "" INTERNAL FORCE)
+#  set(${option} ${value} CACHE "" INTERNAL FORCE)
+  set(${option} ${value})
 endmacro()
 
 add_subdirectory(src)

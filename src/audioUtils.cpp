@@ -12,13 +12,14 @@
 #include <iostream>
 #include <queue>
 #include <set>
-#include <complex.h>
+#include <complex>
 #include <random>
+#include <chrono>
 
-#define MAGNITUDE_TOLERANCE 1e-4
+#define MAGNITUDE_TOLERANCE 1e-6
 //#define SIMPLE_PV
 
-void process_frame(buffer_data_t* bf, audio_data_t* audat)
+void process_frame(buffer_data_t* bf)
 {
 #ifdef DEBUG_DUMP
 	static int count = 0;
@@ -29,8 +30,8 @@ void process_frame(buffer_data_t* bf, audio_data_t* audat)
 
 	// Time differentiation variables.
 	// Can't do forward differentiation because the algorithm is real time
-	my_float deltaPhiPrime_t_back[BUFLEN];
-	my_float deltaPhiPrimeMod_t_back[BUFLEN];
+	my_float deltaPhiPrime_t_back;
+	my_float deltaPhiPrimeMod_t_back;
 
 	// Frequency differentiation variables
 	my_float delta_f_back;
@@ -56,9 +57,9 @@ void process_frame(buffer_data_t* bf, audio_data_t* audat)
 
 		// Time differentiation
 		phi_diff = bf->phi_a[k] - bf->phi_aPrev[k];
-		deltaPhiPrime_t_back[k] = phi_diff - (bf->hopA * 2 * PI * k)/bf->buflen;
-		deltaPhiPrimeMod_t_back[k] = std::remainder(deltaPhiPrime_t_back[k], 2 * PI);
-		bf->delta_t[k] = deltaPhiPrimeMod_t_back[k]/bf->hopA + (2 * PI * k)/bf->buflen;
+		deltaPhiPrime_t_back = phi_diff - ((my_float)bf->hopA * 2 * PI * k)/bf->buflen;
+		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
+		bf->delta_t[k] = deltaPhiPrimeMod_t_back/bf->hopA + (2 * PI * k)/bf->buflen;
 
 		// Backward frequency differentiation
 		if (k > 0)
@@ -89,27 +90,31 @@ void process_frame(buffer_data_t* bf, audio_data_t* audat)
 		bf->phi_s[k] = bf->phi_sPrev[k] + (bf->hopS / 2) * (bf->delta_t[k] + bf->delta_tPrev[k]);
 	}
 #else
-	propagate_phase(bf, audat, b_s , abstol);
+	auto initTime  = std::chrono::high_resolution_clock::now();
+	propagate_phase(bf, b_s , abstol);
+	auto finalTime = std::chrono::high_resolution_clock::now();
+	auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
+	PRINT_LOG("Propagate phase execution time: %l ms.\n", exTime.count());
 #endif
-	std::complex<my_float> z[BUFLEN];
+	std::complex<my_float> z;
 
 	for(uint16_t k = 0; k < bf->buflen; k++)
 	{
-		z[k] = bf->mag[k] * std::exp(std::complex<my_float>{0.f, bf->phi_s[k]});
-		bf->cpxOut[k].r = std::real(z[k]);
-		bf->cpxOut[k].i = std::imag(z[k]);
+		z = bf->mag[k] * std::exp(std::complex<my_float>{0.f, bf->phi_s[k]});
+		bf->cpxOut[k].r = std::real(z);
+		bf->cpxOut[k].i = std::imag(z);
 	}
 
-	DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "mag.csv"       , count, -1, 1, -1);
-	DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_a.csv"     , count, -1, 1, -1);
-	DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_s.csv"     , count, -1, 1, -1);
-	DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrev.csv" , count, -1, 1, -1);
-#ifdef DEBUG_DUMP
-	count++;
-#endif
+//	DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "mag.csv"       , count, -1, 1, -1);
+//	DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_a.csv"     , count, -1, 1, -1);
+//	DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_s.csv"     , count, -1, 1, -1);
+//	DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrev.csv" , count, -1, 1, -1);
+//#ifdef DEBUG_DUMP
+//	count++;
+//#endif
 }
 
-void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_float abstol)
+void propagate_phase(buffer_data_t* bf, my_float b_s, my_float abstol)
 {
 #ifdef DEBUG_DUMP
 	static int count = 0;
@@ -120,7 +125,7 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_fl
 	TupleCompareObject cmp(bf->mag, bf->magPrev);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject<my_float> > h{cmp, std::move(container)}; // STEP 4
 
-	for (uint32_t m = 0; m < bf->buflen; m++)
+	for (uint16_t m = 0; m < bf->buflen; m++)
 	{
 		if (bf->mag[m] > abstol)
 		{ 
@@ -165,8 +170,8 @@ void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_fl
 		}
 	}
 
-	DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count, -1, 1, -1);
-	DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count, -1, 1, -1);
+	//DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count, -1, 1, -1);
+	//DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count, -1, 1, -1);
 #ifdef DEBUG_DUMP
 	count++;
 #endif
@@ -226,7 +231,7 @@ void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, my_f
 	{
 		my_float tShift;
 		my_float upper;
-		my_float lower;
+		my_float lower = 0;
 		uint32_t lowerIdx;
 		uint32_t upperIdx;
 		my_float delta_shift;
@@ -265,7 +270,7 @@ void interpolate(buffer_data_t* bf, audio_data_t* audat, uint32_t vTimeIdx, my_f
 }
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample)
+	uint32_t* vTimeIdx, my_float* pOutBuffLastSample)
 {
 #ifdef DEBUG_DUMP
 	static int counter_1 = 0;
@@ -276,16 +281,17 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 	static int reset_counter = 0;
 #endif
 
+
+#ifdef CONSTANT_Q_T
 	// Constant Q variable initialization
 	uint32_t minFreq = 40;
 	uint32_t maxFreq = 1000;
 	uint8_t  bpo = 64;
 
-//#ifdef CONSTANT_Q_T
-//	CQParameters params(audat->sampleRate, minFreq, maxFreq, bpo);
-//	ConstantQ cq(params);
-//	CQInverse cqi(params);
-//#endif
+	CQParameters params(audat->sampleRate, minFreq, maxFreq, bpo);
+	ConstantQ cq(params);
+	CQInverse cqi(params);
+#endif
 
 	my_float inwinScale = sqrt(((bf->buflen / bf->hopA) / 2));
 	my_float outwinScale = sqrt(((bf->buflen / bf->hopS) / 2));
@@ -328,13 +334,17 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
         /************ PROCESSING STAGE *********************/
 
-		DUMP_ARRAY_COMPLEX(bf->cpxIn  , bf->buflen, DEBUG_DIR "cpxIn.csv"  , counter_1,  5, sample_counter, -1);
+		//DUMP_ARRAY_COMPLEX(bf->cpxIn  , bf->buflen, DEBUG_DIR "cpxIn.csv"  , counter_1,  5, sample_counter, -1);
 
 		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
 
-		process_frame(bf, audat);
+		//auto initTime  = std::chrono::high_resolution_clock::now();
+		process_frame(bf);
+		//auto finalTime = std::chrono::high_resolution_clock::now();
+		//auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
+		//PRINT_LOG("Process frame execution time: %d ms.\n", exTime.count());
 
-		DUMP_ARRAY_COMPLEX(bf->cpxOut, bf->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 40, sample_counter , -1);
+		//DUMP_ARRAY_COMPLEX(bf->cpxOut, bf->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 40, sample_counter , -1);
 		// DUMP_ARRAY(audat->inbuffer , bf->buflen, DEBUG_DIR "inbuffer.csv", counter_1, -1, sample_counter , bf->buflen);
 		// DUMP_ARRAY(audat->inwin    , bf->buflen, DEBUG_DIR "inwin.csv"   , counter_1, -1, sample_counter , bf->buflen);
 		// DUMP_ARRAY(audat->outwin   , bf->buflen, DEBUG_DIR "outwin.csv"  , counter_1, -1, sample_counter , bf->buflen);

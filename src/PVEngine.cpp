@@ -2,6 +2,7 @@
 #include "PVEngine.h"
 #include "audioUtils.h"
 #include "logger.h"
+#include "DumperContainer.h"
 #include <utility>
 #include <complex>
 #include <algorithm>
@@ -10,9 +11,13 @@ PVEngine::~PVEngine()
 {
 }
 
-PVEngine::PVEngine(buffer_data_t* bf, audio_data_t* audat) :
-    bf_(bf),
-    audat_(audat)
+PVEngine::PVEngine(buffer_data_t* bf, audio_data_t* audat)
+   : bf_(bf)
+   , audat_(audat)
+   , frameNum_(0)
+   , vTimeIdx_(0)
+   , cleanIdx_(0)
+   , pOutBuffLastSample_(0)
 {
 	inWinScale_ = sqrt(((bf->buflen / bf->hopA) / 2));
 	outWinScale_ = sqrt(((bf->buflen / bf->hopS) / 2));
@@ -46,24 +51,22 @@ void PVEngine::process()
 
         /************ PROCESSING STAGE *********************/
 
-		// DUMP_ARRAY_COMPLEX(bf_->cpxIn  , bf_->buflen, DEBUG_DIR "cpxIn.csv"  , counter_1,  5, sample_counter, -1);
+		DUMP_ARRAY(bf_->cpxIn, "cpxIn.csv");
 
 		transform(bf_->cpxIn , bf_->cpxOut);
 
 		processFrame();
 
-		// DUMP_ARRAY_COMPLEX(bf_->cpxOut, bf_->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 40, sample_counter , -1);
-		// DUMP_ARRAY(audat_->inbuffer , bf_->buflen, DEBUG_DIR "inbuffer.csv", counter_1, -1, sample_counter , bf_->buflen);
-		// DUMP_ARRAY(audat_->inwin    , bf_->buflen, DEBUG_DIR "inwin.csv"   , counter_1, -1, sample_counter , bf_->buflen);
-		// DUMP_ARRAY(audat_->outwin   , bf_->buflen, DEBUG_DIR "outwin.csv"  , counter_1, -1, sample_counter , bf_->buflen);
-		// DUMP_ARRAY(bf_->phi_a       , bf_->buflen, DEBUG_DIR "phi_a.csv"   , counter_1, -1, sample_counter , bf_->buflen);
-		// DUMP_ARRAY(bf_->phi_s       , bf_->buflen, DEBUG_DIR "phi_s.csv"   , counter_1, -1, sample_counter , bf_->buflen);
+		DUMP_ARRAY(bf_->cpxOut     , "cpxOut.csv");
+		DUMP_ARRAY(audat_->inbuffer, "inbuffer.csv");
+		DUMP_ARRAY(audat_->inwin   , "inwin.csv");
+		DUMP_ARRAY(audat_->outwin  , "outwin.csv");
 
 		std::swap(bf_->cpxIn, bf_->cpxOut);
 
 		inverseTransform(bf_->cpxIn , bf_->cpxOut);
 
-		// DUMP_ARRAY(bf_->cpxIn       , bf_->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 5, sample_counter, -1);
+		DUMP_ARRAY(bf_->cpxIn, "cpxOut.csv");
 
 		for (uint32_t k = 0; k < bf_->buflen; k++)
 		{
@@ -74,7 +77,7 @@ void PVEngine::process()
 
 		strechFrame(audat_->outframe, audat_->vTime);
 
-		// DUMP_ARRAY(audat_->vTime, audat_->numFrames*bf_->hopS*2, DEBUG_DIR "vTimeXXX.csv", counter_1, 40, sample_counter, -1);
+		DUMP_ARRAY(audat_->vTime, "vTime.csv");
 
 		if ((++frameNum_) >= audat_->numFrames) frameNum_ = 0;
 
@@ -84,22 +87,15 @@ void PVEngine::process()
 
 	interpolate(audat_->vTime, audat_->outbuffer);
 
-	// DUMP_ARRAY(audat_->outbuffer, bf_->buflen, DEBUG_DIR "outXXX.csv", counter_2, 10, audio_ptr, -1);
+	 DUMP_ARRAY(audat_->outbuffer, "outbuffer.csv");
 
 	vTimeIdx_ += audat_->numFrames * bf_->hopS;
 	if ((vTimeIdx_) >= audat_->numFrames * bf_->hopS * 2) vTimeIdx_ = 0;
-
-#ifdef DEBUG_DUMP
-	counter_2++;
-#endif
 
 }
 
 void PVEngine::processFrame()
 {
-#ifdef DEBUG_DUMP
-	static int count = 0;
-#endif
 
 	for(uint32_t k = 0; k < bf_->buflen; k++)
 	{
@@ -112,23 +108,20 @@ void PVEngine::processFrame()
 	
 	propagatePhase();
 
-	std::complex<my_float> z[BUFLEN];
+	std::complex<my_float> z;
 
 	for(uint16_t k = 0; k < bf_->buflen; k++)
 	{
-		z[k] = bf_->mag[k] * std::exp(std::complex<my_float>{0.f, bf_->phi_s[k]});
-		bf_->cpxOut[k].r = std::real(z[k]);
-		bf_->cpxOut[k].i = std::imag(z[k]);
+		z = bf_->mag[k] * std::exp(std::complex<my_float>{0.f, bf_->phi_s[k]});
+		bf_->cpxOut[k].r = std::real(z);
+		bf_->cpxOut[k].i = std::imag(z);
 	}
 
-	DUMP_ARRAY(bf_->mag      , bf_->buflen, DEBUG_DIR "mag.csv"       , count, -1, 1, -1);
-	DUMP_ARRAY(bf_->phi_a    , bf_->buflen, DEBUG_DIR "phi_a.csv"     , count, -1, 1, -1);
-	DUMP_ARRAY(bf_->phi_s    , bf_->buflen, DEBUG_DIR "phi_s.csv"     , count, -1, 1, -1);
-	DUMP_ARRAY(bf_->phi_sPrev, bf_->buflen, DEBUG_DIR "phi_sPrev.csv" , count, -1, 1, -1);
+	DUMP_ARRAY(bf_->mag      , "mag.csv");
+	DUMP_ARRAY(bf_->phi_a    , "phi_a.csv");
+	DUMP_ARRAY(bf_->phi_s    , "phi_s.csv");
+	DUMP_ARRAY(bf_->phi_sPrev, "phi_sPrev.csv");
 
-#ifdef DEBUG_DUMP
-	count++;
-#endif
 }
 
 void PVEngine::propagatePhase()
@@ -146,21 +139,22 @@ void PVEngine::computeDifferenceStep()
 
 	// Time differentiation variables.
 	// Can't do forward differentiation because the algorithm is real time
-	my_float deltaPhiPrime_t_back[BUFLEN];
-	my_float deltaPhiPrimeMod_t_back[BUFLEN];
+	my_float deltaPhiPrime_t_back;
+	my_float deltaPhiPrimeMod_t_back;
 
 	// Time differentiation
 	for(uint32_t k = 0; k < bf_->buflen; k++)
 	{
 		phi_diff = bf_->phi_a[k] - bf_->phi_aPrev[k];
-		deltaPhiPrime_t_back[k] = phi_diff - (bf_->hopA * 2 * PI * k)/bf_->buflen;
-		deltaPhiPrimeMod_t_back[k] = std::remainder(deltaPhiPrime_t_back[k], 2 * PI);
-		bf_->delta_t[k] = deltaPhiPrimeMod_t_back[k]/bf_->hopA + (2 * PI * k)/bf_->buflen;
+		deltaPhiPrime_t_back = phi_diff - ((my_float)bf_->hopA * 2 * PI * k)/bf_->buflen;
+		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
+		bf_->delta_t[k] = deltaPhiPrimeMod_t_back/bf_->hopA + (2 * PI * k)/bf_->buflen;
 	}
 }
 
 void PVEngine::transform(cpx* input, cpx* output)
 {
+	// TODO Change to kiss_fftr, it's faster
 	kiss_fft(bf_->cfg, input, output);
 }
 
@@ -169,13 +163,13 @@ void PVEngine::inverseTransform(cpx* input, cpx* output)
 	kiss_fft(bf_->cfgInv, input, output);
 }
 
-void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint8_t frameNum)
+void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint32_t frameNum)
 {
 	for (int k = 0; k < hop; k++)
 	{
 		frame[frameNum * hop + k] = input[frameNum * hop + k];
 	}
-	int frameNum2 = frameNum + 1;
+	uint32_t frameNum2 = frameNum + 1;
 	if (frameNum2 >= audat_->numFrames) frameNum2 = 0;
 	for (uint8_t f2 = 0; f2 < audat_->numFrames; f2++)
 	{
@@ -222,7 +216,7 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 	{
 		my_float tShift;
 		my_float upper;
-		my_float lower;
+		my_float lower = 0;
 		uint32_t lowerIdx;
 		uint32_t upperIdx;
 		my_float delta_shift;

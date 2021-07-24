@@ -4,8 +4,8 @@
 #include "DSPConfig.h"
 #include <math.h>
 #include <stdint.h>
-#include "kissfft/kiss_fft.h"
-#include "kissfft/_kiss_fft_guts.h"
+#include "kiss_fft.h"
+#include "_kiss_fft_guts.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -15,9 +15,9 @@ extern "C"
 #include "audioData.h"
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, uint32_t* cleanIdx, my_float* pOutBuffLastSample);
-void process_frame(buffer_data_t* bf, audio_data_t* audat);
-void propagate_phase(buffer_data_t* bf, audio_data_t* audat, my_float b_s, my_float abstol);
+	uint32_t audio_ptr, uint32_t* vTimeIdx, my_float* pOutBuffLastSample);
+void process_frame(buffer_data_t* bf);
+void propagate_phase(buffer_data_t* bf, my_float b_s, my_float abstol);
 
 void overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint8_t frameNum, int numFrames);
 

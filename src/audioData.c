@@ -1,11 +1,16 @@
 
 #include "audioData.h"
 
-void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint32_t sampleRate, uint8_t steps, uint32_t buflen)
+void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my_float* in_audio, uint32_t sampleRate, uint32_t steps, uint32_t buflen)
 {
 	// Pitch variables
+#ifdef USE_DOUBLE
+	my_float shift = pow(2, ((my_float)steps)/12);
+	uint32_t hopS = (int32_t)round(HOPA * shift);
+#else
 	my_float shift = powf(2, ((my_float)steps)/12);
 	uint32_t hopS = (int32_t)roundf(HOPA * shift);
+#endif
 	uint32_t numFrames = (uint32_t) (BUFLEN / HOPA); // Number of frames that overlap in a buffer. 75% overlap for 4 frames.
 
 	// Initialize structures
@@ -15,8 +20,13 @@ void init_variables(buffer_data_t* bf, audio_data_t* audat, uint32_t numSamp, my
 	// Initialize input and output window functions
 	for(uint32_t k = 0; k < buflen; k++)
 	{
+#ifdef USE_DOUBLE
 		audat->inwin[k] = WINCONST * (1 - cos(2 * PI * k / buflen));
 		audat->outwin[k] = WINCONST * (1 - cos(2 * PI * k / buflen));
+#else
+		audat->inwin[k] = WINCONST * (1 - cosf(2 * PI * k / buflen));
+		audat->outwin[k] = WINCONST * (1 - cosf(2 * PI * k / buflen));
+#endif
 	}
 }
 
@@ -34,7 +44,7 @@ void swap_ping_pong_buffer_data(buffer_data_t* bf, audio_data_t* audat)
 	bf->delta_tPrev = bf->delta_t;
 	bf->delta_t = (bf->delta_t == audat->delta_t_ping) ? audat->delta_t_pong : audat->delta_t_ping;
 }
-void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames, uint32_t numSamp, uint32_t sampleRate, uint32_t bufLen, my_float* in_audio)
+void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint32_t numFrames, uint32_t numSamp, uint32_t sampleRate, uint32_t bufLen, my_float* in_audio)
 {
 	// Allocate and zero fill arrays 
 	*audat = alloc_audio_data(hopS * numFrames * 2, numSamp, bufLen);
@@ -44,7 +54,7 @@ void initialize_audio_data(audio_data_t* audat, uint32_t hopS, uint8_t numFrames
 	audat->sampleRate = sampleRate;
 }
 
-void initialize_buffer_data(buffer_data_t* bf, audio_data_t* audat, my_float shift, uint32_t hopS, uint8_t steps, uint32_t hopA, uint32_t bufLen)
+void initialize_buffer_data(buffer_data_t* bf, audio_data_t* audat, my_float shift, uint32_t hopS, uint32_t steps, uint32_t hopA, uint32_t bufLen)
 {
 	*bf = alloc_buffer_data(bufLen);
 

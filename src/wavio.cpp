@@ -5,6 +5,12 @@
 #include <iostream>
 #include <system_error>
 
+#ifdef _WIN32 
+#define FOPEN(a,b,c) fopen_s(&a,b,c)
+#else
+#define FOPEN(a,b,c) a = fopen(b,c)
+#endif
+
 
 // Find the file size 
 int getFileSize(FILE *inFile){
@@ -55,10 +61,18 @@ void printHeader(wav_hdr wavHeader){
     printf("**************************************\n");
 }
 
-my_float* readWav(uint32_t *numSamp, char* filePath)
+my_float* readWav(uint32_t& numSamp, std::string& filePath)
 {
 	wave::File read_file;
+
+#ifdef _WIN32 
+#pragma warning(push)
+#pragma warning(disable:26812)
+#endif
 	wave::Error err = read_file.Open(filePath, wave::kIn);
+#ifdef __WIN32__
+#pragma warning(pop)
+#endif
 	if (err) {
 		std::cout << "Error, cannot open file: " << filePath << std::endl;
         std::cout << "Error code: " << err << std::endl;
@@ -74,30 +88,35 @@ my_float* readWav(uint32_t *numSamp, char* filePath)
     int numChannels = read_file.channel_number();
     if (numChannels == 2)
     {
-        *numSamp = *numSamp/2;
-        PRINT_LOG1("Converting stereo to mono.\n");
+        numSamp = numSamp/2;
+        PRINT_LOG("Converting stereo to mono.\n");
         // Average the two channels
         for (size_t k = 0; k < content.size(); k += 2)
         {
             content[k] = (content[k] + content[k + 1]) / 2;
         }
-        *numSamp = content.size()/2;
+        numSamp = static_cast<uint32_t>(content.size()/2);
     }
     else if(numChannels > 2)
     {
         std::cout << "Error: Unsupported number of channels: " << numChannels << std::endl;
 		exit(EXIT_FAILURE);
     }
-    my_float* audio = (my_float*) calloc(*numSamp, sizeof(my_float));
-	for (uint32_t i = 0; i < *numSamp; i++) {
-		audio[i] = (numChannels == 2) ? content[i*2] : content[i];
+    my_float* audio = (my_float*) calloc(numSamp, sizeof(my_float));
+    if(!audio)
+    {
+        std::cout << "Error: Could not allocate memory for input audio." << std::endl;
+		exit(EXIT_FAILURE);
+    }
+	for (uint32_t i = 0; i < numSamp; i++) {
+		audio[i] = (numChannels == 2) ? content[static_cast<uint64_t>(i)*2] : content[i];
 	}
-	PRINT_LOG2("Number of samples: %i\n", *numSamp);
+	PRINT_LOG("Number of samples: %i\n", numSamp);
     return audio;
 }
 
 #ifndef USE_WAVE_LIBRARY
-void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
+void writeWav(my_float& audio, std::string& inputFilePath, std::string& outputFilePath) {
     
     wav_hdr wavHeader;
     wav_hdr outWavHeader;
@@ -105,7 +124,7 @@ void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32
     FILE *outWavFile;
     int headerSize = sizeof(wav_hdr);
 
-    wavFile = fopen( inputFilePath , "r" );
+    FOPEN(wavFile, inputFilePath.c_str() , "r" );
 
     if(wavFile == NULL){
         printf("Couldn't open wave file\n");
@@ -130,7 +149,7 @@ void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32
     fclose(wavFile);
 
     // Re-open file to load all the data
-    wavFile = fopen(inputFilePath , "rb");
+    FOPEN(wavFile, inputFilePath.c_str() , "rb" );
 
     if(wavFile == NULL)
 		{
@@ -139,7 +158,7 @@ void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32
     }
 
     // Open and write to output wav file
-    outWavFile = fopen(outputFilePath , "w");
+    FOPEN(outWavFile, outputFilePath.c_str() , "w" );
 
     if(outWavFile == NULL)
 	{
@@ -163,14 +182,19 @@ void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32
     fwrite(&outWavHeader, (headerSize), 1, outWavFile);
     fclose(outWavFile);
 
-    outWavFile = fopen(outputFilePath, "a");
+    FOPEN(outWavFile, outputFilePath.c_str(), "a");
+    if(!outWavFile)
+    {
+		fclose(wavFile);
+        return;
+    }
     if (wavHeader.NumOfChan == 2)
 	{
-        fwrite(audio, (SIZE_DATA/2), 1, outWavFile);
+        fwrite(&audio, (SIZE_DATA/2), 1, outWavFile);
     }
     else
 	{
-        fwrite(audio, SIZE_DATA, 1, outWavFile);
+        fwrite(&audio, SIZE_DATA, 1, outWavFile);
     }
 
     // Close wav files

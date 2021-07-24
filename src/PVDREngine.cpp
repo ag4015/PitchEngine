@@ -1,11 +1,13 @@
 #include "PVDREngine.h"
 #include "Tuple.h"
 #include "logger.h"
+#include "DumperContainer.h"
 #include <set>
 #include <vector>
 #include <random>
 #include <queue>
 #include <complex>
+#include <algorithm>
 
 PVDREngine::~PVDREngine()
 {
@@ -18,16 +20,12 @@ PVDREngine::PVDREngine(buffer_data_t* bf, audio_data_t* audat) :
 
 void PVDREngine::propagatePhase()
 {
-#ifdef DEBUG_DUMP
-	static int count = 0;
-#endif
 	std::set<uint16_t> setI;
 	std::vector<Tuple> container;
 	container.reserve(bf_->buflen);
 	TupleCompareObject cmp(bf_->mag, bf_->magPrev);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject<my_float> > h{cmp, std::move(container)}; // STEP 4
 
-	my_float b_a = 1; // b_a/b_s = shift; The value of b_a has no effect on the result
 	my_float b_s = b_a * bf_->shift;
 
 	// STEP 1
@@ -36,7 +34,7 @@ void PVDREngine::propagatePhase()
 	my_float abstol  = tol * ((maxMag >= bf_->maxMagPrev) ? (maxMag) : (bf_->maxMagPrev));
 	bf_->maxMagPrev = maxMag;
 
-	for (uint32_t m = 0; m < bf_->buflen; m++)
+	for (uint16_t m = 0; m < bf_->buflen; m++)
 	{
 		if (bf_->mag[m] > abstol)
 		{ 
@@ -81,11 +79,9 @@ void PVDREngine::propagatePhase()
 		}
 	}
 
-	DUMP_ARRAY(bf_->delta_f, bf_->buflen, DEBUG_DIR "delta_f.csv" , count, -1, 1, -1);
-	DUMP_ARRAY(bf_->delta_t, bf_->buflen, DEBUG_DIR "delta_t.csv" , count, -1, 1, -1);
-#ifdef DEBUG_DUMP
-	count++;
-#endif
+	DUMP_ARRAY(bf_->delta_f, "delta_f.csv");
+	DUMP_ARRAY(bf_->delta_t, "delta_t.csv");
+
 	return;
 }
 
@@ -96,22 +92,20 @@ void PVDREngine::computeDifferenceStep()
 
 	// Time differentiation variables.
 	// Can't do forward differentiation because the algorithm is real time
-	my_float deltaPhiPrime_t_back[BUFLEN];
-	my_float deltaPhiPrimeMod_t_back[BUFLEN];
+	my_float deltaPhiPrime_t_back;
+	my_float deltaPhiPrimeMod_t_back;
 
 	// Frequency differentiation variables
 	my_float delta_f_back;
 	my_float delta_f_fwd;
-	my_float b_a = 1; // b_a/b_s = shift; The value of b_a has no effect on the result
-	my_float b_s = b_a * bf_->shift;
 
 	for(uint32_t k = 0; k < bf_->buflen; k++)
 	{
 		// Time differentiation
 		phi_diff = bf_->phi_a[k] - bf_->phi_aPrev[k];
-		deltaPhiPrime_t_back[k] = phi_diff - (bf_->hopA * 2 * PI * k)/bf_->buflen;
-		deltaPhiPrimeMod_t_back[k] = std::remainder(deltaPhiPrime_t_back[k], 2 * PI);
-		bf_->delta_t[k] = deltaPhiPrimeMod_t_back[k]/bf_->hopA + (2 * PI * k)/bf_->buflen;
+		deltaPhiPrime_t_back = phi_diff - ((my_float)bf_->hopA * 2 * PI * k)/bf_->buflen;
+		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
+		bf_->delta_t[k] = deltaPhiPrimeMod_t_back/bf_->hopA + (2 * PI * k)/bf_->buflen;
 
 		// Backward frequency differentiation
 		if (k > 0)
@@ -135,3 +129,4 @@ void PVDREngine::computeDifferenceStep()
 			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 	}
 }
+
