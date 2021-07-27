@@ -51,12 +51,12 @@ int main(int argc, char **argv)
 	PRINT_LOG("Input file: %s\n", inputFilePath);
 	PRINT_LOG("Output file: %s\n", outputFilePath);
 
-	INITIALIZE_LOGS(audio_ptr);
-
 	// Load contents of wave file
 	my_float* in_audio = readWav(numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
 	init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
+
+	INITIALIZE_DUMPERS(audio_ptr, &bf, &audat);
 	
 	PRINT_LOG("Buffer length: %i.\n", bf.buflen);
 
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
 		auto initTime  = std::chrono::high_resolution_clock::now();
 
-		//process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
+		process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
 
 		auto finalTime = std::chrono::high_resolution_clock::now();
 		auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 	//}
 
 	// Save the processed audio to the output file
-	writeWav(*audat.out_audio, inputFilePath, outputFilePath);
+	writeWav(audat.out_audio, inputFilePath, outputFilePath, numSamp);
 
 	// Deallocate memory
 	free_audio_data(&audat);
@@ -169,23 +169,23 @@ void parse_arguments(int argc, char** argv, std::string&  inputFilePath, std::st
 	}
 }
 
-void initializeLogs(uint32_t& audio_ptr)
+void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat)
 {
     void createDumper(std::string& name, uint32_t& audio_ptr, uint32_t bufferSize,
         uint32_t dumpSize, uint32_t countMax, uint32_t auPMax);
 	CREATE_DUMPER_C0NTAINER(DEBUG_DIR);
-	INIT_DUMPER("mag.csv"      , audio_ptr, bf_->buflen, bf_->buflen, -1, -1);
-	INIT_DUMPER("phi_a.csv"    , audio_ptr, bf_->buflen, bf_->buflen, -1, -1);
-	INIT_DUMPER("phi_s.csv"    , audio_ptr, bf_->buflen, bf_->buflen, -1, -1);
-	INIT_DUMPER("phi_sPrev.csv", audio_ptr, bf_->buflen, bf_->buflen, -1, -1);
-	INIT_DUMPER("cpxIn.csv"    , audio_ptr, bf_->buflen, bf_->buflen,  5, -1);
-	INIT_DUMPER("cpxOut.csv"   , audio_ptr, bf_->buflen, bf_->buflen,  5, -1);
-	INIT_DUMPER("inbuffer.csv" , audio_ptr, bf_->buflen, bf_->buflen, 40, -1);
-	INIT_DUMPER("outbuffer.csv", audio_ptr, bf_->buflen, bf_->buflen, 10, -1);
-	INIT_DUMPER("inwin.csv"    , audio_ptr, bf_->buflen, bf_->buflen, 40, -1);
-	INIT_DUMPER("outwin.csv"   , audio_ptr, bf_->buflen, bf_->buflen, 40, -1);
-	INIT_DUMPER("delta_f.csv"  , audio_ptr, bf_->buflen, bf_->buflen, -1, -1);
-	INIT_DUMPER("delta_t.csv"  , audio_ptr, bf_->buflen, bf_->buflen, -1, -1);
-	INIT_DUMPER("vTime.csv"    , audio_ptr, audat_->numFrames*bf_->hopS*2, audat_->numFrames*bf_->hopS*2, 40, -1);
+	INIT_DUMPER("mag.csv"      , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	INIT_DUMPER("phi_a.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	INIT_DUMPER("phi_s.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	INIT_DUMPER("phi_sPrev.csv", audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	INIT_DUMPER("cpxIn.csv"    , audio_ptr, bf->buflen, bf->buflen,  5, -1);
+	INIT_DUMPER("cpxOut.csv"   , audio_ptr, bf->buflen, bf->buflen,  5, -1);
+	INIT_DUMPER("inbuffer.csv" , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	INIT_DUMPER("outbuffer.csv", audio_ptr, bf->buflen, bf->buflen, 10, -1);
+	INIT_DUMPER("inwin.csv"    , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	INIT_DUMPER("outwin.csv"   , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	INIT_DUMPER("delta_f.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	INIT_DUMPER("delta_t.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	INIT_DUMPER("vTime.csv"    , audio_ptr, audat->numFrames*bf->hopS*2, audat->numFrames*bf->hopS*2, 40, -1);
 }
 

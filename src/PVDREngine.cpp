@@ -79,8 +79,8 @@ void PVDREngine::propagatePhase()
 		}
 	}
 
-	DUMP_ARRAY(bf_->delta_f, "delta_f.csv");
-	DUMP_ARRAY(bf_->delta_t, "delta_t.csv");
+	//DUMP_ARRAY(bf_->delta_f, "delta_f.csv");
+	//DUMP_ARRAY(bf_->delta_t, "delta_t.csv");
 
 	return;
 }

@@ -1,14 +1,13 @@
 
-option(DEBUG_DUMP "Store variables in csv files" OFF)
-option(DEBUG_LOG "Enable logs" ON)
+option(DEBUG_DUMP "Store variables in csv files" ON)
+option(DEBUG_LOG "Enable logs" OFF)
 option(USE_DOUBLE "Floating point double" OFF)
-option(USE_WAVE_LIBRARY "Use the wave library for .wav files." OFF)
+option(USE_WAVE_LIBRARY "Use the wave library for .wav files." ON)
 option(SIMPLE_PV "Pitch shift with a simple phase vocoder" OFF)
 #option(KISSFFT_DATATYPE "Float or double" double)
 
 if(DEBUG_DUMP)
     message("CSV dumping of variables is active.")
-    add_compile_definitions(DEBUG_DUMP)
 endif()
 
 if(SIMPLE_PV)
@@ -19,6 +18,8 @@ endif()
 if(USE_WAVE_LIBRARY)
     message("Using the wave library.")
     add_compile_definitions(USE_WAVE_LIBRARY)
+else()
+    message("Not using the wave library.")
 endif()
 
 if(USE_DOUBLE)
@@ -85,8 +86,6 @@ set(CONSTANT_Q_SOURCE_FILES
 			   ${CONSTANT_Q_SRC_DSP_DIR}KaiserWindow.cpp;
 			   )
 
-configure_file(${CONSTANT_Q_LIB_DIR}ConstantQConfig.h.in ${CONSTANT_Q_CQ_DIR}ConstantQConfig.h)
-
 set(DSPSIM_SOURCE_FILES
                audioData.c
                audioUtils.cpp
@@ -102,6 +101,7 @@ set(DSPSIM_SOURCE_FILES
                )
 
 add_library(DSPSim STATIC ${DSPSIM_SOURCE_FILES})
+#add_executable(DSPSimExe ${DSPSIM_SOURCE_FILES} main.c)
 
 target_include_directories(DSPSim PUBLIC
                            src/
@@ -123,3 +123,4 @@ else()
   target_compile_options(DSPSim PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()
 
+configure_file(${CONSTANT_Q_LIB_DIR}ConstantQConfig.h.in ${CONSTANT_Q_CQ_DIR}ConstantQConfig.h)

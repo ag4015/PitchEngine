@@ -30,24 +30,4 @@ Dumper::~Dumper()
 	outFile_.close();
 }
 
-template<typename T>
-void Dumper::dump(T* buf)
-{
-	static_assert(std::is_floating_point<T>::value || isComplex<T>::value);
-
-	if ((count_ > maxCount_ && maxCount_ != -1) ||
-		(audioPtr_ != auPMax_ && auPMax_ != -1)) { return; }
-	
-	// Store in a format understandable by numpy in python
-	for (size_t i = 0; i < bufferSize_; i++) {
-		if constexpr (std::is_floating_point<T>::value) {
-			outFile_ << buf[i] << ";";
-		}
-		else {
-			outFile_ << buf[i].r << ";";
-		}
-	}
-	outFile_ << std::endl;
-	count_++;
-}
 

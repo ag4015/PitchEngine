@@ -6,7 +6,7 @@
 
 #define WINCONST   (my_float)0.5            // Constant used for the hamming window
 #define HAMCONST   (my_float)0.53836        // Constant used for the hamming window
-#define BUFLEN     (uint32_t) 1024          // Size of the buffer
+#define BUFLEN     (uint32_t) 4096          // Size of the buffer
 #define HOPA       (uint32_t) 256           // Size of the frame in the analysis stage
 //#define NUMFRAMES  (uint32_t) BUFLEN/HOPA     
 #define PI         (my_float)3.1415926535        // Pi constant

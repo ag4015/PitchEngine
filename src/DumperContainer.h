@@ -5,13 +5,13 @@
 #include <memory>
 #include <string>
 
-#ifdef DEBUG_DUMP
-	   #define INITIALIZE_LOGS(a) intializeLogs(a)
-       #define CREATE_DUMPER_C0NTAINER(a) dumperContainer::getDumperContainer(a)
-       #define INIT_DUMPER(a,b,c,d,e,f) dumpercontainer::getDumperContainer()->createDumper(a,b,c,d,e,f)
-       #define DUMP_ARRAY(a,b) dumpercontainer::getDumperContainer()->dump(a,b)
+#ifdef DEBUG_DUMP 
+	   #define INITIALIZE_DUMPERS(a,b,c) initializeDumpers(a,b,c)
+       #define CREATE_DUMPER_C0NTAINER(a) DumperContainer::getDumperContainer(a)
+       #define INIT_DUMPER(a,b,c,d,e,f) DumperContainer::getDumperContainer()->createDumper(a,b,c,d,e,f)
+       #define DUMP_ARRAY(a,b) DumperContainer::getDumperContainer()->dump(a,b)
 #else
-	   #define INITIALIZE_LOGS(a)
+	   #define INITIALIZE_DUMPERS(a,b,c)
        #define CREATE_DUMPER_C0NTAINER(a)
        #define INIT_DUMPER(a,b,c,d,e,f)
        #define DUMP_ARRAY(a,b)
@@ -22,7 +22,6 @@ class DumperContainer
 private:
     DumperContainer(std::string path) : path_(path) {}
     static DumperContainer* instance;
-    //std::unordered_map<std::string, Dumper> dumperMap_;
     std::unordered_map<std::string, std::unique_ptr<Dumper> > dumperMap_;
     const std::string path_;
 
@@ -34,9 +33,15 @@ public:
         }
 		return instance;
     }
-    void createDumper(std::string& name, uint32_t& audio_ptr, uint32_t bufferSize,
+    void createDumper(const std::string& name, uint32_t& audio_ptr, uint32_t bufferSize,
         uint32_t dumpSize, uint32_t countMax, uint32_t auPMax);
 	template<typename T>
-    void dump(T* buf, std::string& name);
+	void dump(T buf, const std::string& name)
+	{
+		auto dumper = dumperMap_.find(path_ + name);
+		if (dumper != dumperMap_.end()) {
+			dumper->second->dump(buf);
+		}
+	}
 };
 

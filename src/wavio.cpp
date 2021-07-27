@@ -70,7 +70,7 @@ my_float* readWav(uint32_t& numSamp, std::string& filePath)
 #pragma warning(disable:26812)
 #endif
 	wave::Error err = read_file.Open(filePath, wave::kIn);
-#ifdef __WIN32__
+#ifdef _WIN32
 #pragma warning(pop)
 #endif
 	if (err) {
@@ -204,7 +204,7 @@ void writeWav(my_float& audio, std::string& inputFilePath, std::string& outputFi
     return;
 }
 #else
-void writeWav(my_float* audio, char* inputFilePath, char* outputFilePath, uint32_t numSamp) {
+void writeWav(my_float* audio, std::string& inputFilePath, std::string& outputFilePath, uint32_t numSamp) {
 
 	wave::File read_file;
 	wave::Error err = read_file.Open(inputFilePath, wave::kIn);

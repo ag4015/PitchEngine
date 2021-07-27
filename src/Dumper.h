@@ -19,12 +19,30 @@ public:
     Dumper(std::string fileName, uint32_t& audio_ptr, uint32_t dumpSize,
         uint32_t bufferSize, uint32_t maxCount, uint32_t auPMax);
     Dumper(const Dumper& other);
-    //Dumper& operator=(const Dumper&);
-    //Dumper(Dumper&&) noexcept = default;
-    //Dumper &operator=(const Dumper&) = default;
     ~Dumper();
 	template<typename T>
-    void dump(T* buf);
+	void dump(T buf)
+	{
+		using remove_pointer_t = typename std::remove_pointer<T>::type;
+
+		static_assert(std::is_pointer<T>::value);
+		static_assert(std::is_floating_point<remove_pointer_t>::value || isComplex<remove_pointer_t>::value);
+
+		if ((count_ > maxCount_ && maxCount_ != -1) ||
+			(audioPtr_ != auPMax_ && auPMax_ != -1)) { return; }
+		
+		// Store in a format understandable by numpy in python
+		for (uint32_t i = 0; i < bufferSize_; i++) {
+			if constexpr (std::is_floating_point<remove_pointer_t>::value) {
+				outFile_ << buf[i] << ";";
+			}
+			else {
+				outFile_ << buf[i].r << ";";
+			}
+		}
+		outFile_ << std::endl;
+		count_++;
+	}
 };
 
 template <typename T>

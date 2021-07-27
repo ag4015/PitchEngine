@@ -4,6 +4,7 @@
 #include "audioData.h"
 #include "logger.h"
 #include "Tuple.h"
+#include "DumperContainer.h"
 #ifdef CONSTANT_Q_T
 #include "ConstantQ.h"
 #include "CQInverse.h"
@@ -16,7 +17,7 @@
 #include <random>
 #include <chrono>
 
-#define MAGNITUDE_TOLERANCE static_cast<my_float>(1e-6)
+#define MAGNITUDE_TOLERANCE 1e-6f
 //#define SIMPLE_PV
 
 void process_frame(buffer_data_t* bf)
@@ -105,10 +106,10 @@ void process_frame(buffer_data_t* bf)
 		bf->cpxOut[k].i = std::imag(z);
 	}
 
-//	DUMP_ARRAY(bf->mag      , bf->buflen, DEBUG_DIR "mag.csv"       , count, -1, 1, -1);
-//	DUMP_ARRAY(bf->phi_a    , bf->buflen, DEBUG_DIR "phi_a.csv"     , count, -1, 1, -1);
-//	DUMP_ARRAY(bf->phi_s    , bf->buflen, DEBUG_DIR "phi_s.csv"     , count, -1, 1, -1);
-//	DUMP_ARRAY(bf->phi_sPrev, bf->buflen, DEBUG_DIR "phi_sPrev.csv" , count, -1, 1, -1);
+	DUMP_ARRAY(bf->mag      , "mag.csv");
+	DUMP_ARRAY(bf->phi_a    , "phi_a.csv");
+	DUMP_ARRAY(bf->phi_s    , "phi_s.csv");
+	DUMP_ARRAY(bf->phi_sPrev, "phi_sPrev.csv");
 //#ifdef DEBUG_DUMP
 //	count++;
 //#endif
@@ -170,11 +171,8 @@ void propagate_phase(buffer_data_t* bf, my_float b_s, my_float abstol)
 		}
 	}
 
-	//DUMP_ARRAY(bf->delta_f, bf->buflen, DEBUG_DIR "bf->delta_f.csv" , count, -1, 1, -1);
-	//DUMP_ARRAY(bf->delta_t, bf->buflen, DEBUG_DIR "bf->delta_t.csv" , count, -1, 1, -1);
-#ifdef DEBUG_DUMP
-	count++;
-#endif
+	DUMP_ARRAY(bf->delta_f, "delta_f.csv");
+	DUMP_ARRAY(bf->delta_t, "delta_t.csv");
 	return;
 }
 
@@ -339,7 +337,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
         /************ PROCESSING STAGE *********************/
 
-		//DUMP_ARRAY_COMPLEX(bf->cpxIn  , bf->buflen, DEBUG_DIR "cpxIn.csv"  , counter_1,  5, sample_counter, -1);
+		DUMP_ARRAY(bf->cpxIn, "cpxIn.csv");
 
 		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
 
@@ -349,18 +347,16 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		//auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
 		//PRINT_LOG("Process frame execution time: %d ms.\n", exTime.count());
 
-		//DUMP_ARRAY_COMPLEX(bf->cpxOut, bf->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 40, sample_counter , -1);
-		// DUMP_ARRAY(audat->inbuffer , bf->buflen, DEBUG_DIR "inbuffer.csv", counter_1, -1, sample_counter , bf->buflen);
-		// DUMP_ARRAY(audat->inwin    , bf->buflen, DEBUG_DIR "inwin.csv"   , counter_1, -1, sample_counter , bf->buflen);
-		// DUMP_ARRAY(audat->outwin   , bf->buflen, DEBUG_DIR "outwin.csv"  , counter_1, -1, sample_counter , bf->buflen);
-		// DUMP_ARRAY(bf->phi_a       , bf->buflen, DEBUG_DIR "phi_a.csv"   , counter_1, -1, sample_counter , bf->buflen);
-		// DUMP_ARRAY(bf->phi_s       , bf->buflen, DEBUG_DIR "phi_s.csv"   , counter_1, -1, sample_counter , bf->buflen);
+		DUMP_ARRAY(bf->cpxOut     , "cpxOut.csv");
+		DUMP_ARRAY(audat->inbuffer, "inbuffer.csv");
+		DUMP_ARRAY(audat->inwin   , "inwin.csv");
+		DUMP_ARRAY(audat->outwin  , "outwin.csv");
 
 		std::swap(bf->cpxIn, bf->cpxOut);
 
 		kiss_fft( bf->cfgInv , bf->cpxIn, bf->cpxOut);
 
-		// DUMP_ARRAY(bf->cpxIn       , bf->buflen, DEBUG_DIR "cpxOut.csv"  , counter_1, 5, sample_counter, -1);
+		DUMP_ARRAY(bf->cpxIn, "cpxOut.csv");
 
 //#ifdef CONSTANT_Q_T
 //		for (uint32_t k = 0; k < bf->buflen && k < cqout.size(); k++)
@@ -378,7 +374,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		strechFrame(audat->vTime, audat->outframe, &audat->cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
 
-		// DUMP_ARRAY(audat->vTime, audat->numFrames*bf->hopS*2, DEBUG_DIR "vTimeXXX.csv", counter_1, 40, sample_counter, -1);
+		DUMP_ARRAY(audat->vTime, "vTime.csv");
 
 		if ((++frameNum) >= audat->numFrames) frameNum = 0;
 
@@ -392,7 +388,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 	interpolate(bf, audat, *vTimeIdx, pOutBuffLastSample);
 
-	// DUMP_ARRAY(audat->outbuffer, bf->buflen, DEBUG_DIR "outXXX.csv", counter_2, 10, audio_ptr, -1);
+    DUMP_ARRAY(audat->outbuffer, "outbuffer.csv");
 
 	*vTimeIdx += audat->numFrames * bf->hopS;
 	if ((*vTimeIdx) >= audat->numFrames * bf->hopS * 2) *vTimeIdx = 0;

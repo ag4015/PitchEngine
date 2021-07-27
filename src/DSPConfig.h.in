@@ -9,6 +9,9 @@
 
 // the configured options and settings for Tutorial
 #define RESOURCES_DIR "@RESOURCES_DIR@/"
+#define INPUT_AUDIO_DIR RESOURCES_DIR "inputAudio/"
+#define OUTPUT_AUDIO_DIR RESOURCES_DIR "outputAudio/"
+#define DEBUG_DIR RESOURCES_DIR "debugData/"
 
 #ifdef USE_DOUBLE
 typedef double my_float;

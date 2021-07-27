@@ -92,7 +92,7 @@ void PVEngine::process()
 
 	interpolate(audat_->vTime, audat_->outbuffer);
 
-	 DUMP_ARRAY(audat_->outbuffer, "outbuffer.csv");
+    DUMP_ARRAY(audat_->outbuffer, "outbuffer.csv");
 
 	vTimeIdx_ += audat_->numFrames * bf_->hopS;
 	if ((vTimeIdx_) >= audat_->numFrames * bf_->hopS * 2) vTimeIdx_ = 0;
@@ -122,10 +122,10 @@ void PVEngine::processFrame()
 		bf_->cpxOut[k].i = std::imag(z);
 	}
 
-	DUMP_ARRAY(bf_->mag      , "mag.csv");
-	DUMP_ARRAY(bf_->phi_a    , "phi_a.csv");
-	DUMP_ARRAY(bf_->phi_s    , "phi_s.csv");
-	DUMP_ARRAY(bf_->phi_sPrev, "phi_sPrev.csv");
+	//DUMP_ARRAY(bf_->mag      , "mag.csv");
+	//DUMP_ARRAY(bf_->phi_a    , "phi_a.csv");
+	//DUMP_ARRAY(bf_->phi_s    , "phi_s.csv");
+	//DUMP_ARRAY(bf_->phi_sPrev, "phi_sPrev.csv");
 
 }
 

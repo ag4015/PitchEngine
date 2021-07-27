@@ -15,7 +15,7 @@ extern "C"
 #include "audioData.h"
 
 void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
-	uint32_t audio_ptr, uint32_t* vTimeIdx, my_float* pOutBuffLastSample);
+	uint32_t* vTimeIdx, my_float* pOutBuffLastSample);
 void process_frame(buffer_data_t* bf);
 void propagate_phase(buffer_data_t* bf, my_float b_s, my_float abstol);
 

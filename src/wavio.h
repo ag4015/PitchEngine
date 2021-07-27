@@ -36,5 +36,9 @@ void    printHeader(wav_hdr wavHeader);
 void    separateChannels(int16_t* audio, int16_t* left_channel,/* int16_t* right_channel,*/ unsigned long size);
 wav_hdr makeHeaderMono(wav_hdr header);
 my_float*  readWav(uint32_t& numSamp, std::string& filePath);
+#ifndef USE_WAVE_LIBRARY
 void    writeWav(my_float& audio, std::string& inputFilePath, std::string& outputFilePath);
+#else
+void    writeWav(my_float* audio, std::string& inputFilePath, std::string& outputFilePath, uint32_t numSamp);
+#endif
 
