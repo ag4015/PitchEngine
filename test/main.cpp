@@ -128,7 +128,7 @@ void load_distortion_coefficients(my_float* coeffs, size_t* coeff_size)
         exit(1);
 	}
 #ifdef USE_DOUBLE
-	while( fscan(inFile, "%lf\n", &coeff) != EOF )
+	while( fscanf(inFile, "%lf\n", &coeff) != EOF )
 #else
 	while( fscanf(inFile, "%f\n", &coeff) != EOF )
 #endif
@@ -136,7 +136,7 @@ void load_distortion_coefficients(my_float* coeffs, size_t* coeff_size)
 	PRINT_LOG("Coefficients:\n");
 
 #ifdef USE_DOUBLE
-	while( fscan(inFile, "%lf\n", &coeff) != EOF )
+	while( fscanf(inFile, "%lf\n", &coeff) != EOF )
 #else
 	while( fscanf(inFile, "%f\n", &coeff) != EOF )
 #endif

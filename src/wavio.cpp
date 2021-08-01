@@ -223,7 +223,7 @@ void writeWav(my_float* audio, std::string& inputFilePath, std::string& outputFi
 	std::vector<float> content;
     content.reserve(numSamp);
     for (uint32_t i = 0; i < numSamp; i++) {
-        content.push_back(audio[i]);
+        content.push_back(static_cast<float>(audio[i]));
     }
 	err = write_file.Write(content);
 	if (err) {
