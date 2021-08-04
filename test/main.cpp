@@ -54,62 +54,81 @@ int main(int argc, char **argv)
 	// Load contents of wave file
 	my_float* in_audio = readWav(numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
 
-	init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
+	parameterMap_t parameterMap;
+	parameterCombinations_t paramCombs;
 
-	INITIALIZE_DUMPERS(audio_ptr, &bf, &audat);
-	
-	PRINT_LOG("Buffer length: %i.\n", bf.buflen);
+	parameterMap["buflen"] = { 1024, 2048, 4096 };
+	parameterMap["hopA"]   = { 256, 512 };
+	parameterMap["hopS"]   = { 123 };
+	parameterMap["dummy"]  = { };
 
-	while(audio_ptr < (numSamp - bf.buflen))
+	generateParameterCombinations(parameterMap, paramCombs);
+
+	for (auto& [paramName, paramValues] : parameterMap)
 	{
-		for (uint16_t k = 0; k < bf.buflen; k++)
+		for (auto paramValue : paramValues)
 		{
-			audat.inbuffer[k] = audat.in_audio[audio_ptr + k] * INGAIN;
-		}
+			//std::string variationName = "_" + paramName + "_" +
+			//	std::to_string(std::get<uint32_t>(paramValue)) + "_";
 
-		elapsed_time = clock();
+			init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
 
-		printf("\r%i%%", 100 * audio_ptr/numSamp);
+			//INITIALIZE_DUMPERS(audio_ptr, &bf, &audat, variationName);
+			
+			PRINT_LOG("Buffer length: %i.\n", bf.buflen);
 
-		auto initTime  = std::chrono::high_resolution_clock::now();
-
-		process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
-
-		auto finalTime = std::chrono::high_resolution_clock::now();
-		auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
-		PRINT_LOG("Process buffer execution time: %s ms.\n", exTime.count());
-
-		elapsed_time = clock() - elapsed_time;
-		avg_time = avg_time + (elapsed_time - avg_time)/++N;
-
-		for (uint16_t k = 0; k < bf.buflen; k++)
-		{
-
-			audat.out_audio[audio_ptr + k] = audat.outbuffer[k] * OUTGAIN;
-
-			// Avoid uint16_t overflow and clip the signal instead.
-			if (std::abs(audat.out_audio[audio_ptr + k]) > 1)
+			while(audio_ptr < (numSamp - bf.buflen))
 			{
-				audat.out_audio[audio_ptr + k] = (audat.out_audio[audio_ptr + k] < 0) ? -1.0 : 1.0;
+				for (uint16_t k = 0; k < bf.buflen; k++)
+				{
+					audat.inbuffer[k] = audat.in_audio[audio_ptr + k] * INGAIN;
+				}
+
+				elapsed_time = clock();
+
+				printf("\r%i%%", 100 * audio_ptr/numSamp);
+
+				auto initTime  = std::chrono::high_resolution_clock::now();
+
+				process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
+
+				auto finalTime = std::chrono::high_resolution_clock::now();
+				auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
+				PRINT_LOG("Process buffer execution time: %s ms.\n", exTime.count());
+
+				elapsed_time = clock() - elapsed_time;
+				avg_time = avg_time + (elapsed_time - avg_time)/++N;
+
+				for (uint16_t k = 0; k < bf.buflen; k++)
+				{
+
+					audat.out_audio[audio_ptr + k] = audat.outbuffer[k] * OUTGAIN;
+
+					// Avoid uint16_t overflow and clip the signal instead.
+					if (std::abs(audat.out_audio[audio_ptr + k]) > 1)
+					{
+						audat.out_audio[audio_ptr + k] = (audat.out_audio[audio_ptr + k] < 0) ? -1.0 : 1.0;
+					}
+				}
+				audio_ptr += bf.buflen;
 			}
+			PRINT_LOG("It took an average of %f ms to process each frame.\n", 1000.0 * avg_time/CLOCKS_PER_SEC);
+
+			// Reconvert floating point audio to 16bit
+			//for (uint32_t i = 0; i < numSamp; i++)
+			//{
+			//	audat.out_audio[i] = audat.out_audio[i] * MAXVAL16;
+			//}
+
+			// Save the processed audio to the output file
+			writeWav(audat.out_audio, inputFilePath, outputFilePath, numSamp);
+
+			// Deallocate memory
+			free_audio_data(&audat);
+			free_buffer_data(&bf);
+			free(coeffs);
 		}
-		audio_ptr += bf.buflen;
 	}
-	PRINT_LOG("It took an average of %f ms to process each frame.\n", 1000.0 * avg_time/CLOCKS_PER_SEC);
-
-	// Reconvert floating point audio to 16bit
-	//for (uint32_t i = 0; i < numSamp; i++)
-	//{
-	//	audat.out_audio[i] = audat.out_audio[i] * MAXVAL16;
-	//}
-
-	// Save the processed audio to the output file
-	writeWav(audat.out_audio, inputFilePath, outputFilePath, numSamp);
-
-	// Deallocate memory
-	free_audio_data(&audat);
-	free_buffer_data(&bf);
-	free(coeffs);
 
 	return 0;
 
@@ -169,11 +188,9 @@ void parse_arguments(int argc, char** argv, std::string&  inputFilePath, std::st
 	}
 }
 
-void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat)
+void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat, std::string& variationName)
 {
-    void createDumper(std::string& name, uint32_t& audio_ptr, uint32_t bufferSize,
-        uint32_t dumpSize, uint32_t countMax, uint32_t auPMax);
-	CREATE_DUMPER_C0NTAINER(DEBUG_DIR);
+	CREATE_DUMPER_C0NTAINER(DEBUG_DIR + variationName);
 	INIT_DUMPER("mag.csv"      , audio_ptr, bf->buflen, bf->buflen, -1, -1);
 	INIT_DUMPER("phi_a.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
 	INIT_DUMPER("phi_s.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
@@ -187,5 +204,24 @@ void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat)
 	INIT_DUMPER("delta_f.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
 	INIT_DUMPER("delta_t.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
 	INIT_DUMPER("vTime.csv"    , audio_ptr, audat->numFrames*bf->hopS*2, audat->numFrames*bf->hopS*2, 40, -1);
+}
+
+void generateParameterCombinations(const parameterMap_t & allParams, parameterCombinations_t & paramCombs)
+{
+	int numCombinations = 1;
+	for (auto& it : allParams)
+	{
+		if (it.second.empty()) { continue; }
+		numCombinations *= it.second.size();
+	}
+	for (auto& it : allParams)
+	{
+		if (it.second.empty()) { continue; }
+		for (int i = 0; i < numCombinations / it.second.size(); i++)
+		{
+			paramCombs[it.first].insert(paramCombs[it.first].end(), it.second.begin(), it.second.end());
+		}
+	}
+
 }
 
