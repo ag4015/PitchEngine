@@ -6,6 +6,7 @@
 #cmakedefine SIMPLE_PV
 #cmakedefine CONSTANT_Q_T
 #cmakedefine USE_DOUBLE
+#cmakedefine USE_MULTITHREADING
 
 // the configured options and settings for Tutorial
 #define RESOURCES_DIR "@RESOURCES_DIR@/"
