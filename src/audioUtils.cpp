@@ -5,6 +5,7 @@
 #include "logger.h"
 #include "Tuple.h"
 #include "DumperContainer.h"
+#include "Timer.h"
 #ifdef CONSTANT_Q_T
 #include "ConstantQ.h"
 #include "CQInverse.h"
@@ -307,7 +308,10 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
         /************ ANALYSIS STAGE ***********************/
 
 		// Using mag as output buffer, nothing to do with magnitude
-		overlapAdd(audat->inbuffer, audat->inframe, audat->outframe, bf->hopA, frameNum, audat->numFrames);  
+		{
+			Timer timer("overlapAdd", timeUnit::MICROSECONDS);
+			overlapAdd(audat->inbuffer, audat->inframe, audat->outframe, bf->hopA, frameNum, audat->numFrames);
+		}
 
 		// TODO: Need to fix this for floats
 #ifdef RESET_BUFFER
@@ -339,12 +343,15 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		DUMP_ARRAY(bf->cpxIn, "cpxIn.csv");
 
-		kiss_fft( bf->cfg , bf->cpxIn , bf->cpxOut );
+		{
+			Timer timer("fwd_fft", timeUnit::MICROSECONDS);
+			kiss_fft(bf->cfg, bf->cpxIn, bf->cpxOut);
+		}
 
-		//auto initTime  = std::chrono::high_resolution_clock::now();
-		process_frame(bf);
-		//auto finalTime = std::chrono::high_resolution_clock::now();
-		//auto exTime  = std::chrono::duration_cast<std::chrono::milliseconds>(finalTime - initTime);
+		{
+			Timer timer("process_frame", timeUnit::MILISECONDS);
+			process_frame(bf);
+		}
 		//PRINT_LOG("Process frame execution time: %d ms.\n", exTime.count());
 
 		DUMP_ARRAY(bf->cpxOut     , "cpxOut.csv");
@@ -354,7 +361,10 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		std::swap(bf->cpxIn, bf->cpxOut);
 
-		kiss_fft( bf->cfgInv , bf->cpxIn, bf->cpxOut);
+		{
+			Timer timer("inv_fft", timeUnit::MICROSECONDS);
+			kiss_fft(bf->cfgInv, bf->cpxIn, bf->cpxOut);
+		}
 
 		DUMP_ARRAY(bf->cpxIn, "cpxOut.csv");
 
@@ -372,7 +382,10 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
         /************ SYNTHESIS STAGE ***********************/
 
-		strechFrame(audat->vTime, audat->outframe, &audat->cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
+		{
+			Timer timer("strechFrame", timeUnit::MICROSECONDS);
+			strechFrame(audat->vTime, audat->outframe, &audat->cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
+		}
 
 		DUMP_ARRAY(audat->vTime, "vTime.csv");
 

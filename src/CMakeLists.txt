@@ -1,5 +1,5 @@
 
-option(DEBUG_DUMP "Store variables in csv files" OFF)
+option(DEBUG_DUMP "Store variables in csv files" ON)
 option(DEBUG_LOG "Enable logs" OFF)
 option(USE_DOUBLE "Floating point double" ON)
 option(USE_WAVE_LIBRARY "Use the wave library for .wav files." ON)
@@ -102,6 +102,8 @@ set(DSPSIM_SOURCE_FILES
                wavio.cpp
                Dumper.cpp
                DumperContainer.cpp
+               Timer.cpp
+               TimerContainer.cpp
                ${CONSTANT_Q_SOURCE_FILES}
                ${KISSFFT_EXTRA_SOURCE_FILES}
                )
