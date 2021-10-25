@@ -309,7 +309,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 
 		// Using mag as output buffer, nothing to do with magnitude
 		{
-			Timer timer("overlapAdd", timeUnit::MICROSECONDS);
+			CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
 			overlapAdd(audat->inbuffer, audat->inframe, audat->outframe, bf->hopA, frameNum, audat->numFrames);
 		}
 
@@ -344,12 +344,12 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		DUMP_ARRAY(bf->cpxIn, "cpxIn.csv");
 
 		{
-			Timer timer("fwd_fft", timeUnit::MICROSECONDS);
+			CREATE_TIMER("fwd_fft", timeUnit::MICROSECONDS);
 			kiss_fft(bf->cfg, bf->cpxIn, bf->cpxOut);
 		}
 
 		{
-			Timer timer("process_frame", timeUnit::MILISECONDS);
+			CREATE_TIMER("process_frame", timeUnit::MILISECONDS);
 			process_frame(bf);
 		}
 		//PRINT_LOG("Process frame execution time: %d ms.\n", exTime.count());
@@ -362,7 +362,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
 		std::swap(bf->cpxIn, bf->cpxOut);
 
 		{
-			Timer timer("inv_fft", timeUnit::MICROSECONDS);
+			CREATE_TIMER("inv_fft", timeUnit::MICROSECONDS);
 			kiss_fft(bf->cfgInv, bf->cpxIn, bf->cpxOut);
 		}
 
@@ -383,7 +383,7 @@ void process_buffer(buffer_data_t* bf, audio_data_t* audat, uint8_t frameNum,
         /************ SYNTHESIS STAGE ***********************/
 
 		{
-			Timer timer("strechFrame", timeUnit::MICROSECONDS);
+			CREATE_TIMER("strechFrame", timeUnit::MICROSECONDS);
 			strechFrame(audat->vTime, audat->outframe, &audat->cleanIdx, bf->hopS, frameNum, *vTimeIdx, audat->numFrames * bf->hopS * 2, bf->buflen);
 		}
 

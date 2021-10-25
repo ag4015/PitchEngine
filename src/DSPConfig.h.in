@@ -7,8 +7,8 @@
 #cmakedefine CONSTANT_Q_T
 #cmakedefine USE_DOUBLE
 #cmakedefine USE_MULTITHREADING
+#cmakedefine DEBUG_TIMING
 
-// the configured options and settings for Tutorial
 #define RESOURCES_DIR "@RESOURCES_DIR@/"
 #define INPUT_AUDIO_DIR RESOURCES_DIR "inputAudio/"
 #define OUTPUT_AUDIO_DIR RESOURCES_DIR "outputAudio/"

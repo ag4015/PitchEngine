@@ -90,12 +90,7 @@ int main(int argc, char **argv)
 		thread.join();
 	}
 #else
-	{
-		std::cout << "Test " << variationName << std::endl;
-		Timer timer("runTest", timeUnit::SECONDS);
-		runTest(inputFilePath, outputFilePath, paramInstance, variationName);
-	}
-	TimerContainer::getTimerContainer()->dumpTimings(variationName, "timings.csv");
+	runTest(inputFilePath, outputFilePath, paramInstance, variationName);
 	}
 #endif
 
@@ -142,6 +137,8 @@ void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat, 
 
 void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterInstanceMap_t paramInstance, std::string& variationName)
 {
+	std::cout << "Test " << variationName << std::endl;
+	CREATE_TIMER("runTest", timeUnit::SECONDS);
 	my_float avg_time     = 0;                      // Average time taken to compute a frame
 	my_float elapsed_time = 0;
 	uint32_t N            = 0;
@@ -183,7 +180,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 		auto initTime  = std::chrono::high_resolution_clock::now();
 
 		{
-			Timer timer("process_buffer", timeUnit::SECONDS);
+			CREATE_TIMER("process_buffer", timeUnit::SECONDS);
 			//process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
 		}
 
@@ -222,5 +219,6 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	free_audio_data(&audat);
 	free_buffer_data(&bf);
 	free(coeffs);
+	DUMP_TIMINGS(variationName, "timings.csv")
 }
 

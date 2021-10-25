@@ -4,14 +4,22 @@
 #include <memory>
 #include <string>
 
-#ifdef DEBUG_DUMP 
+#if defined(DEBUG_DUMP) || defined(DEBUG_TIMING)
 	   #define INITIALIZE_DUMPERS(a,b,c,d) initializeDumpers(a,b,c,d)
        #define CREATE_DUMPER_C0NTAINER(a) DumperContainer::getDumperContainer(a)
-       #define INIT_DUMPER(a,b,c,d,e,f,g) DumperContainer::getDumperContainer()->createDumper(a,b,c,d,e,f,g)
-       #define DUMP_ARRAY(a,b) DumperContainer::getDumperContainer()->dump(a,b)
+       #define CREATE_TIMER(a,b) Timer timer(a,b);
+       #define DUMP_TIMINGS(a,b) TimerContainer::getTimerContainer()->dumpTimings(a,b);
 #else
 	   #define INITIALIZE_DUMPERS(a,b,c,d)
        #define CREATE_DUMPER_C0NTAINER(a)
+       #define CREATE_TIMER(a,b)
+       #define DUMP_TIMINGS(a,b)
+#endif
+
+#ifdef DEBUG_DUMP
+       #define INIT_DUMPER(a,b,c,d,e,f,g) DumperContainer::getDumperContainer()->createDumper(a,b,c,d,e,f,g)
+       #define DUMP_ARRAY(a,b) DumperContainer::getDumperContainer()->dump(a,b)
+#else
        #define INIT_DUMPER(a,b,c,d,e,f,g)
        #define DUMP_ARRAY(a,b)
 #endif

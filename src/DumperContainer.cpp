@@ -1,8 +1,12 @@
 #include "DumperContainer.h"
 #include <filesystem>
+#include <mutex>
+
+std::mutex dumperContainerMutex;
 
 DumperContainer* DumperContainer::getDumperContainer(const std::string& path)
 {
+	std::lock_guard<std::mutex> dumperLock(dumperContainerMutex);
 	if (!instance) {
 		instance = new DumperContainer{ path };
 	}

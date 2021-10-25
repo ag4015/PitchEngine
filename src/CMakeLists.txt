@@ -1,10 +1,11 @@
 
-option(DEBUG_DUMP "Store variables in csv files" ON)
+option(DEBUG_DUMP "Store variables in csv files" OFF)
+option(DEBUG_TIMING "Measure time of execution" ON)
 option(DEBUG_LOG "Enable logs" OFF)
 option(USE_DOUBLE "Floating point double" ON)
 option(USE_WAVE_LIBRARY "Use the wave library for .wav files." ON)
 option(SIMPLE_PV "Pitch shift with a simple phase vocoder" OFF)
-option(USE_MULTITHREADING "Use multithreading for each parameter" OFF)
+option(USE_MULTITHREADING "Use multithreading for each parameter" ON)
 #option(KISSFFT_DATATYPE "Float or double" double)
 
 if(DEBUG_DUMP)
