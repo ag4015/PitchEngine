@@ -124,7 +124,6 @@ void parse_arguments(int argc, char** argv, std::string&  inputFilePath, std::st
 
 void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat, std::string& variationName)
 {
-	std::string tmp = DEBUG_DIR;
 	CREATE_DUMPER_C0NTAINER(DEBUG_DIR);
 	INIT_DUMPER(variationName, "mag.csv"      , audio_ptr, bf->buflen, bf->buflen, -1, -1);
 	INIT_DUMPER(variationName, "phi_a.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
@@ -145,7 +144,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 {
 	my_float avg_time     = 0;                      // Average time taken to compute a frame
 	my_float elapsed_time = 0;
-	uint32_t N         = 0;
+	uint32_t N            = 0;
 
 	my_float *coeffs         = 0;                 // Coefficients from the distortion polynomial
 	uint32_t audio_ptr       = 0;                 // Wav file sample pointer

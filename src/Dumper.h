@@ -23,6 +23,7 @@ public:
     Dumper(std::string& fileName);
     Dumper(const Dumper& other);
     ~Dumper();
+	// Default dumper
 	template<typename T>
 	void dump(T buf)
 	{
