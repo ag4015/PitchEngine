@@ -1,6 +1,6 @@
-[submodule "src/wave"]
-	path = src/wave
-	url = https://github.com/audionamix/wave
-[submodule "src/constant-q-cpp"]
-	path = src/constant-q-cpp
-	url = https://github.com/cannam/constant-q-cpp.git
+[submodule "deps/wave"]
+	path = deps/wave
+	url = https://github.com/audionamix/wave.git
+[submodule "deps/constant-q-cpp"]
+	path = deps/constant-q-cpp
+	url = https://github.com/ag4015/constant-q-cpp.git

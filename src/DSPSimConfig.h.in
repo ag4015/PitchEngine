@@ -1,0 +1,15 @@
+#ifndef DSP_CONFIG_H
+#define DSP_CONFIG_H
+
+#define DATA_DIR "@DATA_DIR@/"
+#define INPUT_AUDIO_DIR "@INPUT_AUDIO_DIR@/"
+#define OUTPUT_AUDIO_DIR "@OUTPUT_AUDIO_DIR@/"
+#define DEBUG_DIR "@DEBUG_DIR@/"
+
+#ifdef USE_DOUBLE
+typedef double my_float;
+#else
+typedef float my_float;
+#endif
+
+#endif // DSP_CONFIG_H
