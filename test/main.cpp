@@ -83,14 +83,14 @@ int main(int argc, char **argv)
 		std::filesystem::create_directory(outputFilePath);
 		outputFilePath += variationName + ".wav";
 
-#ifdef USE_MULTITHREADING
+#ifndef USE_MULTITHREADING
+		runTest(inputFilePath, outputFilePath, paramInstance, variationName);
+	}
+#else
 		vecThread.push_back(std::thread{ runTest, inputFilePath, outputFilePath, paramInstance, variationName });
 	}
 	for (auto& thread : vecThread) {
 		thread.join();
-	}
-#else
-	runTest(inputFilePath, outputFilePath, paramInstance, variationName);
 	}
 #endif
 
@@ -181,7 +181,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 
 		{
 			CREATE_TIMER("process_buffer", timeUnit::SECONDS);
-			//process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
+			process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
 		}
 
 		auto finalTime = std::chrono::high_resolution_clock::now();
