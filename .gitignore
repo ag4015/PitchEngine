@@ -6,10 +6,10 @@ out/
 bin/*
 .vscode/
 .vs/
-resources/debugData/*
-resources/inputAudio/*
-resources/outputAudio/*
 CMakeSettings.json
 .git_token
 build/
-data/outputAudio/
+data/outputAudio/*
+data/matlabAudio/*
+data/debugData/*
+data/debugDataOld/
