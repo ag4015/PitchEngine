@@ -12,3 +12,4 @@ resources/outputAudio/*
 CMakeSettings.json
 .git_token
 build/
+data/outputAudio/
