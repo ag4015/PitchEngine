@@ -22,5 +22,6 @@ class Timer
 public:
 	Timer(std::string name, timeUnit unit);
 	~Timer();
+	void endMeasurement();
 };
 

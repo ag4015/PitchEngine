@@ -13,5 +13,5 @@ private:
 public:
     static TimerContainer* getTimerContainer();
     void updateTimer(std::string& name, uint64_t elapsedTimeUs, timeUnit unit);
-    void dumpTimings(const std::string& variationName, std::string name);
+    void dumpTimings(std::string name);
 };

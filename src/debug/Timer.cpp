@@ -10,6 +10,10 @@
 
 	Timer::~Timer()
 	{
+		endMeasurement();
+	}
+	void Timer::endMeasurement()
+	{
 		highResTime finalTime = std::chrono::high_resolution_clock::now();
 		switch(unit_)
 		{

@@ -19,21 +19,21 @@ target_include_directories(DSPSim
 		.
 )
 
-option(DEBUG_DUMP "Store variables in csv files" OFF)
+option(DEBUG_DUMP "Store variables in csv files" ON)
 if(DEBUG_DUMP)
     message("CSV dumping of variables is active.")
-	target_compile_definitions(DSPSim PRIVATE -DDEBUG_DUMP)
+	target_compile_definitions(DSPSim PUBLIC -DDEBUG_DUMP)
 endif()
 
 option(DEBUG_TIMING "Measure time of execution" ON)
 if(DEBUG_TIMING)
     message("Time measurement activated")
-	target_compile_definitions(DSPSim PRIVATE -DDEBUG_TIMING)
+	target_compile_definitions(DSPSim PUBLIC -DDEBUG_TIMING)
 endif()
 
 option(DEBUG_LOG "Enable logs" OFF)
 if(DEBUG_LOG)
     message("Logs activated")
-	target_compile_definitions(DSPSim PRIVATE -DDEBUG_LOG)
+	target_compile_definitions(DSPSim PUBLIC -DDEBUG_LOG)
 endif()
 

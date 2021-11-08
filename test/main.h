@@ -14,6 +14,13 @@
 
 #define USE_WAVE_LIBRARY
 
+enum
+{
+	PV = 0,
+	PVDR,
+	CQPV
+};
+
 //using parameterMap_t = std::unordered_map< std::string, std::vector<uint32_t> >;
 using parameterInstanceMap_t = std::unordered_map< std::string, uint32_t>;
 using parameterCombinations_t = std::unordered_map<std::string, std::vector<uint32_t> >;
