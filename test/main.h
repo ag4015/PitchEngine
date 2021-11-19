@@ -18,7 +18,8 @@ enum
 {
 	PV = 0,
 	PVDR,
-	CQPV
+	CQPV,
+	AU
 };
 
 //using parameterMap_t = std::unordered_map< std::string, std::vector<uint32_t> >;

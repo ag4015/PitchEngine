@@ -13,7 +13,5 @@ target_sources(DSPSim
 	   CQPVEngine.h
 	   audioData.c
 	   audioData.h
-	   audioUtils.cpp
-	   audioUtils.h
 )
 

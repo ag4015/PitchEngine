@@ -1,6 +1,5 @@
 
 #include "PVEngine.h"
-#include "audioUtils.h"
 #include "logger.h"
 #include "DumperContainer.h"
 #include <utility>
@@ -19,6 +18,9 @@ PVEngine::PVEngine(buffer_data_t* bf, audio_data_t* audat)
    , cleanIdx_(0)
    , pOutBuffLastSample_(0)
 {
+
+	init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
+
 #ifdef USE_DOUBLE
 	inWinScale_ = sqrt(((bf->buflen / bf->hopA) / 2));
 	outWinScale_ = sqrt(((bf->buflen / bf->hopS) / 2));
@@ -37,7 +39,12 @@ void PVEngine::process()
         /************ ANALYSIS STAGE ***********************/
 
 		// Using mag as output buffer, nothing to do with magnitude
-		overlapAdd(audat_->inbuffer, audat_->inframe, audat_->outframe, bf_->hopA, frameNum_);  
+		{
+			CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
+			DUMP_ARRAY(audat_->inframe, "inframe.csv");
+			overlapAdd(audat_->inbuffer, audat_->inframe, audat_->outframe, bf_->hopA, frameNum_);
+			DUMP_ARRAY(audat_->outframe, "outframe.csv");
+		}
 
 		// TODO: Need to fix this for floats
 #ifdef RESET_BUFFER
@@ -56,9 +63,7 @@ void PVEngine::process()
 
         /************ PROCESSING STAGE *********************/
 
-		DUMP_ARRAY(bf_->cpxIn, "cpxIn.csv");
-
-		transform(bf_->cpxIn , bf_->cpxOut);
+		transform(bf_->cpxIn, bf_->cpxOut);
 
 		processFrame();
 
@@ -122,10 +127,10 @@ void PVEngine::processFrame()
 		bf_->cpxOut[k].i = std::imag(z);
 	}
 
-	//DUMP_ARRAY(bf_->mag      , "mag.csv");
-	//DUMP_ARRAY(bf_->phi_a    , "phi_a.csv");
-	//DUMP_ARRAY(bf_->phi_s    , "phi_s.csv");
-	//DUMP_ARRAY(bf_->phi_sPrev, "phi_sPrev.csv");
+	DUMP_ARRAY(bf_->mag      , "mag.csv");
+	DUMP_ARRAY(bf_->phi_a    , "phi_a.csv");
+	DUMP_ARRAY(bf_->phi_s    , "phi_s.csv");
+	DUMP_ARRAY(bf_->phi_sPrev, "phi_sPrev.csv");
 
 }
 
@@ -159,8 +164,11 @@ void PVEngine::computeDifferenceStep()
 
 void PVEngine::transform(cpx* input, cpx* output)
 {
-	// TODO Change to kiss_fftr, it's faster
-	kiss_fft(bf_->cfg, input, output);
+	DUMP_ARRAY(bf_->cpxIn, "cpxIn.csv");
+	CREATE_TIMER("fwd_fft", timeUnit::MICROSECONDS);
+	kiss_fft(bf_->cfg, input, output); // TODO Change to kiss_fftr, it's faster
+	END_TIMER("fwd_fft");
+	DUMP_ARRAY(bf_->cpxOut, "cpxOut.csv");
 }
 
 void PVEngine::inverseTransform(cpx* input, cpx* output)

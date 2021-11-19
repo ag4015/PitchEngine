@@ -1,7 +1,6 @@
 
 #include "main.h"
 #include "wavio.h"
-#include "audioUtils.h"
 #include "stdint.h"
 #include "CQPVEngine.h"
 #include "PVDREngine.h"
@@ -43,11 +42,17 @@ int main(int argc, char **argv)
 	paramCombs["buflen"] = { 1024, 1024, 2048, 2048, 4096, 4096 };
 	paramCombs["hopA"]   = { 256,  512,  256,  512,  256,  512 };
 	paramCombs["hopS"]   = { 256,  256,  256,  256,  256,  256 };
-	paramCombs["algo"]   = { PVDR, PVDR, PVDR, PV, PV, PV};
+	paramCombs["algo"]   = { PVDR, PVDR, PVDR, PVDR, PVDR, PVDR};
 
 	//paramCombs["buflen"] = { 1024 };
 	//paramCombs["hopA"]   = { 256 };
 	//paramCombs["hopS"]   = { 256 };
+	//paramCombs["algo"]   = { PV };
+
+	//paramCombs["buflen"] = { 1024, 1024 };
+	//paramCombs["hopA"]   = { 256, 256 };
+	//paramCombs["hopS"]   = { 256, 256 };
+	//paramCombs["algo"]   = { PVDR, PV };
 
 	std::string originalOutputFilePath = outputFilePath;
 
@@ -78,6 +83,10 @@ int main(int argc, char **argv)
 					break;
 				case(CQPV):
 					algorithmName = "cqpv";
+					break;
+				case(AU):
+					algorithmName = "au";
+					break;
 				}
 				variationName += paramName + "_" + algorithmName + "_";
 			} else {
@@ -110,58 +119,7 @@ int main(int argc, char **argv)
 		runTest(inputFilePath, outputFilePath, paramInstance, variationName);
 	}
 #endif
-
 	return 0;
-
-}
-
-void parse_arguments(int argc, char** argv, std::string&  inputFilePath, std::string& outputFilePath, my_float* var)
-{
-	if (argc > 1) {
-		inputFilePath = argv[1];
-	}
-	if (argc > 2) {
-		outputFilePath = argv[2];
-	}
-	if (argc > 3)
-	{
-#ifdef USE_DOUBLE
-		*var = atof(argv[3]);
-#else
-		char* tmpPtr;
-		*var = strtof(argv[3], &tmpPtr);
-#endif
-	}
-}
-
-void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat, std::string& variationName)
-{
-	// Remove possible file extension ".wav"
-	std::string debugPath{ DEBUG_DIR DEFAULT_INPUT_FILENAME };
-	size_t lastIndex = debugPath.find_last_of(".");
-	if (lastIndex != std::string::npos) {
-		debugPath = debugPath.substr(0, lastIndex);
-	}
-
-	// Create directory for this test case
-	debugPath += "/";
-	std::filesystem::create_directory(debugPath);
-
-	CREATE_DUMPER_C0NTAINER(debugPath);
-	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
-	INIT_DUMPER("mag.csv"      , audio_ptr, bf->buflen, bf->buflen, -1, -1);
-	INIT_DUMPER("phi_a.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
-	INIT_DUMPER("phi_s.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
-	INIT_DUMPER("phi_sPrev.csv", audio_ptr, bf->buflen, bf->buflen, -1, -1);
-	INIT_DUMPER("cpxIn.csv"    , audio_ptr, bf->buflen, bf->buflen,  5, -1);
-	INIT_DUMPER("cpxOut.csv"   , audio_ptr, bf->buflen, bf->buflen,  5, -1);
-	INIT_DUMPER("inbuffer.csv" , audio_ptr, bf->buflen, bf->buflen, 40, -1);
-	INIT_DUMPER("outbuffer.csv", audio_ptr, bf->buflen, bf->buflen, 10, -1);
-	INIT_DUMPER("inwin.csv"    , audio_ptr, bf->buflen, bf->buflen, 40, -1);
-	INIT_DUMPER("outwin.csv"   , audio_ptr, bf->buflen, bf->buflen, 40, -1);
-	INIT_DUMPER("delta_f.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
-	INIT_DUMPER("delta_t.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
-	INIT_DUMPER("vTime.csv"    , audio_ptr, audat->numFrames*bf->hopS*2, audat->numFrames*bf->hopS*2, 40, -1);
 }
 
 void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterInstanceMap_t paramInstance, std::string& variationName)
@@ -183,6 +141,16 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	audio_data_t audat;
 	uint32_t numSamp;
 
+	// Load contents of wave file
+	my_float* in_audio = readWav(numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
+
+	PRINT_LOG("Input file: %s\n", inputFilePath);
+	PRINT_LOG("Output file: %s\n", outputFilePath);
+
+	INITIALIZE_DUMPERS(audio_ptr, &bf, &audat, variationName);
+	
+	PRINT_LOG("Buffer length: %i.\n", bf.buflen);
+
 	std::unique_ptr<PitchEngine> pe;
 	switch (paramInstance["algo"])
 	{
@@ -195,19 +163,9 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	case(CQPV):
 		pe = std::make_unique<CQPVEngine>(&bf, &audat);
 		break;
+	case(AU):
+		break;
 	}
-
-	// Load contents of wave file
-	my_float* in_audio = readWav(numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
-
-	PRINT_LOG("Input file: %s\n", inputFilePath);
-	PRINT_LOG("Output file: %s\n", outputFilePath);
-
-	init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
-
-	INITIALIZE_DUMPERS(audio_ptr, &bf, &audat, variationName);
-	
-	PRINT_LOG("Buffer length: %i.\n", bf.buflen);
 
 	while(audio_ptr < (numSamp - bf.buflen))
 	{
@@ -224,7 +182,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 
 		{
 			CREATE_TIMER("process_buffer", timeUnit::MILISECONDS);
-			process_buffer(&bf, &audat, frameNum, &vTimeIdx, &pOutBuffLastSample);
+			pe->process();
 		}
 
 		auto finalTime = std::chrono::high_resolution_clock::now();
@@ -263,5 +221,56 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	free(coeffs);
 	END_TIMER("runTest")
 	DUMP_TIMINGS("timings.csv")
+}
+
+void parse_arguments(int argc, char** argv, std::string&  inputFilePath, std::string& outputFilePath, my_float* var)
+{
+	if (argc > 1) {
+		inputFilePath = argv[1];
+	}
+	if (argc > 2) {
+		outputFilePath = argv[2];
+	}
+	if (argc > 3)
+	{
+#ifdef USE_DOUBLE
+		*var = atof(argv[3]);
+#else
+		char* tmpPtr;
+		*var = strtof(argv[3], &tmpPtr);
+#endif
+	}
+}
+
+void initializeDumpers(uint32_t& audio_ptr, buffer_data* bf, audio_data* audat, std::string& variationName)
+{
+	// Remove possible file extension ".wav"
+	std::string debugPath{ DEBUG_DIR DEFAULT_INPUT_FILENAME };
+	size_t lastIndex = debugPath.find_last_of(".");
+	if (lastIndex != std::string::npos) {
+		debugPath = debugPath.substr(0, lastIndex);
+	}
+
+	// Create directory for this test case
+	debugPath += "/";
+	std::filesystem::create_directory(debugPath);
+
+	CREATE_DUMPER_C0NTAINER(debugPath);
+	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
+	//INIT_DUMPER("inframe.csv"   , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	//INIT_DUMPER("outframe.csv"  , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	//INIT_DUMPER("mag.csv"      , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	//INIT_DUMPER("phi_a.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	//INIT_DUMPER("phi_s.csv"    , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	//INIT_DUMPER("phi_sPrev.csv", audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	//INIT_DUMPER("cpxIn.csv"    , audio_ptr, bf->buflen, bf->buflen,  40, -1);
+	//INIT_DUMPER("cpxOut.csv"   , audio_ptr, bf->buflen, bf->buflen,  40, -1);
+	//INIT_DUMPER("inbuffer.csv" , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	//INIT_DUMPER("outbuffer.csv", audio_ptr, bf->buflen, bf->buflen, 10, -1);
+	//INIT_DUMPER("inwin.csv"    , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	//INIT_DUMPER("outwin.csv"   , audio_ptr, bf->buflen, bf->buflen, 40, -1);
+	//INIT_DUMPER("delta_f.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	//INIT_DUMPER("delta_t.csv"  , audio_ptr, bf->buflen, bf->buflen, -1, -1);
+	//INIT_DUMPER("vTime.csv"    , audio_ptr, audat->numFrames*bf->hopS*2, audat->numFrames*bf->hopS*2, 40, -1);
 }
 

@@ -29,16 +29,10 @@ else()
   target_compile_options(DSPSim PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()
 
-option(SIMPLE_PV "Pitch shift with a simple phase vocoder" OFF)
-if(SIMPLE_PV)
-    message("Algorithm is a simple phase vocoder.")
-	target_compile_definitions(DSPSim PRIVATE -DSIMPLE_PV)
-endif()
-
 set(USE_KISSFFT  ON)
 if(USE_KISSFFT)
     message("Using the kissfft library")
-	target_compile_definitions(DSPSim PRIVATE -DSIMPLE_PV)
+	target_compile_definitions(DSPSim PRIVATE -DUSE_KISSFFT)
 endif()
 
 option(USE_WAVE_LIBRARY "Use the wave library for .wav files." ON)

@@ -1,8 +1,11 @@
 #include "DumperContainer.h"
 #include <filesystem>
 #include <mutex>
+#include <chrono>
+#include <thread>
 
 std::mutex dumperContainerMutex;
+//std::mutex createDumperMutex;
 
 DumperContainer::DumperContainer(std::string path)
 {
@@ -32,8 +35,12 @@ void DumperContainer::updatePath(const std::string& path)
 void DumperContainer::createDumper(const std::string& name, uint32_t& audio_ptr,
 	uint32_t bufferSize, uint32_t dumpSize, uint32_t countMax, uint32_t auPMax)
 {
+	//std::lock_guard<std::mutex> createDumper(createDumperMutex);
 	std::string& folderDir = getPath();
-	std::filesystem::create_directory(folderDir);
+	std::string folderDir2 = folderDir;
+	//std::filesystem::remove_all(folderDir);
+	//std::this_thread::sleep_for(std::chrono::seconds(5));
+	std::filesystem::create_directory(folderDir2);
 	std::string fileName = folderDir + name;
 	dumperMap_[fileName] = std::move(std::make_unique<Dumper>(Dumper(fileName, &audio_ptr, bufferSize, dumpSize, countMax, auPMax)));
 }
