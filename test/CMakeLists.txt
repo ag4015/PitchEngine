@@ -20,7 +20,7 @@ target_link_libraries(DSPSimTs PUBLIC
                         DSPSim
                         )
 
-option(USE_MULTITHREADING "Use multithreading for each parameter" ON)
+option(USE_MULTITHREADING "Use multithreading for each parameter" OFF)
 if(USE_MULTITHREADING)
     message("Multithreading activated.")
 	target_compile_definitions(DSPSimTs PRIVATE -DUSE_MULTITHREADING)

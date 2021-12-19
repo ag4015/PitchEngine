@@ -6,7 +6,7 @@ class CQPVEngine : public PVDREngine
 {
 public:
     virtual ~CQPVEngine();
-    CQPVEngine(buffer_data_t* bf, audio_data_t* audat);
+	CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t sampleRate);
     //process() override;
 
 protected:
@@ -14,6 +14,7 @@ protected:
 	my_float minFreq_;
 	my_float maxFreq_;
 	uint8_t  bpo_;
+	uint32_t sampleRate_;
 
 };
 

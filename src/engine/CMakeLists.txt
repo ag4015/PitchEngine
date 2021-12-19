@@ -11,7 +11,5 @@ target_sources(DSPSim
 	   PVDREngine.h
 	   CQPVEngine.cpp
 	   CQPVEngine.h
-	   audioData.c
-	   audioData.h
 )
 

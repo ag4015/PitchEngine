@@ -8,12 +8,20 @@ class PVDREngine : public PVEngine
 {
 public:
     virtual ~PVDREngine();
-    PVDREngine(buffer_data_t* bf, audio_data_t* audat);
+    PVDREngine(int steps, int buflen, int hopA);
     void propagatePhase() override;
     void computeDifferenceStep() override;
-private:
+    void resetData() override;
 
-	my_float b_a = 1; // b_a/b_s = shift; The value of b_a has no effect on the result
+protected:
+    
+    virtual void allocateMemoryPVDR();
+    virtual void freeMemoryPVDR();
+
+	my_float b_a_ = 1; // b_a/b_s = shift; The value of b_a has no effect on the result
+    my_float maxMagPrev_;
+
+    my_float* delta_f_;
 
 };
 

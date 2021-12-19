@@ -4,6 +4,8 @@
 #include "logger.h"
 #include <iostream>
 #include <system_error>
+#include <mutex>
+#include <thread>
 
 #ifdef _WIN32 
 #define FOPEN(a,b,c) fopen_s(&a,b,c)
@@ -11,6 +13,7 @@
 #define FOPEN(a,b,c) a = fopen(b,c)
 #endif
 
+std::mutex readWavMutex;
 
 // Find the file size 
 int getFileSize(FILE *inFile){
@@ -61,8 +64,9 @@ void printHeader(wav_hdr wavHeader){
     printf("**************************************\n");
 }
 
-my_float* readWav(uint32_t& numSamp, std::string& filePath)
+my_float* readWav(int& numSamp, std::string& filePath)
 {
+	std::lock_guard<std::mutex> readWavLock(readWavMutex);
 	wave::File read_file;
 
 #ifdef _WIN32 

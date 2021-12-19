@@ -8,16 +8,18 @@ CQPVEngine::~CQPVEngine()
 {
 }
 
-CQPVEngine::CQPVEngine(buffer_data_t* bf, audio_data_t* audat) :
-	PVDREngine(bf, audat)
+CQPVEngine::CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t sampleRate) :
+	PVDREngine(steps, buflen, hopA)
   , minFreq_(40)
   , maxFreq_(1000)
   , bpo_(64)
+  , sampleRate_(sampleRate)
 {
-	CQParameters params(static_cast<my_float>(audat->sampleRate), minFreq_, maxFreq_, bpo_);
+	CQParameters params(sampleRate_, minFreq_, maxFreq_, bpo_);
 	ConstantQ cq(params);
 	CQInverse cqi(params);
 
 	std::vector<my_float> cqin;
-	cqin.reserve(bf->buflen);
+	cqin.reserve(buflen_);
 }
+

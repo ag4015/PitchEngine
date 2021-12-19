@@ -1,11 +1,14 @@
 #include "DumperContainer.h"
+#ifdef WIN32
 #include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
 #include <mutex>
 #include <chrono>
 #include <thread>
 
 std::mutex dumperContainerMutex;
-//std::mutex createDumperMutex;
 
 DumperContainer::DumperContainer(std::string path)
 {
@@ -32,15 +35,16 @@ void DumperContainer::updatePath(const std::string& path)
 }
 
 // Dumper for variables
-void DumperContainer::createDumper(const std::string& name, uint32_t& audio_ptr,
-	uint32_t bufferSize, uint32_t dumpSize, uint32_t countMax, uint32_t auPMax)
+void DumperContainer::createDumper(const std::string& name, int& audio_ptr,
+	int bufferSize, int dumpSize, int countMax, int auPMax)
 {
-	//std::lock_guard<std::mutex> createDumper(createDumperMutex);
 	std::string& folderDir = getPath();
 	std::string folderDir2 = folderDir;
-	//std::filesystem::remove_all(folderDir);
-	//std::this_thread::sleep_for(std::chrono::seconds(5));
+#ifdef WIN32
 	std::filesystem::create_directory(folderDir2);
+#else
+	std::experimental::filesystem::create_directory(folderDir2);
+#endif
 	std::string fileName = folderDir + name;
 	dumperMap_[fileName] = std::move(std::make_unique<Dumper>(Dumper(fileName, &audio_ptr, bufferSize, dumpSize, countMax, auPMax)));
 }
@@ -49,7 +53,11 @@ void DumperContainer::createDumper(const std::string& name, uint32_t& audio_ptr,
 void DumperContainer::createDumper(const std::string& name)
 {
 	std::string& folderDir = getPath();
+#ifdef WIN32
 	std::filesystem::create_directory(folderDir);
+#else
+	std::experimental::filesystem::create_directory(folderDir);
+#endif
 	std::string fileName = folderDir + name;
 	dumperMap_[fileName] = std::move(std::make_unique<Dumper>(Dumper(fileName)));
 }

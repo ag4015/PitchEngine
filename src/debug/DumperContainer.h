@@ -6,11 +6,11 @@
 #include <thread>
 
 #if defined(DEBUG_DUMP) || defined(DEBUG_TIMING)
-	   #define INITIALIZE_DUMPERS(a,b,c,d) initializeDumpers(a,b,c,d)
+	   #define INITIALIZE_DUMPERS(a,b,c,d,e) initializeDumpers(a,b,c,d,e)
        #define CREATE_DUMPER_C0NTAINER(a) DumperContainer::getDumperContainer(a)
        #define UPDATE_DUMPER_CONTAINER_PATH(a) DumperContainer::getDumperContainer()->updatePath(a)
 #else
-	   #define INITIALIZE_DUMPERS(a,b,c,d)
+	   #define INITIALIZE_DUMPERS(a,b,c,d,e)
        #define CREATE_DUMPER_C0NTAINER(a)
        #define UPDATE_DUMPER_CONTAINER_PATH(a)
 #endif
@@ -44,9 +44,9 @@ private:
 public:
     std::unordered_map<std::thread::id, std::string> pathMap_;
     static DumperContainer* getDumperContainer(const std::string& path = "");
-    void DumperContainer::updatePath(const std::string& path);
-    void createDumper(const std::string& name, uint32_t& audio_ptr, uint32_t bufferSize,
-        uint32_t dumpSize, uint32_t countMax, uint32_t auPMax);
+    void updatePath(const std::string& path);
+    void createDumper(const std::string& name, int& audio_ptr, int bufferSize,
+        int dumpSize, int countMax, int auPMax);
     void createDumper(const std::string& name);
 	template<typename T>
 	void dump(T buf, const std::string& name)

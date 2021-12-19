@@ -5,10 +5,14 @@
 
 #ifndef USE_DOUBLE
 typedef float cq_float;
+#ifndef POW
 #define POW(x,y) powf(x,static_cast<cq_float>(y))
+#endif
 #else
 typedef double cq_float;
+#ifndef POW
 #define POW(x,y) pow(x,static_cast<cq_float>(y))
+#endif
 #endif
 
 

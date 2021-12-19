@@ -21,3 +21,7 @@ target_include_directories(DSPSim PUBLIC
                            ${KISSFFT_TOOLS_DIR}
                            )
 
+if(NOT MSVC)
+	target_link_libraries(DSPSim PRIVATE stdc++fs)
+endif()
+

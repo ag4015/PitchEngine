@@ -8,9 +8,9 @@
        #define PRINT_LOG(...) 
 #endif
 
-inline void printLog() {
-    std::cout << std::endl;
-}
+//inline void printLog() {
+//    std::cout << std::endl;
+//}
 
 template<typename First, typename ... Strings>
 inline void printLog(First arg, const Strings&... rest) {

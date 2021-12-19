@@ -6,112 +6,131 @@
 #include <complex>
 #include <algorithm>
 
-PVEngine::~PVEngine()
+PVEngine::PVEngine(int steps, int buflen_, int hopA)
+	: PitchEngine(buflen_, steps)
+	, hopA_(hopA)
+	, frameNum_(0)
+	, vTimeIdx_(0)
+	, pOutBuffLastSample_(0)
 {
+
+	hopS_      = static_cast<int>(ROUND(hopA_ * shift_));
+	numFrames_ = static_cast<int>(buflen_ / hopA_);
+	vTimeSize_ = hopS_ * numFrames_ * 2;
+	cleanIdx_ = hopS_ * numFrames_;
+
+	allocateMemoryPV();
+
+	initializeTransformer();
+
+	// Initialize the magnitude pointers
+	mag_ = mag_ping_;
+	magPrev_ = mag_pong_;
+
+	// Initialize the synthesis phase pointers
+	phi_s_ = phi_ping_;
+	phi_sPrev_ = phi_pong_;
+
+	// Initialize the time phase derivative pointers
+	delta_t_     = delta_t_ping_;
+	delta_tPrev_ = delta_t_pong_;
+
+	inWinScale_  = SQRT(((buflen_ / hopA_) / 2));
+	outWinScale_ = SQRT(((buflen_ / hopS_) / 2));
+
+	// Initialize input and output window functions
+	for(int k = 0; k < buflen_; k++)
+	{
+		inwin_[k]  = WINCONST * (1 - COS(2 * PI * k / buflen_));
+		outwin_[k] = WINCONST * (1 - COS(2 * PI * k / buflen_));
+	}
 }
 
-PVEngine::PVEngine(buffer_data_t* bf, audio_data_t* audat)
-   : bf_(bf)
-   , audat_(audat)
-   , frameNum_(0)
-   , vTimeIdx_(0)
-   , cleanIdx_(0)
-   , pOutBuffLastSample_(0)
+PVEngine::~PVEngine()
 {
-
-	init_variables(&bf, &audat, numSamp, in_audio, sampleRate, STEPS, BUFLEN);
-
-#ifdef USE_DOUBLE
-	inWinScale_ = sqrt(((bf->buflen / bf->hopA) / 2));
-	outWinScale_ = sqrt(((bf->buflen / bf->hopS) / 2));
-#else
-	inWinScale_  = sqrtf(((static_cast<my_float>(bf->buflen) / static_cast<my_float>(bf->hopA)) / 2));
-	outWinScale_ = sqrtf(((static_cast<my_float>(bf->buflen) / static_cast<my_float>(bf->hopS)) / 2));
-#endif
+	freeMemoryPV();
 }
 
 void PVEngine::process()
 {
-	for (uint8_t f = 0; f < audat_->numFrames; f++)
+	for (int f = 0; f < numFrames_; f++)
 	{
-		swap_ping_pong_buffer_data(bf_, audat_);
+		swapPingPongPV();
 
         /************ ANALYSIS STAGE ***********************/
 
-		// Using mag as output buffer, nothing to do with magnitude
-		{
-			CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
-			DUMP_ARRAY(audat_->inframe, "inframe.csv");
-			overlapAdd(audat_->inbuffer, audat_->inframe, audat_->outframe, bf_->hopA, frameNum_);
-			DUMP_ARRAY(audat_->outframe, "outframe.csv");
-		}
+		DUMP_ARRAY(inframe_, "inframe.csv");
+		CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
+		overlapAdd(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
+		END_TIMER("overlapAdd");
+		DUMP_ARRAY(outframe_, "outframe.csv");
 
 		// TODO: Need to fix this for floats
 #ifdef RESET_BUFFER
 		if (++reset_counter == 256)
 		{
-			reset_buffer_data_arrays(bf_);
+			resetDataPV();
 			reset_counter = 0;
 		}
 #endif
 
-		for (uint32_t k = 0; k < bf_->buflen; k++)
+		for (int k = 0; k < buflen_; k++)
 		{
-			bf_->cpxIn[k].r = (audat_->outframe[k] * audat_->inwin[k]) / inWinScale_;
-			bf_->cpxIn[k].i = 0;
+			cpxIn_[k].r = (outframe_[k] * inwin_[k]) / inWinScale_;
+			cpxIn_[k].i = 0;
 		}
 
         /************ PROCESSING STAGE *********************/
 
-		transform(bf_->cpxIn, bf_->cpxOut);
+		transform(cpxIn_, cpxOut_);
 
 		processFrame();
 
-		DUMP_ARRAY(bf_->cpxOut     , "cpxOut.csv");
-		DUMP_ARRAY(audat_->inbuffer, "inbuffer.csv");
-		DUMP_ARRAY(audat_->inwin   , "inwin.csv");
-		DUMP_ARRAY(audat_->outwin  , "outwin.csv");
+		DUMP_ARRAY(cpxOut_  , "cpxOut.csv");
+		DUMP_ARRAY(inbuffer_, "inbuffer.csv");
+		DUMP_ARRAY(inwin_   , "inwin.csv");
+		DUMP_ARRAY(outwin_  , "outwin.csv");
 
-		std::swap(bf_->cpxIn, bf_->cpxOut);
+		std::swap(cpxIn_, cpxOut_);
 
-		inverseTransform(bf_->cpxIn , bf_->cpxOut);
+		inverseTransform(cpxIn_ , cpxOut_);
 
-		DUMP_ARRAY(bf_->cpxIn, "cpxOut.csv");
+		DUMP_ARRAY(cpxIn_, "cpxOut.csv");
 
-		for (uint32_t k = 0; k < bf_->buflen; k++)
+		for (int k = 0; k < buflen_; k++)
 		{
-			audat_->outframe[k] = bf_->cpxOut[k].r * (audat_->outwin[k] / bf_->buflen) / outWinScale_;
+			outframe_[k] = cpxOut_[k].r * (outwin_[k] / buflen_) / outWinScale_;
 		}
 
         /************ SYNTHESIS STAGE ***********************/
 
-		strechFrame(audat_->outframe, audat_->vTime);
+		strechFrame(outframe_, vTime_);
 
-		DUMP_ARRAY(audat_->vTime, "vTime.csv");
+		DUMP_ARRAY(vTime_, "vTime.csv");
 
-		if ((++frameNum_) >= audat_->numFrames) frameNum_ = 0;
+		if ((++frameNum_) >= numFrames_) frameNum_ = 0;
 
 	}
 
     /************* LINEAR INTERPOLATION *****************/
 
-	interpolate(audat_->vTime, audat_->outbuffer);
+	interpolate(vTime_, outbuffer_);
 
-    DUMP_ARRAY(audat_->outbuffer, "outbuffer.csv");
+    DUMP_ARRAY(outbuffer_, "outbuffer.csv");
 
-	vTimeIdx_ += audat_->numFrames * bf_->hopS;
-	if ((vTimeIdx_) >= audat_->numFrames * bf_->hopS * 2) vTimeIdx_ = 0;
+	vTimeIdx_ += numFrames_ * hopS_;
+	if ((vTimeIdx_) >= numFrames_ * hopS_ * 2) vTimeIdx_ = 0;
 
 }
 
 void PVEngine::processFrame()
 {
 
-	for(uint32_t k = 0; k < bf_->buflen; k++)
+	for(int k = 0; k < buflen_; k++)
 	{
-		bf_->mag[k] = std::abs(std::complex<my_float>{bf_->cpxOut[k].r, bf_->cpxOut[k].i});
-		bf_->phi_aPrev[k] = bf_->phi_a[k];
-		bf_->phi_a[k] = std::arg(std::complex<my_float>{bf_->cpxOut[k].r, bf_->cpxOut[k].i});
+		mag_[k] = std::abs(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
+		phi_aPrev_[k] = phi_a_[k];
+		phi_a_[k] = std::arg(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
 	}
 
 	computeDifferenceStep();
@@ -120,25 +139,25 @@ void PVEngine::processFrame()
 
 	std::complex<my_float> z;
 
-	for(uint16_t k = 0; k < bf_->buflen; k++)
+	for(int k = 0; k < buflen_; k++)
 	{
-		z = bf_->mag[k] * std::exp(std::complex<my_float>{0.f, bf_->phi_s[k]});
-		bf_->cpxOut[k].r = std::real(z);
-		bf_->cpxOut[k].i = std::imag(z);
+		z = mag_[k] * std::exp(std::complex<my_float>{0.f, phi_s_[k]});
+		cpxOut_[k].r = std::real(z);
+		cpxOut_[k].i = std::imag(z);
 	}
 
-	DUMP_ARRAY(bf_->mag      , "mag.csv");
-	DUMP_ARRAY(bf_->phi_a    , "phi_a.csv");
-	DUMP_ARRAY(bf_->phi_s    , "phi_s.csv");
-	DUMP_ARRAY(bf_->phi_sPrev, "phi_sPrev.csv");
+	DUMP_ARRAY(mag_      , "mag.csv");
+	DUMP_ARRAY(phi_a_    , "phi_a.csv");
+	DUMP_ARRAY(phi_s_    , "phi_s.csv");
+	DUMP_ARRAY(phi_sPrev_, "phi_sPrev.csv");
 
 }
 
 void PVEngine::propagatePhase()
 {
-	for (uint32_t k = 0; k < bf_->buflen; k++)
+	for (int k = 0; k < buflen_; k++)
 	{
-		bf_->phi_s[k] = bf_->phi_sPrev[k] + (bf_->hopS / 2) * (bf_->delta_t[k] + bf_->delta_tPrev[k]);
+		phi_s_[k] = phi_sPrev_[k] + (hopS_ / 2) * (delta_t_[k] + delta_tPrev_[k]);
 	}
 }
 
@@ -153,61 +172,61 @@ void PVEngine::computeDifferenceStep()
 	my_float deltaPhiPrimeMod_t_back;
 
 	// Time differentiation
-	for(uint32_t k = 0; k < bf_->buflen; k++)
+	for(int k = 0; k < buflen_; k++)
 	{
-		phi_diff = bf_->phi_a[k] - bf_->phi_aPrev[k];
-		deltaPhiPrime_t_back = phi_diff - ((my_float)bf_->hopA * 2 * PI * k)/bf_->buflen;
+		phi_diff = phi_a_[k] - phi_aPrev_[k];
+		deltaPhiPrime_t_back = phi_diff - ((my_float)hopA_ * 2 * PI * k)/buflen_;
 		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
-		bf_->delta_t[k] = deltaPhiPrimeMod_t_back/bf_->hopA + (2 * PI * k)/bf_->buflen;
+		delta_t_[k] = deltaPhiPrimeMod_t_back/hopA_ + (2 * PI * k)/buflen_;
 	}
 }
 
 void PVEngine::transform(cpx* input, cpx* output)
 {
-	DUMP_ARRAY(bf_->cpxIn, "cpxIn.csv");
+	DUMP_ARRAY(cpxIn_, "cpxIn.csv");
 	CREATE_TIMER("fwd_fft", timeUnit::MICROSECONDS);
-	kiss_fft(bf_->cfg, input, output); // TODO Change to kiss_fftr, it's faster
+	kiss_fft(cfg_, input, output); // TODO Change to kiss_fftr, it's faster
 	END_TIMER("fwd_fft");
-	DUMP_ARRAY(bf_->cpxOut, "cpxOut.csv");
+	DUMP_ARRAY(cpxOut_, "cpxOut.csv");
 }
 
 void PVEngine::inverseTransform(cpx* input, cpx* output)
 {
-	kiss_fft(bf_->cfgInv, input, output);
+	kiss_fft(cfgInv_, input, output);
 }
 
-void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, uint32_t frameNum)
+void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, int frameNum)
 {
 	for (int k = 0; k < hop; k++)
 	{
 		frame[frameNum * hop + k] = input[frameNum * hop + k];
 	}
-	uint32_t frameNum2 = frameNum + 1;
-	if (frameNum2 >= audat_->numFrames) frameNum2 = 0;
-	for (uint8_t f2 = 0; f2 < audat_->numFrames; f2++)
+	int frameNum2 = frameNum + 1;
+	if (frameNum2 >= numFrames_) frameNum2 = 0;
+	for (int f2 = 0; f2 < numFrames_; f2++)
 	{
 		for (int k = 0; k < hop; k++)
 		{
 			output[k + f2 * hop] = frame[frameNum2 * hop + k];
 		}
-		if (++frameNum2 >= audat_->numFrames) frameNum2 = 0;
+		if (++frameNum2 >= numFrames_) frameNum2 = 0;
 	}
 }
 
 void PVEngine::strechFrame(my_float* input, my_float* output)
 {
-	uint32_t outputSize = audat_->numFrames * bf_->hopS * 2;
-	for (uint32_t k = 0; k < bf_->hopS; k++)
+	int outputSize = numFrames_ * hopS_ * 2;
+	for (int k = 0; k < hopS_; k++)
 	{
-		output[audat_->cleanIdx] = 0;
-		if (++(audat_->cleanIdx) >= outputSize) audat_->cleanIdx = 0;
+		output[cleanIdx_] = 0;
+		if (++(cleanIdx_) >= outputSize) cleanIdx_ = 0;
 	}
 
 	// The indexing variable for output has to be circular.
-	uint32_t t = vTimeIdx_ + bf_->hopS * frameNum_;
+	int t = vTimeIdx_ + hopS_ * frameNum_;
 	if (t >= outputSize) t = 0;
 
-	for (uint32_t k = 0; k < bf_->buflen; k++)
+	for (int k = 0; k < buflen_; k++)
 	{
 		output[t] += input[k];
 		if ((++t) >= (outputSize)) t = 0;
@@ -217,10 +236,10 @@ void PVEngine::strechFrame(my_float* input, my_float* output)
 // TODO: Last sample of buffer can be calculated better
 void PVEngine::interpolate(my_float* input, my_float* output)
 {
-	uint32_t k;
-	if (bf_->steps == 12)
+	int k;
+	if (steps_ == 12)
 	{
-		for (k = 0; k < bf_->buflen; k++)
+		for (k = 0; k < buflen_; k++)
 		{
 			output[k] = input[vTimeIdx_ + k * 2];
 		}
@@ -230,14 +249,14 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 		my_float tShift;
 		my_float upper;
 		my_float lower = 0;
-		uint32_t lowerIdx;
-		uint32_t upperIdx;
+		int lowerIdx;
+		int upperIdx;
 		my_float delta_shift;
-		for (k = vTimeIdx_; k < vTimeIdx_ + bf_->buflen; k++)
+		for (k = vTimeIdx_; k < vTimeIdx_ + buflen_; k++)
 		{
-			tShift = (k - vTimeIdx_) * bf_->shift;
+			tShift = (k - vTimeIdx_) * shift_;
 
-			lowerIdx = (uint32_t)(tShift + vTimeIdx_);
+			lowerIdx = (int)(tShift + vTimeIdx_);
 			upperIdx = lowerIdx + 1;
 			if (lowerIdx == 0)
 			{
@@ -247,15 +266,15 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 				delta_shift = (output[k - vTimeIdx_ + 1] - pOutBuffLastSample_) / 2;
 				output[k - vTimeIdx_] = output[k - vTimeIdx_ + 1] - delta_shift;
 			}
-			if (upperIdx == 2*bf_->hopS*audat_->numFrames)
+			if (upperIdx == 2*hopS_*numFrames_)
 			{
-				delta_shift = (bf_->shift*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - tShift + bf_->shift);
+				delta_shift = (shift_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - tShift + shift_);
 				output[k - vTimeIdx_] = delta_shift + output[k - vTimeIdx_ - 1];
 				continue;
 			}
-			if (upperIdx == 2*bf_->hopS*audat_->numFrames + 1 && lowerIdx == 2*bf_->hopS*audat_->numFrames)
+			if (upperIdx == 2*hopS_*numFrames_ + 1 && lowerIdx == 2*hopS_*numFrames_)
 			{
-				delta_shift = (bf_->shift*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - tShift + bf_->shift);
+				delta_shift = (shift_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - tShift + shift_);
 				output[k - vTimeIdx_] = delta_shift + output[k - vTimeIdx_ - 1];
 				continue;
 			}
@@ -266,5 +285,89 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 		pOutBuffLastSample_ = output[k - vTimeIdx_ - 1];
 	}
 
+}
+
+void PVEngine::swapPingPongPV()
+{
+	// Update magnitude pointers
+	magPrev_ = mag_;
+	mag_ = (mag_ == mag_ping_) ? mag_pong_ : mag_ping_;
+
+	// Phase pointers are not updated
+	phi_sPrev_ = phi_s_;
+	phi_s_ = (phi_s_ == phi_ping_) ? phi_pong_ : phi_ping_;
+
+	// Update time phase derivative pointers
+	delta_tPrev_ = delta_t_;
+	delta_t_ = (delta_t_ == delta_t_ping_) ? delta_t_pong_ : delta_t_ping_;
+}
+
+void PVEngine::resetData()
+{
+	for (int k = 0; k < buflen_; k++)
+	{
+		cpxIn_[k].r     = 0;
+		cpxIn_[k].i     = 0;
+		cpxOut_[k].r    = 0;
+		cpxOut_[k].i    = 0;
+		mag_[k]         = 0;
+		magPrev_[k]     = 0;
+		phi_a_[k]       = 0;
+		phi_aPrev_[k]   = 0;
+		phi_s_[k]       = 0;
+		phi_sPrev_[k]   = 0;
+		delta_t_[k]     = 0;
+		delta_tPrev_[k] = 0;
+	}
+}
+
+void PVEngine::initializeTransformer()
+{
+	cfg_    = kiss_fft_alloc(buflen_, 0, 0, 0);
+	cfgInv_ = kiss_fft_alloc(buflen_, 1, 0, 0);
+	cpxIn_  = (kiss_fft_cpx*) calloc(buflen_, sizeof(kiss_fft_cpx));
+	cpxOut_ = (kiss_fft_cpx*) calloc(buflen_, sizeof(kiss_fft_cpx));
+}
+
+void PVEngine::destroyTransformer()
+{
+	kiss_fft_free(cfg_);
+	kiss_fft_free(cfgInv_);
+	kiss_fft_free(cpxIn_);
+	kiss_fft_free(cpxOut_);
+}
+
+void PVEngine::allocateMemoryPV()
+{
+	phi_a_        = new my_float[buflen_]();
+	phi_aPrev_    = new my_float[buflen_]();
+	vTime_        = new my_float[vTimeSize_]();
+	inframe_      = new my_float[buflen_]();
+	outframe_     = new my_float[buflen_]();
+	inwin_        = new my_float[buflen_]();
+	outwin_       = new my_float[buflen_]();
+	phi_ping_     = new my_float[buflen_]();
+	phi_pong_     = new my_float[buflen_]();
+	delta_t_ping_ = new my_float[buflen_]();
+	delta_t_pong_ = new my_float[buflen_]();
+	mag_ping_     = new my_float[buflen_]();
+	mag_pong_     = new my_float[buflen_]();
+}
+
+void PVEngine::freeMemoryPV()
+{
+	delete[] phi_a_;
+	delete[] phi_aPrev_;
+	delete[] vTime_;
+	delete[] inframe_;
+	delete[] outframe_;
+	delete[] inwin_;
+	delete[] outwin_;
+	delete[] phi_ping_;
+	delete[] phi_pong_;
+	delete[] delta_t_ping_;
+	delete[] delta_t_pong_;
+	delete[] mag_ping_;
+	delete[] mag_pong_;
 }
 
