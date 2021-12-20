@@ -1,7 +1,7 @@
 
-set(DSPSIM_SRC_ENGINE_DIR ${DSPSIM_SRC_DIR}engine/)
+set(PITCH_ENGINE_SRC_ENGINE_DIR ${PITCH_ENGINE_SRC_DIR}engine/)
 
-target_sources(DSPSim 
+target_sources(PitchEngine 
     PRIVATE
 	   PitchEngine.cpp
 	   PitchEngine.h

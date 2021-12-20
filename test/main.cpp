@@ -43,17 +43,11 @@ int main(int argc, char **argv)
 
 	parse_arguments(argc, argv, inputFilePath, outputFilePath, &var);
 
-	paramCombs["steps"]  = {   12,   12,   12,   12,   12,   12 };
-	paramCombs["algo"]   = { PVDR, PVDR, PVDR, PVDR, PVDR, PVDR };
-	paramCombs["hopS"]   = {  256,  256,  256,  256,  256,  256 };
-	paramCombs["hopA"]   = {  256,  512,  256,  512,  256,  512 };
-	paramCombs["buflen"] = { 1024, 1024, 2048, 2048, 4096, 4096 };
-
-	//paramCombs["buflen"] = { 1024 };
-	//paramCombs["hopA"]   = { 256  };
-	//paramCombs["hopS"]   = { 512  };
-	//paramCombs["algo"]   = { PV   };
-	//paramCombs["steps"]  = { 2   };
+	paramCombs["steps"]  = { 0,   12 };
+	paramCombs["algo"]   = { PV, PVDR };
+	paramCombs["hopS"]   = { 256,  512 };
+	paramCombs["hopA"]   = { 256,  512 };
+	paramCombs["buflen"] = { 1024,2048, 4096 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
 

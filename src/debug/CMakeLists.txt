@@ -1,7 +1,7 @@
 
-set(DSPSIM_SRC_DEBUG_DIR ${DSPSIM_SRC_DIR}debug/)
+set(PITCH_ENGINE_SRC_DEBUG_DIR ${PITCH_ENGINE_SRC_DIR}debug/)
 
-target_sources(DSPSim 
+target_sources(PitchEngine 
     PRIVATE
 		Dumper.cpp
 		Dumper.h
@@ -14,7 +14,7 @@ target_sources(DSPSim
 		logger.h
 )
 
-target_include_directories(DSPSim
+target_include_directories(PitchEngine
 	PUBLIC
 		.
 )
@@ -22,18 +22,18 @@ target_include_directories(DSPSim
 option(DEBUG_DUMP "Store variables in csv files" ON)
 if(DEBUG_DUMP)
     message("CSV dumping of variables is active.")
-	target_compile_definitions(DSPSim PUBLIC -DDEBUG_DUMP)
+	target_compile_definitions(PitchEngine PUBLIC -DDEBUG_DUMP)
 endif()
 
 option(DEBUG_TIMING "Measure time of execution" ON)
 if(DEBUG_TIMING)
     message("Time measurement activated")
-	target_compile_definitions(DSPSim PUBLIC -DDEBUG_TIMING)
+	target_compile_definitions(PitchEngine PUBLIC -DDEBUG_TIMING)
 endif()
 
 option(DEBUG_LOG "Enable logs" OFF)
 if(DEBUG_LOG)
     message("Logs activated")
-	target_compile_definitions(DSPSim PUBLIC -DDEBUG_LOG)
+	target_compile_definitions(PitchEngine PUBLIC -DDEBUG_LOG)
 endif()
 

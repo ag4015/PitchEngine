@@ -1,10 +1,10 @@
 
-set(DSPSIM_DEPENDENCIES_DIR ${DSPSIM_DIR}deps/)
+set(PITCH_ENGINE_DEPENDENCIES_DIR ${PITCH_ENGINE_DIR}deps/)
 
 add_subdirectory(wave)
 
 # CONSTANT_Q Folder
-set(CONSTANT_Q_LIB_DIR ${DSPSIM_DEPENDENCIES_DIR}constant-q-cpp/)
+set(CONSTANT_Q_LIB_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}constant-q-cpp/)
 
 add_library(constant_q_lib "")
 
@@ -104,5 +104,5 @@ target_include_directories(constant_q_lib PUBLIC
 			  ${CONSTANT_Q_CQ_MISC_DIR}
 )
 
-target_link_libraries(DSPSim PUBLIC constant_q_lib wave)
+target_link_libraries(PitchEngine PUBLIC constant_q_lib wave)
 
