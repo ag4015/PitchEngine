@@ -43,17 +43,19 @@ int main(int argc, char **argv)
 
 	parse_arguments(argc, argv, inputFilePath, outputFilePath, &var);
 
-	//paramCombs["buflen"] = { 1024, 1024, 2048, 2048, 4096, 4096 };
-	//paramCombs["hopA"]   = {  256,  512,  256,  512,  256,  512 };
-	//paramCombs["hopS"]   = {  256,  256,  256,  256,  256,  256 };
-	//paramCombs["algo"]   = { PVDR, PVDR, PVDR, PVDR, PVDR, PVDR };
-	//paramCombs["steps"]  = {   12,   12,   12,   12,   12,   12 };
+	paramCombs["steps"]  = {   12,   12,   12,   12,   12,   12 };
+	paramCombs["algo"]   = { PVDR, PVDR, PVDR, PVDR, PVDR, PVDR };
+	paramCombs["hopS"]   = {  256,  256,  256,  256,  256,  256 };
+	paramCombs["hopA"]   = {  256,  512,  256,  512,  256,  512 };
+	paramCombs["buflen"] = { 1024, 1024, 2048, 2048, 4096, 4096 };
 
-	paramCombs["buflen"] = { 1024 };
-	paramCombs["hopA"]   = { 256  };
-	paramCombs["hopS"]   = { 256  };
-	paramCombs["algo"]   = { PV   };
-	paramCombs["steps"]  = { 12   };
+	//paramCombs["buflen"] = { 1024 };
+	//paramCombs["hopA"]   = { 256  };
+	//paramCombs["hopS"]   = { 512  };
+	//paramCombs["algo"]   = { PV   };
+	//paramCombs["steps"]  = { 2   };
+
+	paramCombs = generateParameterCombinations(paramCombs);
 
 	std::string originalOutputFilePath = outputFilePath;
 
@@ -262,5 +264,61 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("delta_f.csv"  , audio_ptr, buflen, buflen, -1, -1);
 	//INIT_DUMPER("delta_t.csv"  , audio_ptr, buflen, buflen, -1, -1);
 	//INIT_DUMPER("vTime.csv"    , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
+}
+
+void CartesianRecurse(std::vector<std::vector<int>> &accum, std::vector<int> stack,
+	std::vector<std::vector<int>> sequences, int index)
+{
+	std::vector<int> sequence = sequences[index];
+	for (int i : sequence)
+	{
+		stack.push_back(i);
+		if (index == 0) {
+			accum.push_back(stack);
+		}
+		else {
+			CartesianRecurse(accum, stack, sequences, index - 1);
+		}
+		stack.pop_back();
+	}
+}
+std::vector<std::vector<int>> CartesianProduct(std::vector<std::vector<int>>& sequences)
+{
+	std::vector<std::vector<int>> accum;
+	std::vector<int> stack;
+	if (sequences.size() > 0) {
+		CartesianRecurse(accum, stack, sequences, sequences.size() - 1);
+	}
+	return accum;
+}
+
+parameterCombinations_t generateParameterCombinations(parameterCombinations_t& paramCombs)
+{
+	// Convert parameterCombinations_t to a vector of vector of ints
+	std::vector<std::vector<int>> sequences;
+	for (auto& param : paramCombs) {
+		std::vector<int> seq;
+		for (auto val : param.second) {
+			seq.push_back(val);
+		}
+		sequences.push_back(seq);
+	}
+
+	std::vector<std::vector<int>> res = CartesianProduct(sequences);
+	// Eliminate duplicates
+	std::set<std::vector<int>> resSet;
+	for (auto& v : res) {
+		resSet.insert(v);
+	}
+	parameterCombinations_t newParamCombs;
+	for (auto& set : resSet) {
+		int i = 0;
+		for (auto& param : paramCombs) {
+			// Reverse the set and insert
+			newParamCombs[param.first].push_back(set[set.size() - i - 1]);
+			i++;
+		}
+	}
+	return newParamCombs;
 }
 

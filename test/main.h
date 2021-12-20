@@ -30,6 +30,7 @@ using parameterCombinations_t = std::unordered_map<std::string, std::vector<int>
 
 void parse_arguments(int argc, char** argv, std::string& inputFilePath, std::string& outputFilePath, my_float* var);
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName);
+parameterCombinations_t generateParameterCombinations(parameterCombinations_t& paramCombs);
 //void generateParameterCombinations(const parameterMap_t & allParams, parameterCombinations_t & paramCombs);
 void runTest(std::string & inputFilePath, std::string & outputFilePath, parameterInstanceMap_t paramInstance, std::string& variationName);
 
