@@ -22,7 +22,7 @@
 #endif
 
  //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
-#define DEFAULT_INPUT_FILENAME "sine_short.wav"
+#define DEFAULT_INPUT_FILENAME "sine_tester.wav"
 #define DEFAULT_OUTPUT_FILENAME "output.wav"
 
 #define INGAIN     1
@@ -30,7 +30,6 @@
 
 DumperContainer* DumperContainer::instance = 0;
 TimerContainer* TimerContainer::instance = 0;
-
 
 int main(int argc, char **argv)
 {

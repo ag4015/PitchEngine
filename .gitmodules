@@ -4,3 +4,6 @@
 [submodule "deps/constant-q-cpp"]
 	path = deps/constant-q-cpp
 	url = https://github.com/ag4015/constant-q-cpp.git
+[submodule "deps/progress-cpp"]
+	path = deps/progress-cpp
+	url = https://github.com/prakhar1989/progress-cpp.git
