@@ -9,6 +9,7 @@
 #include "logger.h"
 #include "DumperContainer.h"
 #include "TimerContainer.h"
+#include "ProgressBarContainer.h"
 #include <time.h>
 #include <cmath>
 #ifdef WIN32
@@ -22,7 +23,10 @@
 #endif
 
  //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
-#define DEFAULT_INPUT_FILENAME "sine_tester.wav"
+ //#define DEFAULT_INPUT_FILENAME "clean_guitar.wav"
+ //#define DEFAULT_INPUT_FILENAME "pulp_fiction.wav"
+//#define DEFAULT_INPUT_FILENAME "sine_tester.wav"
+#define DEFAULT_INPUT_FILENAME "sine_short.wav"
 #define DEFAULT_OUTPUT_FILENAME "output.wav"
 
 #define INGAIN     1
@@ -30,6 +34,7 @@
 
 DumperContainer* DumperContainer::instance = 0;
 TimerContainer* TimerContainer::instance = 0;
+ProgressBarContainer* ProgressBarContainer::instance = 0;
 
 int main(int argc, char **argv)
 {
@@ -47,6 +52,12 @@ int main(int argc, char **argv)
 	paramCombs["hopS"]   = { 256,  512 };
 	paramCombs["hopA"]   = { 256,  512 };
 	paramCombs["buflen"] = { 1024,2048, 4096 };
+
+	//paramCombs["steps"]  = { 12 };
+	//paramCombs["algo"]   = { PVDR };
+	//paramCombs["hopS"] = { 256 };
+	//paramCombs["hopA"]   = { 256 };
+	//paramCombs["buflen"] = { 1024 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
 
@@ -121,7 +132,7 @@ int main(int argc, char **argv)
 
 void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterInstanceMap_t paramInstance, std::string& variationName)
 {
-	std::cout << "Test " << variationName << std::endl;
+	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runTest", timeUnit::MILISECONDS);
 
 	int audio_ptr  = 0;                       // Wav file sample pointer
@@ -144,6 +155,8 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	PRINT_LOG("Output file: %s\n", outputFilePath);
 
 	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName);
+
+	ProgressBarContainer::getProgressBarContainer()->createProgressBar(variationName, static_cast<int>(numSamp/buflen));
 	
 	PRINT_LOG("Buffer length: %i.\n", buflen);
 
@@ -168,7 +181,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 			pe->inbuffer_[k] = in_audio[audio_ptr + k] * INGAIN;
 		}
 
-		printf("\r%i%%", 100 * audio_ptr/numSamp);
+		ProgressBarContainer::getProgressBarContainer()->progress(variationName);
 
 		CREATE_TIMER("process_buffer", timeUnit::MILISECONDS);
 		pe->process();
@@ -186,6 +199,8 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 		}
 		audio_ptr += buflen;
 	}
+	ProgressBarContainer::getProgressBarContainer()->finish(variationName);
+	//bar.finish();
 
 	// Reconvert floating point audio to 16bit
 	//for (int i = 0; i < numSamp; i++)

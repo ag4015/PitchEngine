@@ -112,7 +112,7 @@ my_float* readWav(int& numSamp, std::string& filePath)
         std::cout << "Error: Could not allocate memory for input audio." << std::endl;
 		exit(EXIT_FAILURE);
     }
-	for (uint32_t i = 0; i < numSamp; i++) {
+	for (int i = 0; i < numSamp; i++) {
 		audio[i] = (numChannels == 2) ? content[static_cast<uint64_t>(i)*2] : content[i];
 	}
 	PRINT_LOG("Number of samples: %i\n", numSamp);

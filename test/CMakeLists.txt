@@ -14,6 +14,7 @@ target_include_directories(PitchEngineTs PUBLIC
                            ${PITCH_ENGINE_SRC_DIR}
                            ${PITCH_ENGINE_SRC_DIR}Engine/
                            ../kissfft/tools/
+                           ../deps/cpptqdm/
                            )
 
 target_link_libraries(PitchEngineTs PUBLIC

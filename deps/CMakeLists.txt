@@ -106,3 +106,12 @@ target_include_directories(constant_q_lib PUBLIC
 
 target_link_libraries(PitchEngine PUBLIC constant_q_lib wave)
 
+set(CPP_TQDM_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}cpptqdm/)
+set(PROGRESSBAR_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}progressbar/)
+
+target_include_directories(PitchEngine
+	PUBLIC 
+		${CPP_TQDM_DIR}
+		${PROGRESSBAR_DIR}
+)
+
