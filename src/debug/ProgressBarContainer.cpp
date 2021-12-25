@@ -66,13 +66,27 @@ progressBarMap_t& ProgressBarContainer::getProgressBarMap()
 
 void ProgressBarContainer::progress(std::string& name)
 {
-	std::unique_lock<std::mutex> progressBarLock(progressBarContainerMutex, std::try_to_lock);
+	//std::unique_lock<std::mutex> progressBarLock(progressBarContainerMutex, std::try_to_lock);
 	getProgressBarMap()[name]->progress();
-	if (!progressBarLock.owns_lock()) {
-		return;
-	}
+	//if (!progressBarLock.owns_lock()) {
+	//	return;
+	//}
+}
 
-	//std::this_thread::sleep_for(std::chrono::milliseconds(30));
+bool ProgressBarContainer::allFinished()
+{
+	for (size_t i = 0; i < progressBarMap_.size(); i++)
+	{
+		if (!getProgressBarMap()[progressBarNameVec_[i]]->isFinished())
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void ProgressBarContainer::print()
+{
 	for (size_t i = 0; i < getProgressBarMap().size() - 1; i++)
 	{
 		std::cout << "\033[1A";
@@ -84,10 +98,14 @@ void ProgressBarContainer::progress(std::string& name)
 			std::cout << std::endl;
 		}
 		std::cout << "\r";
+//#ifndef USE_MULTITHREADING
 		//if (!getProgressBarMap()[progressBarNameVec_[i]]->isFinished())
 		//{
+//#endif
 			std::cout << getProgressBarMap()[progressBarNameVec_[i]]->getOutputStream().str();
+//#ifndef USE_MULTITHREADING
 		//}
+//#endif
 		if (i < getProgressBarMap().size() - 1 && !getProgressBarMap()[progressBarNameVec_[i + 1]]->first_)
 		{
 			std::cout << "\033[1B";
@@ -99,3 +117,4 @@ void ProgressBarContainer::finish(std::string& name)
 {
 	progressBarMap_[name]->finish();
 }
+

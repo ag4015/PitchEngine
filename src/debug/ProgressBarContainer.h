@@ -2,6 +2,7 @@
 #include "progressbar.hpp"
 #include <unordered_map>
 #include <memory>
+#include <vector>
 
 class ProgressBar
 {
@@ -32,6 +33,8 @@ public:
     void createProgressBar(std::string& name, int numCycles);
     void progress(std::string& name);
     void finish(std::string& name);
+    bool allFinished();
+    void print();
     progressBarMap_t& getProgressBarMap();
 
 };

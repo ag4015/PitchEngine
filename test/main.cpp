@@ -120,6 +120,7 @@ int main(int argc, char **argv)
 #ifdef USE_MULTITHREADING
 		vecThread.push_back(std::thread{ runTest, inputFilePath, outputFilePath, paramInstance, variationName });
 	}
+	vecThread.push_back(std::thread{ printProgress });
 	for (auto& thread : vecThread) {
 		thread.join();
 	}
@@ -200,7 +201,6 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 		audio_ptr += buflen;
 	}
 	ProgressBarContainer::getProgressBarContainer()->finish(variationName);
-	//bar.finish();
 
 	// Reconvert floating point audio to 16bit
 	//for (int i = 0; i < numSamp; i++)
@@ -329,4 +329,15 @@ parameterCombinations_t generateParameterCombinations(parameterCombinations_t& p
 	}
 	return newParamCombs;
 }
+
+void printProgress()
+{
+	while (!ProgressBarContainer::getProgressBarContainer()->allFinished() ||
+		ProgressBarContainer::getProgressBarContainer()->getProgressBarMap().size() == 0)
+	{
+		//std::this_thread::sleep_for(std::chrono::milliseconds(30));
+		ProgressBarContainer::getProgressBarContainer()->print();
+	}
+}
+
 

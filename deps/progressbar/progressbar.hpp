@@ -131,6 +131,10 @@ inline void progressbar::update(std::stringstream& outStream) {
 
     if (!update_is_called) {
         if (do_show_bar == true) {
+            outStream << name_;
+            for (size_t i = 0; i < (55 - name_.length()); i++) {
+                outStream << " ";
+            }
             outStream << opening_bracket_char;
             for (int _ = 0; _ < 50; _++) outStream << todo_char;
             outStream << closing_bracket_char << " 0%";
