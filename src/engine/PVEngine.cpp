@@ -233,10 +233,10 @@ void PVEngine::strechFrame(my_float* input, my_float* output)
 	}
 }
 
-// TODO: Last sample of buffer can be calculated better
 void PVEngine::interpolate(my_float* input, my_float* output)
 {
 	int k;
+	// If interpolating one octave up, just take every two samples
 	if (steps_ == 12)
 	{
 		for (k = 0; k < buflen_; k++)
@@ -246,7 +246,8 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 	}
 	else
 	{
-		my_float tShift;
+		my_float totalShift;
+		int totalShiftInt;
 		my_float upper;
 		my_float lower = 0;
 		int lowerIdx;
@@ -254,33 +255,38 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 		my_float delta_shift;
 		for (k = vTimeIdx_; k < vTimeIdx_ + buflen_; k++)
 		{
-			tShift = (k - vTimeIdx_) * shift_;
+			if (k == (vTimeIdx_ + buflen_ - 1))
+			{
+				int a = 4;
+			}
+			totalShift = (k - vTimeIdx_) * shift_;
+			totalShiftInt = static_cast<int>(totalShift);
 
-			lowerIdx = (int)(tShift + vTimeIdx_);
+			lowerIdx = static_cast<int>(totalShift + vTimeIdx_);
 			upperIdx = lowerIdx + 1;
 			if (lowerIdx == 0)
 			{
-				lower = input[lowerIdx + 1];
+				lower = input[lowerIdx];
 				upper = input[upperIdx + 1];
-				output[k - vTimeIdx_ + 1] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
+				output[k - vTimeIdx_ + 1] = lower * (1 - (totalShift - totalShiftInt)) + upper * (totalShift - totalShiftInt);
 				delta_shift = (output[k - vTimeIdx_ + 1] - pOutBuffLastSample_) / 2;
 				output[k - vTimeIdx_] = output[k - vTimeIdx_ + 1] - delta_shift;
 			}
 			if (upperIdx == 2*hopS_*numFrames_)
 			{
-				delta_shift = (shift_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - tShift + shift_);
+				delta_shift = output[k - vTimeIdx_ - 1] - output[k - vTimeIdx_ - 2];
 				output[k - vTimeIdx_] = delta_shift + output[k - vTimeIdx_ - 1];
 				continue;
 			}
 			if (upperIdx == 2*hopS_*numFrames_ + 1 && lowerIdx == 2*hopS_*numFrames_)
 			{
-				delta_shift = (shift_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - tShift + shift_);
+				delta_shift = (shift_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - totalShift + shift_);
 				output[k - vTimeIdx_] = delta_shift + output[k - vTimeIdx_ - 1];
 				continue;
 			}
 			lower = input[lowerIdx];
 			upper = input[upperIdx];
-			output[k - vTimeIdx_] = lower * (1 - (tShift - (int)tShift)) + upper * (tShift - (int)tShift);
+			output[k - vTimeIdx_] = lower * (1 - (totalShift - totalShiftInt)) + upper * (totalShift - totalShiftInt);
 		}
 		pOutBuffLastSample_ = output[k - vTimeIdx_ - 1];
 	}
