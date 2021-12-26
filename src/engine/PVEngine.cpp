@@ -255,10 +255,6 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 		my_float delta_shift;
 		for (k = vTimeIdx_; k < vTimeIdx_ + buflen_; k++)
 		{
-			if (k == (vTimeIdx_ + buflen_ - 1))
-			{
-				int a = 4;
-			}
 			totalShift = (k - vTimeIdx_) * shift_;
 			totalShiftInt = static_cast<int>(totalShift);
 

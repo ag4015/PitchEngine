@@ -1,47 +1,9 @@
 
 #include "ProgressBarContainer.h"
 #include <mutex>
-#include <chrono>
-#include <thread>
 
 std::mutex getProgressBarContainerMutex;
-std::mutex progressBarContainerMutex;
 std::mutex getProgressBarMapMutex;
-std::mutex progressMutex;
-std::mutex finishMutex;
-
-ProgressBar::ProgressBar(std::string& name, int numCycles)
-	: name_(name)
-	, bar_(numCycles, name)
-	, finished_(false)
-	, outStream_()
-	, first_(true)
-{
-}
-
-std::stringstream& ProgressBar::getOutputStream()
-{
-	return outStream_;
-}
-
-void ProgressBar::progress()
-{
-	std::lock_guard<std::mutex> progressMutexLock(progressMutex);
-	outStream_.clear();
-	bar_.update(outStream_);
-}
-
-void ProgressBar::finish()
-{
-	std::lock_guard<std::mutex> finishMutexLock(finishMutex);
-	finished_ = true;
-	progress();
-}
-
-bool ProgressBar::isFinished()
-{
-	return finished_;
-}
 
 ProgressBarContainer* ProgressBarContainer::getProgressBarContainer()
 {
@@ -77,7 +39,7 @@ bool ProgressBarContainer::allFinished()
 {
 	for (size_t i = 0; i < progressBarMap_.size(); i++)
 	{
-		if (!getProgressBarMap()[progressBarNameVec_[i]]->isFinished())
+		if (!getProgressBarMap()[progressBarNameVec_[i]]->printedAfterFinished_)
 		{
 			return false;
 		}
@@ -93,19 +55,24 @@ void ProgressBarContainer::print()
 	}
 	for (size_t i = 0; i < progressBarMap_.size(); i++)
 	{
-		if (getProgressBarMap()[progressBarNameVec_[i]]->first_ && i != 0) {
-			getProgressBarMap()[progressBarNameVec_[i]]->first_ = false;
+		ProgressBar* progressBar = getProgressBarMap()[progressBarNameVec_[i]].get();
+		if (progressBar->first_ && i != 0) {
+			progressBar->first_ = false;
 			std::cout << std::endl;
 		}
 		std::cout << "\r";
-//#ifndef USE_MULTITHREADING
-		//if (!getProgressBarMap()[progressBarNameVec_[i]]->isFinished())
-		//{
-//#endif
-			std::cout << getProgressBarMap()[progressBarNameVec_[i]]->getOutputStream().str();
-//#ifndef USE_MULTITHREADING
-		//}
-//#endif
+#ifndef USE_MULTITHREADING
+		if (!progressBar->isFinished() || !progressBar->printedAfterFinished_)
+		{
+			if (progressBar->isFinished())
+			{
+				progressBar->printedAfterFinished_ = true;
+			}
+#endif
+			std::cout << progressBar->getOutputStream().str();
+#ifndef USE_MULTITHREADING
+		}
+#endif
 		if (i < getProgressBarMap().size() - 1 && !getProgressBarMap()[progressBarNameVec_[i + 1]]->first_)
 		{
 			std::cout << "\033[1B";

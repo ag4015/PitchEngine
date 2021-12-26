@@ -23,10 +23,10 @@
 #endif
 
  //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
- //#define DEFAULT_INPUT_FILENAME "clean_guitar.wav"
+ #define DEFAULT_INPUT_FILENAME "clean_guitar.wav"
  //#define DEFAULT_INPUT_FILENAME "pulp_fiction.wav"
 //#define DEFAULT_INPUT_FILENAME "sine_tester.wav"
-#define DEFAULT_INPUT_FILENAME "sine_short.wav"
+//#define DEFAULT_INPUT_FILENAME "sine_short.wav"
 #define DEFAULT_OUTPUT_FILENAME "output.wav"
 
 #define INGAIN     1
@@ -53,10 +53,10 @@ int main(int argc, char **argv)
 	paramCombs["hopA"]   = { 256,  512 };
 	paramCombs["buflen"] = { 1024,2048, 4096 };
 
-	//paramCombs["steps"]  = { 12 };
-	//paramCombs["algo"]   = { PVDR };
-	//paramCombs["hopS"] = { 256 };
-	//paramCombs["hopA"]   = { 256 };
+	//paramCombs["steps"]  = { 0 };
+	//paramCombs["algo"]   = { PV };
+	//paramCombs["hopS"] = { 512 };
+	//paramCombs["hopA"]   = { 512 };
 	//paramCombs["buflen"] = { 1024 };
 
 	paramCombs = generateParameterCombinations(paramCombs);

@@ -13,6 +13,8 @@ target_sources(PitchEngine
 		TimerContainer.h
 		ProgressBarContainer.cpp
 		ProgressBarContainer.h
+		ProgressBar.cpp
+		ProgressBar.h
 		logger.h
 )
 
