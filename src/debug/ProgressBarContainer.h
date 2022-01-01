@@ -22,3 +22,4 @@ public:
     progressBarMap_t& getProgressBarMap();
 
 };
+

@@ -17,3 +17,4 @@ public:
     bool first_;
     bool printedAfterFinished_;
 };
+

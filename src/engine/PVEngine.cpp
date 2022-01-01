@@ -6,6 +6,12 @@
 #include <complex>
 #include <algorithm>
 
+#ifdef RESET_BUFFER
+#define RESET_PV() if (++reset_counter == 256) { resetDataPV(); reset_counter = 0; }
+#else
+#define RESET_PV()
+#endif
+
 PVEngine::PVEngine(int steps, int buflen_, int hopA)
 	: PitchEngine(buflen_, steps)
 	, hopA_(hopA)
@@ -59,20 +65,10 @@ void PVEngine::process()
 
         /************ ANALYSIS STAGE ***********************/
 
-		DUMP_ARRAY(inframe_, "inframe.csv");
-		CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
 		overlapAdd(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
-		END_TIMER("overlapAdd");
-		DUMP_ARRAY(outframe_, "outframe.csv");
 
 		// TODO: Need to fix this for floats
-#ifdef RESET_BUFFER
-		if (++reset_counter == 256)
-		{
-			resetDataPV();
-			reset_counter = 0;
-		}
-#endif
+		RESET_PV();
 
 		for (int k = 0; k < buflen_; k++)
 		{
@@ -129,6 +125,7 @@ void PVEngine::processFrame()
 	for(int k = 0; k < buflen_; k++)
 	{
 		mag_[k] = std::abs(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
+		// TODO: Optimize this code. No need to copy phi_a_ to phi_aPrev_. They can just be swaped.
 		phi_aPrev_[k] = phi_a_[k];
 		phi_a_[k] = std::arg(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
 	}
@@ -197,20 +194,34 @@ void PVEngine::inverseTransform(cpx* input, cpx* output)
 
 void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, int frameNum)
 {
+	DUMP_ARRAY(inframe_, "inframe.csv");
+	CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
+
 	for (int k = 0; k < hop; k++)
 	{
 		frame[frameNum * hop + k] = input[frameNum * hop + k];
 	}
+
 	int frameNum2 = frameNum + 1;
-	if (frameNum2 >= numFrames_) frameNum2 = 0;
+	if (frameNum2 >= numFrames_)
+	{
+		frameNum2 = 0;
+	}
+
 	for (int f2 = 0; f2 < numFrames_; f2++)
 	{
 		for (int k = 0; k < hop; k++)
 		{
 			output[k + f2 * hop] = frame[frameNum2 * hop + k];
 		}
-		if (++frameNum2 >= numFrames_) frameNum2 = 0;
+		if (++frameNum2 >= numFrames_)
+		{
+			frameNum2 = 0;
+		}
 	}
+
+	DUMP_ARRAY(outframe_, "outframe.csv");
+	return;
 }
 
 void PVEngine::strechFrame(my_float* input, my_float* output)
