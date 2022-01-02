@@ -127,8 +127,13 @@ void PVDREngine::computeDifferenceStep()
 
 	for(int k = 0; k < buflen_; k++)
 	{
+		// Computation of magnitude and phase
+		mag_[k] = std::abs(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
+		my_float phi_aPrev_ = phi_a_[k];
+		phi_a_[k] = std::arg(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
+
 		// Time differentiation
-		phi_diff = phi_a_[k] - phi_aPrev_[k];
+		phi_diff = phi_a_[k] - phi_aPrev_;
 		deltaPhiPrime_t_back = phi_diff - ((my_float)hopA_ * 2 * PI * k)/buflen_;
 		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
 		delta_t_[k] = deltaPhiPrimeMod_t_back/hopA_ + (2 * PI * k)/buflen_;
@@ -167,7 +172,6 @@ void PVDREngine::resetData()
 		mag_[k]         = 0;
 		magPrev_[k]     = 0;
 		phi_a_[k]       = 0;
-		phi_aPrev_[k]   = 0;
 		phi_s_[k]       = 0;
 		phi_sPrev_[k]   = 0;
 		delta_t_[k]     = 0;

@@ -33,9 +33,13 @@ PVEngine::PVEngine(int steps, int buflen_, int hopA)
 	mag_ = mag_ping_;
 	magPrev_ = mag_pong_;
 
+	// Initialize the analysis phase pointers
+	phi_s_ = phi_s_ping_;
+	phi_sPrev_ = phi_s_pong_;
+
 	// Initialize the synthesis phase pointers
-	phi_s_ = phi_ping_;
-	phi_sPrev_ = phi_pong_;
+	phi_s_ = phi_s_ping_;
+	phi_sPrev_ = phi_s_pong_;
 
 	// Initialize the time phase derivative pointers
 	delta_t_     = delta_t_ping_;
@@ -59,13 +63,16 @@ PVEngine::~PVEngine()
 
 void PVEngine::process()
 {
+	CREATE_TIMER("process", timeUnit::MILISECONDS);
 	for (int f = 0; f < numFrames_; f++)
 	{
 		swapPingPongPV();
 
         /************ ANALYSIS STAGE ***********************/
 
+		DUMP_ARRAY(inframe_, "inframe.csv");
 		overlapAdd(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
+		DUMP_ARRAY(outframe_, "outframe.csv");
 
 		// TODO: Need to fix this for floats
 		RESET_PV();
@@ -121,14 +128,7 @@ void PVEngine::process()
 
 void PVEngine::processFrame()
 {
-
-	for(int k = 0; k < buflen_; k++)
-	{
-		mag_[k] = std::abs(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
-		// TODO: Optimize this code. No need to copy phi_a_ to phi_aPrev_. They can just be swaped.
-		phi_aPrev_[k] = phi_a_[k];
-		phi_a_[k] = std::arg(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
-	}
+	CREATE_TIMER("processFrame", timeUnit::MICROSECONDS);
 
 	computeDifferenceStep();
 	
@@ -150,14 +150,6 @@ void PVEngine::processFrame()
 
 }
 
-void PVEngine::propagatePhase()
-{
-	for (int k = 0; k < buflen_; k++)
-	{
-		phi_s_[k] = phi_sPrev_[k] + (hopS_ / 2) * (delta_t_[k] + delta_tPrev_[k]);
-	}
-}
-
 void PVEngine::computeDifferenceStep()
 {
 	my_float phi_diff;
@@ -171,10 +163,24 @@ void PVEngine::computeDifferenceStep()
 	// Time differentiation
 	for(int k = 0; k < buflen_; k++)
 	{
-		phi_diff = phi_a_[k] - phi_aPrev_[k];
+		// Computation of magnitude and phase
+		mag_[k] = std::abs(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
+		my_float phi_aPrev_ = phi_a_[k];
+		phi_a_[k] = std::arg(std::complex<my_float>{cpxOut_[k].r, cpxOut_[k].i});
+
+		// Time differentiation
+		phi_diff = phi_a_[k] - phi_aPrev_;
 		deltaPhiPrime_t_back = phi_diff - ((my_float)hopA_ * 2 * PI * k)/buflen_;
 		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
 		delta_t_[k] = deltaPhiPrimeMod_t_back/hopA_ + (2 * PI * k)/buflen_;
+	}
+}
+
+void PVEngine::propagatePhase()
+{
+	for (int k = 0; k < buflen_; k++)
+	{
+		phi_s_[k] = phi_sPrev_[k] + (hopS_ / 2) * (delta_t_[k] + delta_tPrev_[k]);
 	}
 }
 
@@ -189,12 +195,12 @@ void PVEngine::transform(cpx* input, cpx* output)
 
 void PVEngine::inverseTransform(cpx* input, cpx* output)
 {
+	CREATE_TIMER("inv_fft", timeUnit::MICROSECONDS);
 	kiss_fft(cfgInv_, input, output);
 }
 
 void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, int frameNum)
 {
-	DUMP_ARRAY(inframe_, "inframe.csv");
 	CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
 
 	for (int k = 0; k < hop; k++)
@@ -220,7 +226,6 @@ void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, in
 		}
 	}
 
-	DUMP_ARRAY(outframe_, "outframe.csv");
 	return;
 }
 
@@ -308,7 +313,7 @@ void PVEngine::swapPingPongPV()
 
 	// Phase pointers are not updated
 	phi_sPrev_ = phi_s_;
-	phi_s_ = (phi_s_ == phi_ping_) ? phi_pong_ : phi_ping_;
+	phi_s_ = (phi_s_ == phi_s_ping_) ? phi_s_pong_ : phi_s_ping_;
 
 	// Update time phase derivative pointers
 	delta_tPrev_ = delta_t_;
@@ -326,7 +331,6 @@ void PVEngine::resetData()
 		mag_[k]         = 0;
 		magPrev_[k]     = 0;
 		phi_a_[k]       = 0;
-		phi_aPrev_[k]   = 0;
 		phi_s_[k]       = 0;
 		phi_sPrev_[k]   = 0;
 		delta_t_[k]     = 0;
@@ -353,14 +357,13 @@ void PVEngine::destroyTransformer()
 void PVEngine::allocateMemoryPV()
 {
 	phi_a_        = new my_float[buflen_]();
-	phi_aPrev_    = new my_float[buflen_]();
 	vTime_        = new my_float[vTimeSize_]();
 	inframe_      = new my_float[buflen_]();
 	outframe_     = new my_float[buflen_]();
 	inwin_        = new my_float[buflen_]();
 	outwin_       = new my_float[buflen_]();
-	phi_ping_     = new my_float[buflen_]();
-	phi_pong_     = new my_float[buflen_]();
+	phi_s_ping_     = new my_float[buflen_]();
+	phi_s_pong_     = new my_float[buflen_]();
 	delta_t_ping_ = new my_float[buflen_]();
 	delta_t_pong_ = new my_float[buflen_]();
 	mag_ping_     = new my_float[buflen_]();
@@ -370,14 +373,13 @@ void PVEngine::allocateMemoryPV()
 void PVEngine::freeMemoryPV()
 {
 	delete[] phi_a_;
-	delete[] phi_aPrev_;
 	delete[] vTime_;
 	delete[] inframe_;
 	delete[] outframe_;
 	delete[] inwin_;
 	delete[] outwin_;
-	delete[] phi_ping_;
-	delete[] phi_pong_;
+	delete[] phi_s_ping_;
+	delete[] phi_s_pong_;
 	delete[] delta_t_ping_;
 	delete[] delta_t_pong_;
 	delete[] mag_ping_;

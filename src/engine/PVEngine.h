@@ -51,7 +51,6 @@ protected:
 	kiss_fft_cfg cfgInv_;
 
     my_float* phi_a_;
-    my_float* phi_aPrev_;
 	my_float* phi_s_;
 	my_float* phi_sPrev_;
 
@@ -63,7 +62,7 @@ protected:
 	my_float* inframe_     , *outframe_;           // Pointer to the current frame
 	my_float* inwin_       , *outwin_;             // Input and output windows
     my_float* mag_ping_    , *mag_pong_;           // Frame magnitude ping-pong buffers
-    my_float* phi_ping_    , *phi_pong_;           // Frame phase ping-pong buffers
+    my_float* phi_s_ping_  , *phi_s_pong_;         // Synthesis phase ping-pong buffers
     my_float* delta_t_ping_, *delta_t_pong_;       // Frame phase time derivative ping-pong buffers
 
     kiss_fft_cpx* cpxIn_;                          // Input of transform
