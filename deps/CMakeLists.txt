@@ -2,6 +2,7 @@
 set(PITCH_ENGINE_DEPENDENCIES_DIR ${PITCH_ENGINE_DIR}deps/)
 
 add_subdirectory(wave)
+add_subdirectory(googletest)
 
 # CONSTANT_Q Folder
 set(CONSTANT_Q_LIB_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}constant-q-cpp/)
