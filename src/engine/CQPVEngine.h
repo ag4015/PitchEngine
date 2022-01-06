@@ -6,7 +6,7 @@ class CQPVEngine : public PVDREngine
 {
 public:
     virtual ~CQPVEngine();
-	CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t sampleRate);
+	CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t sampleRate, my_float magTol);
     //process() override;
 
 protected:

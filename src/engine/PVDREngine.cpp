@@ -32,9 +32,10 @@ struct TupleCompareObject
 	}
 };
 
-PVDREngine::PVDREngine(int steps, int buflen, int hopA)
+PVDREngine::PVDREngine(int steps, int buflen, int hopA, my_float magTol)
 	: PVEngine(steps, buflen, hopA)
 	, maxMagPrev_(0)
+	, magTol_(magTol)
 {
 	allocateMemoryPVDR();
 }
@@ -55,9 +56,8 @@ void PVDREngine::propagatePhase()
 	my_float b_s = b_a_ * shift_;
 
 	// STEP 1
-	my_float tol = MAGNITUDE_TOLERANCE;
 	my_float maxMag     = *std::max_element(mag_, mag_ + buflen_);
-	my_float abstol  = tol * ((maxMag >= maxMagPrev_) ? (maxMag) : (maxMagPrev_));
+	my_float abstol  = magTol_ * ((maxMag >= maxMagPrev_) ? (maxMag) : (maxMagPrev_));
 	maxMagPrev_ = maxMag;
 
 	for (uint16_t m = 0; m < buflen_; m++)

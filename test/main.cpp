@@ -36,26 +36,19 @@ DumperContainer* DumperContainer::instance = 0;
 TimerContainer* TimerContainer::instance = 0;
 ProgressBarContainer* ProgressBarContainer::instance = 0;
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
 	parameterCombinations_t paramCombs;
-	my_float var          = 0;
+	my_float var = 0;
 
 	std::string inputFilePath{ INPUT_AUDIO_DIR DEFAULT_INPUT_FILENAME };
 	std::string outputFilePath{ OUTPUT_AUDIO_DIR DEFAULT_INPUT_FILENAME };
 
-	parse_arguments(argc, argv, inputFilePath, outputFilePath, &var);
-
-	//paramCombs["steps"]  = { 0,   12 };
-	//paramCombs["algo"]   = { PV, PVDR };
-	//paramCombs["hopS"]   = { 256,  512 };
-	//paramCombs["hopA"]   = { 256,  512 };
-	//paramCombs["buflen"] = { 1024,2048, 4096 };
-
-	paramCombs["steps"]  = { 0, 12 };
-	paramCombs["algo"]   = { PV, PVDR };
-	paramCombs["hopA"]   = { 256 };
+	paramCombs["steps"] = { 0, 12 };
+	paramCombs["algo"] = { PV, PVDR };
+	paramCombs["hopA"] = { 256 };
+	paramCombs["magTol"] = { 1e-4 };
 	paramCombs["buflen"] = { 4096 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
@@ -80,7 +73,7 @@ int main(int argc, char **argv)
 		for (auto& [paramName, paramValue] : paramInstance) {
 			if (paramName == "algo") {
 				std::string algorithmName;
-				switch (paramValue) {
+				switch (std::get<int>(paramValue)) {
 				case(PV):
 					algorithmName = "pv";
 					break;
@@ -92,8 +85,12 @@ int main(int argc, char **argv)
 					break;
 				}
 				variationName += paramName + "_" + algorithmName + "_";
+			} else if (paramName == "magTol") {
+				std::stringstream ss;
+				ss << std::get<my_float>(paramValue) << std::scientific;
+				variationName += paramName + "_" + ss.str() + "_";
 			} else {
-				variationName += paramName + "_" + std::to_string(paramValue) + "_";
+				variationName += paramName + "_" + std::to_string(std::get<int>(paramValue)) + "_";
 			}
 		}
 
@@ -137,12 +134,13 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runTest", timeUnit::MILISECONDS);
 
-	int audio_ptr  = 0;                       // Wav file sample pointer
-	int buflen     = paramInstance["buflen"];
-	int steps      = paramInstance["steps"];
-	int hopA       = paramInstance["hopA"];
-	int sampleRate = 44100;
-	int numSamp    = 0;
+	int audio_ptr   = 0;                       // Wav file sample pointer
+	int buflen      = std::get<int>(paramInstance["buflen"]);
+	int steps       = std::get<int>(paramInstance["steps"]);
+	int hopA        = std::get<int>(paramInstance["hopA"]);
+	my_float magTol = std::get<my_float>(paramInstance["magTol"]);
+	int sampleRate  = 44100;
+	int numSamp     = 0;
 
 	my_float shift = POW(2, (steps/12));
 	int hopS       = static_cast<int>(ROUND(HOPA * shift));
@@ -163,16 +161,16 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	PRINT_LOG("Buffer length: %i.\n", buflen);
 
 	std::unique_ptr<PitchEngine> pe;
-	switch (paramInstance["algo"])
+	switch (std::get<int>(paramInstance["algo"]))
 	{
 	case(PV):
 		pe = std::make_unique<PVEngine>(steps, buflen, hopA);
 		break;
 	case(PVDR):
-		pe = std::make_unique<PVDREngine>(steps, buflen, hopA);
+		pe = std::make_unique<PVDREngine>(steps, buflen, hopA, magTol);
 		break;
 	case(CQPV):
-		pe = std::make_unique<CQPVEngine>(steps, buflen, hopA, sampleRate);
+		pe = std::make_unique<CQPVEngine>(steps, buflen, hopA, sampleRate, magTol);
 		break;
 	}
 
@@ -212,30 +210,12 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	writeWav(out_audio, inputFilePath, outputFilePath, numSamp);
 
 	// Deallocate memory
+	free(in_audio);
+	free(out_audio);
+
 	END_TIMER("runTest")
 	DUMP_TIMINGS("timings.csv")
 
-	free(in_audio);
-	free(out_audio);
-}
-
-void parse_arguments(int argc, char** argv, std::string&  inputFilePath, std::string& outputFilePath, my_float* var)
-{
-	if (argc > 1) {
-		inputFilePath = argv[1];
-	}
-	if (argc > 2) {
-		outputFilePath = argv[2];
-	}
-	if (argc > 3)
-	{
-#ifdef USE_DOUBLE
-		*var = atof(argv[3]);
-#else
-		char* tmpPtr;
-		*var = strtof(argv[3], &tmpPtr);
-#endif
-	}
 }
 
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName)
@@ -274,11 +254,11 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
-void CartesianRecurse(std::vector<std::vector<int>> &accum, std::vector<int> stack,
-	std::vector<std::vector<int>> sequences, int index)
+void CartesianRecurse(std::vector<std::vector<int64_t>> &accum, std::vector<int64_t> stack,
+	std::vector<std::vector<int64_t>> sequences,int64_t index)
 {
-	std::vector<int> sequence = sequences[index];
-	for (int i : sequence)
+	std::vector<int64_t> sequence = sequences[index];
+	for (int64_t i : sequence)
 	{
 		stack.push_back(i);
 		if (index == 0) {
@@ -290,10 +270,10 @@ void CartesianRecurse(std::vector<std::vector<int>> &accum, std::vector<int> sta
 		stack.pop_back();
 	}
 }
-std::vector<std::vector<int>> CartesianProduct(std::vector<std::vector<int>>& sequences)
+std::vector<std::vector<int64_t>> CartesianProduct(std::vector<std::vector<int64_t>>& sequences)
 {
-	std::vector<std::vector<int>> accum;
-	std::vector<int> stack;
+	std::vector<std::vector<int64_t>> accum;
+	std::vector<int64_t> stack;
 	if (sequences.size() > 0) {
 		CartesianRecurse(accum, stack, sequences, sequences.size() - 1);
 	}
@@ -303,18 +283,18 @@ std::vector<std::vector<int>> CartesianProduct(std::vector<std::vector<int>>& se
 parameterCombinations_t generateParameterCombinations(parameterCombinations_t& paramCombs)
 {
 	// Convert parameterCombinations_t to a vector of vector of ints
-	std::vector<std::vector<int>> sequences;
+	std::vector<std::vector<int64_t>> sequences;
 	for (auto& param : paramCombs) {
-		std::vector<int> seq;
+		std::vector<int64_t> seq;
 		for (auto val : param.second) {
-			seq.push_back(val);
+			seq.push_back(reinterpret_cast<int64_t&>(val));
 		}
 		sequences.push_back(seq);
 	}
 
-	std::vector<std::vector<int>> res = CartesianProduct(sequences);
+	std::vector<std::vector<int64_t>> res = CartesianProduct(sequences);
 	// Eliminate duplicates
-	std::set<std::vector<int>> resSet;
+	std::set<std::vector<int64_t>> resSet;
 	for (auto& v : res) {
 		resSet.insert(v);
 	}
@@ -323,7 +303,14 @@ parameterCombinations_t generateParameterCombinations(parameterCombinations_t& p
 		int i = 0;
 		for (auto& param : paramCombs) {
 			// Reverse the set and insert
-			newParamCombs[param.first].push_back(set[set.size() - i - 1]);
+			if (param.first == "magTol") {
+				int64_t a = static_cast<int64_t>(set[set.size() - i - 1]);
+				my_float b = reinterpret_cast<my_float&>(a);
+				newParamCombs[param.first].push_back(b);
+			} else {
+				auto a = static_cast<int>(set[set.size() - i - 1]);
+				newParamCombs[param.first].push_back(a);
+			}
 			i++;
 		}
 	}

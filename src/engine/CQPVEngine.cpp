@@ -8,8 +8,8 @@ CQPVEngine::~CQPVEngine()
 {
 }
 
-CQPVEngine::CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t sampleRate) :
-	PVDREngine(steps, buflen, hopA)
+CQPVEngine::CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t sampleRate, my_float magTol) :
+	PVDREngine(steps, buflen, hopA, magTol)
   , minFreq_(40)
   , maxFreq_(1000)
   , bpo_(64)
