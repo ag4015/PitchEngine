@@ -23,10 +23,10 @@
 #endif
 
  //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
- #define DEFAULT_INPUT_FILENAME "clean_guitar.wav"
+ //#define DEFAULT_INPUT_FILENAME "clean_guitar.wav"
  //#define DEFAULT_INPUT_FILENAME "pulp_fiction.wav"
 //#define DEFAULT_INPUT_FILENAME "sine_tester.wav"
-//#define DEFAULT_INPUT_FILENAME "sine_short.wav"
+#define DEFAULT_INPUT_FILENAME "sine_short.wav"
 #define DEFAULT_OUTPUT_FILENAME "output.wav"
 
 #define INGAIN     1
@@ -47,17 +47,16 @@ int main(int argc, char **argv)
 
 	parse_arguments(argc, argv, inputFilePath, outputFilePath, &var);
 
-	paramCombs["steps"]  = { 0,   12 };
-	paramCombs["algo"]   = { PV, PVDR };
-	paramCombs["hopS"]   = { 256,  512 };
-	paramCombs["hopA"]   = { 256,  512 };
-	paramCombs["buflen"] = { 1024,2048, 4096 };
+	//paramCombs["steps"]  = { 0,   12 };
+	//paramCombs["algo"]   = { PV, PVDR };
+	//paramCombs["hopS"]   = { 256,  512 };
+	//paramCombs["hopA"]   = { 256,  512 };
+	//paramCombs["buflen"] = { 1024,2048, 4096 };
 
-	//paramCombs["steps"]  = { 0 };
-	//paramCombs["algo"]   = { PV };
-	//paramCombs["hopS"] = { 512 };
-	//paramCombs["hopA"]   = { 512 };
-	//paramCombs["buflen"] = { 1024 };
+	paramCombs["steps"]  = { 0, 12 };
+	paramCombs["algo"]   = { PV, PVDR };
+	paramCombs["hopA"]   = { 256 };
+	paramCombs["buflen"] = { 4096 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
 
@@ -120,7 +119,9 @@ int main(int argc, char **argv)
 #ifdef USE_MULTITHREADING
 		vecThread.push_back(std::thread{ runTest, inputFilePath, outputFilePath, paramInstance, variationName });
 	}
+#ifdef USE_PROGRESS_BAR
 	vecThread.push_back(std::thread{ printProgress });
+#endif
 	for (auto& thread : vecThread) {
 		thread.join();
 	}
@@ -157,7 +158,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 
 	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName);
 
-	ProgressBarContainer::getProgressBarContainer()->createProgressBar(variationName, static_cast<int>(numSamp/buflen));
+	PROGRESS_BAR_CREATE(variationName, static_cast<int>(numSamp / buflen));
 	
 	PRINT_LOG("Buffer length: %i.\n", buflen);
 
@@ -182,11 +183,9 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 			pe->inbuffer_[k] = in_audio[audio_ptr + k] * INGAIN;
 		}
 
-		ProgressBarContainer::getProgressBarContainer()->progress(variationName);
+		PROGRESS_BAR_PROGRESS(variationName);
 
-		CREATE_TIMER("process_buffer", timeUnit::MILISECONDS);
 		pe->process();
-		END_TIMER("process_buffer");
 
 		for (int k = 0; k < buflen; k++)
 		{
@@ -200,7 +199,8 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 		}
 		audio_ptr += buflen;
 	}
-	ProgressBarContainer::getProgressBarContainer()->finish(variationName);
+
+	PROGRESS_BAR_FINISH(variationName);
 
 	// Reconvert floating point audio to 16bit
 	//for (int i = 0; i < numSamp; i++)
@@ -259,19 +259,19 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
 	//INIT_DUMPER("inframe.csv"   , audio_ptr, buflen, buflen, 40, -1);
 	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("mag.csv"      , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("phi_a.csv"    , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("phi_s.csv"    , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("phi_sPrev.csv", audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("cpxIn.csv"    , audio_ptr, buflen, buflen,  40, -1);
-	//INIT_DUMPER("cpxOut.csv"   , audio_ptr, buflen, buflen,  40, -1);
-	//INIT_DUMPER("inbuffer.csv" , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("outbuffer.csv", audio_ptr, buflen, buflen, 10, -1);
-	//INIT_DUMPER("inwin.csv"    , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("outwin.csv"   , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("delta_f.csv"  , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("delta_t.csv"  , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("vTime.csv"    , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
+	//INIT_DUMPER("mag.csv"       , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("phi_a.csv"     , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("phi_s.csv"     , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("phi_sPrev.csv" , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("cpxIn.csv"     , audio_ptr, buflen, buflen,  40, -1);
+	//INIT_DUMPER("cpxOut.csv"    , audio_ptr, buflen, buflen,  40, -1);
+	//INIT_DUMPER("inbuffer.csv"  , audio_ptr, buflen, buflen, 40, -1);
+	//INIT_DUMPER("outbuffer.csv" , audio_ptr, buflen, buflen, 10, -1);
+	//INIT_DUMPER("inwin.csv"     , audio_ptr, buflen, buflen, 40, -1);
+	//INIT_DUMPER("outwin.csv"    , audio_ptr, buflen, buflen, 40, -1);
+	//INIT_DUMPER("delta_f.csv"   , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("delta_t.csv"   , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
 void CartesianRecurse(std::vector<std::vector<int>> &accum, std::vector<int> stack,
@@ -335,7 +335,6 @@ void printProgress()
 	while (!ProgressBarContainer::getProgressBarContainer()->allFinished() ||
 		ProgressBarContainer::getProgressBarContainer()->getProgressBarMap().size() == 0)
 	{
-		//std::this_thread::sleep_for(std::chrono::milliseconds(30));
 		ProgressBarContainer::getProgressBarContainer()->print();
 	}
 }

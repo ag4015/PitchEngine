@@ -29,3 +29,11 @@ else()
     message("Multithreading not activated.")
 endif()
 
+option(USE_PROGRESS_BAR "Use progress bar" OFF)
+if(USE_PROGRESS_BAR)
+    message("Progress bar activated.")
+	target_compile_definitions(PitchEngineTs PRIVATE -DUSE_PROGRESS_BAR)
+else()
+    message("Progress bar not activated.")
+endif()
+
