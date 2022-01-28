@@ -20,7 +20,7 @@ PVEngine::PVEngine(int steps, int buflen_, int hopA)
 	, pOutBuffLastSample_(0)
 {
 
-	hopS_      = static_cast<int>(ROUND(hopA_ * shift_));
+	hopS_      = static_cast<int>(ROUND(hopA_ * alpha_));
 	numFrames_ = static_cast<int>(buflen_ / hopA_);
 	vTimeSize_ = hopS_ * numFrames_ * 2;
 	cleanIdx_ = hopS_ * numFrames_;
@@ -271,7 +271,7 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 		my_float delta_shift;
 		for (k = vTimeIdx_; k < vTimeIdx_ + buflen_; k++)
 		{
-			totalShift = (k - vTimeIdx_) * shift_;
+			totalShift = (k - vTimeIdx_) * alpha_;
 			totalShiftInt = static_cast<int>(totalShift);
 
 			lowerIdx = static_cast<int>(totalShift + vTimeIdx_);
@@ -292,7 +292,7 @@ void PVEngine::interpolate(my_float* input, my_float* output)
 			}
 			if (upperIdx == 2*hopS_*numFrames_ + 1 && lowerIdx == 2*hopS_*numFrames_)
 			{
-				delta_shift = (shift_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - totalShift + shift_);
+				delta_shift = (alpha_*(lower - output[k - vTimeIdx_ - 1]))/(lowerIdx - totalShift + alpha_);
 				output[k - vTimeIdx_] = delta_shift + output[k - vTimeIdx_ - 1];
 				continue;
 			}

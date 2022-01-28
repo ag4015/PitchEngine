@@ -5,7 +5,7 @@ PitchEngine::PitchEngine(int buflen, uint32_t steps)
 	: buflen_(buflen)
 	, steps_(steps)
 {
-	shift_ = POW(2, (steps_/ SEMITONES_PER_OCTAVE ));
+	alpha_ = POW(2, (steps_/ SEMITONES_PER_OCTAVE ));
 	allocateMemoryPE();
 }
 

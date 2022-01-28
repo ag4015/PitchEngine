@@ -10,7 +10,7 @@ public:
 
     int buflen_;
     int steps_;
-    my_float shift_;
+    my_float alpha_;
     my_float* inbuffer_;
     my_float* outbuffer_;
 

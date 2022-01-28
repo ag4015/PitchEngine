@@ -53,7 +53,7 @@ void PVDREngine::propagatePhase()
 	TupleCompareObject cmp(mag_, magPrev_);
 	std::priority_queue<Tuple, std::vector<Tuple>, TupleCompareObject<my_float> > h{cmp, std::move(container)}; // STEP 4
 
-	my_float b_s = b_a_ * shift_;
+	my_float b_s = b_a_ * alpha_;
 
 	// STEP 1
 	my_float maxMag     = *std::max_element(mag_, mag_ + buflen_);
