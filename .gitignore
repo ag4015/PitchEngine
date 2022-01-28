@@ -13,3 +13,4 @@ data/outputAudio/*
 data/matlabAudio/*
 data/debugData/*
 data/debugDataOld/
+src/PitchEngineConfig.h
