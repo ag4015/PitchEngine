@@ -8,7 +8,7 @@
 #define HOPA       (uint32_t) 256           // Size of the frame in the analysis stage
 #define PI         (my_float)3.1415926535   // Pi constant
 #define MAXVAL16   (my_float)32768          // Maximum
-#define SEMITONES_PER_OCTAVE 12
+#define SEMITONES_PER_OCTAVE 12.0
 
 typedef kiss_fft_cpx cpx;
 
