@@ -30,7 +30,7 @@ protected:
     virtual void propagatePhase();
     virtual void computeDifferenceStep();
 
-    void overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, int frameNum);
+    void createFrame(my_float* input, my_float* frame, my_float* output, int hop, int frameNum);
     void strechFrame(my_float* input, my_float* output);
     void interpolate(my_float* input, my_float* output);
 

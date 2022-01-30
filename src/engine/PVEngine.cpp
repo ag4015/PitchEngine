@@ -71,7 +71,7 @@ void PVEngine::process()
         /************ ANALYSIS STAGE ***********************/
 
 		DUMP_ARRAY(inframe_, "inframe.csv");
-		overlapAdd(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
+		createFrame(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
 		DUMP_ARRAY(outframe_, "outframe.csv");
 
 		// TODO: Need to fix this for floats
@@ -199,9 +199,9 @@ void PVEngine::inverseTransform(cpx* input, cpx* output)
 	kiss_fft(cfgInv_, input, output);
 }
 
-void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, int hop, int frameNum)
+void PVEngine::createFrame(my_float* input, my_float* frame, my_float* output, int hop, int frameNum)
 {
-	CREATE_TIMER("overlapAdd", timeUnit::MICROSECONDS);
+	CREATE_TIMER("createFrame", timeUnit::MICROSECONDS);
 
 	for (int k = 0; k < hop; k++)
 	{
@@ -218,7 +218,7 @@ void PVEngine::overlapAdd(my_float* input, my_float* frame, my_float* output, in
 	{
 		for (int k = 0; k < hop; k++)
 		{
-			output[k + f2 * hop] = frame[frameNum2 * hop + k];
+			output[k + f2 * hop] = input[frameNum2 * hop + k];
 		}
 		if (++frameNum2 >= numFrames_)
 		{
@@ -362,8 +362,8 @@ void PVEngine::allocateMemoryPV()
 	outframe_     = new my_float[buflen_]();
 	inwin_        = new my_float[buflen_]();
 	outwin_       = new my_float[buflen_]();
-	phi_s_ping_     = new my_float[buflen_]();
-	phi_s_pong_     = new my_float[buflen_]();
+	phi_s_ping_   = new my_float[buflen_]();
+	phi_s_pong_   = new my_float[buflen_]();
 	delta_t_ping_ = new my_float[buflen_]();
 	delta_t_pong_ = new my_float[buflen_]();
 	mag_ping_     = new my_float[buflen_]();
