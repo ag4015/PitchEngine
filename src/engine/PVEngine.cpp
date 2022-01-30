@@ -218,7 +218,7 @@ void PVEngine::createFrame(my_float* input, my_float* frame, my_float* output, i
 	{
 		for (int k = 0; k < hop; k++)
 		{
-			output[k + f2 * hop] = input[frameNum2 * hop + k];
+			output[k + f2 * hop] = frame[frameNum2 * hop + k];
 		}
 		if (++frameNum2 >= numFrames_)
 		{
