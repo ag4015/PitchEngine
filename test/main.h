@@ -23,13 +23,15 @@ enum
 	CQPV,
 };
 
-using parameterInstanceMap_t = std::unordered_map< std::string, std::variant<int, my_float> >;
-using parameterCombinations_t = std::unordered_map<std::string, std::vector<std::variant<int, my_float> > >;
+using var_t = std::variant<int, my_float, std::string>;
+using parameterInstanceMap_t  = std::unordered_map<std::string, var_t >;
+using parameterCombinations_t = std::unordered_map<std::string, std::vector<var_t> >;
 
-void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName);
+void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName);
 parameterCombinations_t generateParameterCombinations(parameterCombinations_t& paramCombs);
-void runTest(std::string & inputFilePath, std::string & outputFilePath, parameterInstanceMap_t paramInstance, std::string& variationName);
+void runTest(std::string inputFilePath, std::string outputFilePath, parameterInstanceMap_t paramInstance, std::string variationName);
 void printProgress();
+bool runTestSuite(parameterCombinations_t& paramCombs, std::string inputFileDir, std::string outputFileDir);
 
 #endif // MAIN_H
 

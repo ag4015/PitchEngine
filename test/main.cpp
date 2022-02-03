@@ -22,13 +22,6 @@
 #include <thread>
 #endif
 
- //#define DEFAULT_INPUT_FILENAME "constant_guitar_short.wav"
- //#define DEFAULT_INPUT_FILENAME "clean_guitar.wav"
- //#define DEFAULT_INPUT_FILENAME "pulp_fiction.wav"
-//#define DEFAULT_INPUT_FILENAME "sine_tester.wav"
-#define DEFAULT_INPUT_FILENAME "sine_short.wav"
-#define DEFAULT_OUTPUT_FILENAME "output.wav"
-
 #define INGAIN     1
 #define OUTGAIN    1
 
@@ -40,20 +33,23 @@ int main(int argc, char** argv)
 {
 
 	parameterCombinations_t paramCombs;
-	my_float var = 0;
 
-	std::string inputFilePath{ INPUT_AUDIO_DIR DEFAULT_INPUT_FILENAME };
-	std::string outputFilePath{ OUTPUT_AUDIO_DIR DEFAULT_INPUT_FILENAME };
-
-	paramCombs["steps"] = { 0, 12 };
-	paramCombs["algo"] = { PV, PVDR };
-	paramCombs["hopA"] = { 256 };
-	paramCombs["magTol"] = { 1e-4 };
-	paramCombs["buflen"] = { 4096 };
+	paramCombs["inputFile"] = { "sine_short", "clean_guitar"};
+	paramCombs["steps"]     = { 12, 13 };
+	paramCombs["algo"]      = { PV };
+	paramCombs["magTol"]    = { 1e-4 };
+	paramCombs["buflen"]    = { 4096 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
 
-	std::string originalOutputFilePath = outputFilePath;
+	bool result = runTestSuite(paramCombs, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+
+	return result;
+
+}
+
+bool runTestSuite(parameterCombinations_t& paramCombs, std::string inputFileDir, std::string outputFileDir)
+{
 
 #ifdef USE_MULTITHREADING
 	std::vector<std::thread> vecThread;
@@ -61,8 +57,9 @@ int main(int argc, char** argv)
 
 	for (size_t paramIdx = 0; paramIdx < paramCombs["buflen"].size(); paramIdx++)
 	{
-		// Reset outputFilePath
-		outputFilePath = originalOutputFilePath;
+
+		std::string outputFilePath{ outputFileDir };
+		std::string inputFilePath{ inputFileDir };
 
 		// Select the parameters to use for this iteration of the test
 		parameterInstanceMap_t paramInstance;
@@ -70,8 +67,34 @@ int main(int argc, char** argv)
 			paramInstance[paramName] = paramValues[paramIdx];
 		}
 		std::string variationName;
-		for (auto& [paramName, paramValue] : paramInstance) {
-			if (paramName == "algo") {
+		for (auto [paramName, paramValue] : paramInstance) {
+
+			if (paramName == "inputFile")
+			{
+
+				std::string& paramValueStr =  std::get<std::string>(paramValue);
+
+				// Remove possible file extension ".wav"
+				size_t lastIndex = paramValueStr.find_last_of(".");
+				if (lastIndex != std::string::npos) {
+					paramValueStr = paramValueStr.substr(0, lastIndex);
+				}
+
+				outputFilePath += paramValueStr;
+				inputFilePath += paramValueStr + ".wav";
+
+				// Create directory for this test case
+				outputFilePath += "/";
+#ifdef WIN32
+				std::filesystem::create_directory(outputFilePath);
+#else
+				std::experimental::filesystem::create_directory(outputFilePath);
+#endif
+			}
+			if (paramName == "inputFile") {
+				variationName += std::get<std::string>(paramValue) + "_";
+			}
+			else if (paramName == "algo") {
 				std::string algorithmName;
 				switch (std::get<int>(paramValue)) {
 				case(PV):
@@ -98,19 +121,6 @@ int main(int argc, char** argv)
 		size_t lastIndex = variationName.find_last_of("_");
 		variationName = variationName.substr(0, lastIndex);
 
-		// Remove possible file extension ".wav"
-		lastIndex = outputFilePath.find_last_of(".");
-		if (lastIndex != std::string::npos) {
-			outputFilePath = outputFilePath.substr(0, lastIndex);
-		}
-
-		// Create directory for this test case
-		outputFilePath += "/";
-#ifdef WIN32
-		std::filesystem::create_directory(outputFilePath);
-#else
-		std::experimental::filesystem::create_directory(outputFilePath);
-#endif
 		outputFilePath += variationName + ".wav";
 
 #ifdef USE_MULTITHREADING
@@ -129,7 +139,7 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterInstanceMap_t paramInstance, std::string& variationName)
+void runTest(std::string inputFilePath, std::string outputFilePath, parameterInstanceMap_t paramInstance, std::string variationName)
 {
 	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runTest", timeUnit::MILISECONDS);
@@ -137,14 +147,14 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	int audio_ptr   = 0;                       // Wav file sample pointer
 	int buflen      = std::get<int>(paramInstance["buflen"]);
 	int steps       = std::get<int>(paramInstance["steps"]);
-	int hopA        = std::get<int>(paramInstance["hopA"]);
+	int hopA        = (1.0 - (ANALYSIS_FRAME_OVERLAP / 100.0)) * buflen;
 	my_float magTol = std::get<my_float>(paramInstance["magTol"]);
 	int sampleRate  = 44100;
 	int numSamp     = 0;
 
 	my_float shift = POW(2, (steps/12));
-	int hopS       = static_cast<int>(ROUND(HOPA * shift));
-	int numFrames  = static_cast<int>(buflen / HOPA);
+	int hopS       = static_cast<int>(ROUND(hopA * shift));
+	int numFrames  = static_cast<int>(buflen / hopA);
 
 	// Load contents of wave file
 	my_float* in_audio = readWav(numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
@@ -154,7 +164,7 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 	PRINT_LOG("Input file: %s\n",  inputFilePath);
 	PRINT_LOG("Output file: %s\n", outputFilePath);
 
-	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName);
+	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, std::get<std::string>(paramInstance["inputFile"]));
 
 	PROGRESS_BAR_CREATE(variationName, static_cast<int>(numSamp / buflen));
 	
@@ -218,10 +228,11 @@ void runTest(std::string& inputFilePath, std::string& outputFilePath, parameterI
 
 }
 
-void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName)
+void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName)
 {
 	// Remove possible file extension ".wav"
-	std::string debugPath{ DEBUG_DIR DEFAULT_INPUT_FILENAME };
+	std::string debugPath{ DEBUG_DIR };
+	debugPath += fileName;
 	size_t lastIndex = debugPath.find_last_of(".");
 	if (lastIndex != std::string::npos) {
 		debugPath = debugPath.substr(0, lastIndex);
@@ -286,8 +297,18 @@ parameterCombinations_t generateParameterCombinations(parameterCombinations_t& p
 	std::vector<std::vector<int64_t>> sequences;
 	for (auto& param : paramCombs) {
 		std::vector<int64_t> seq;
-		for (auto val : param.second) {
-			seq.push_back(reinterpret_cast<int64_t&>(val));
+		if (param.first == "inputFile")
+		{
+			for (auto& val : param.second) {
+				std::string* strAddress = &std::get<std::string>(val);
+				seq.push_back(reinterpret_cast<int64_t&>(strAddress));
+			}
+		}
+		else
+		{
+			for (auto& val : param.second) {
+				seq.push_back(reinterpret_cast<int64_t&>(val));
+			}
 		}
 		sequences.push_back(seq);
 	}
@@ -303,11 +324,20 @@ parameterCombinations_t generateParameterCombinations(parameterCombinations_t& p
 		int i = 0;
 		for (auto& param : paramCombs) {
 			// Reverse the set and insert
-			if (param.first == "magTol") {
+			if (param.first == "magTol")
+			{
 				int64_t a = static_cast<int64_t>(set[set.size() - i - 1]);
 				my_float b = reinterpret_cast<my_float&>(a);
 				newParamCombs[param.first].push_back(b);
-			} else {
+			}
+			else if (param.first == "inputFile")
+			{
+				int64_t a = static_cast<int64_t>(set[set.size() - i - 1]);
+				std::string* b = reinterpret_cast<std::string*>(a);
+				newParamCombs[param.first].push_back(*b);
+			}
+			else
+			{
 				auto a = static_cast<int>(set[set.size() - i - 1]);
 				newParamCombs[param.first].push_back(a);
 			}

@@ -28,11 +28,7 @@ progressBarMap_t& ProgressBarContainer::getProgressBarMap()
 
 void ProgressBarContainer::progress(std::string& name)
 {
-	//std::unique_lock<std::mutex> progressBarLock(progressBarContainerMutex, std::try_to_lock);
 	getProgressBarMap()[name]->progress();
-	//if (!progressBarLock.owns_lock()) {
-	//	return;
-	//}
 }
 
 bool ProgressBarContainer::allFinished()

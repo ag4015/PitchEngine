@@ -6,11 +6,11 @@
 #include <thread>
 
 #if defined(DEBUG_DUMP) || defined(DEBUG_TIMING)
-	   #define INITIALIZE_DUMPERS(a,b,c,d,e) initializeDumpers(a,b,c,d,e)
+	   #define INITIALIZE_DUMPERS(a,b,c,d,e,f) initializeDumpers(a,b,c,d,e,f)
        #define CREATE_DUMPER_C0NTAINER(a) DumperContainer::getDumperContainer(a)
        #define UPDATE_DUMPER_CONTAINER_PATH(a) DumperContainer::getDumperContainer()->updatePath(a)
 #else
-	   #define INITIALIZE_DUMPERS(a,b,c,d,e)
+	   #define INITIALIZE_DUMPERS(a,b,c,d,e,f)
        #define CREATE_DUMPER_C0NTAINER(a)
        #define UPDATE_DUMPER_CONTAINER_PATH(a)
 #endif
