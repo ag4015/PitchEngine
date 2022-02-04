@@ -3,6 +3,7 @@ set(PITCH_ENGINE_TEST_DIR ${PITCH_ENGINE_DIR}test/)
 
 add_executable(PitchEngineTs
                main.cpp
+               PitchEngineTs.cpp
                )
 
 
