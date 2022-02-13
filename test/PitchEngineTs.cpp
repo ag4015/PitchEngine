@@ -18,8 +18,12 @@
 #include <experimental/filesystem>
 #endif
 #include <memory>
-#ifdef USE_MULTITHREADING
 #include <thread>
+#include <queue>
+#ifdef USE_MULTITHREADING
+#define NUM_THREADS 7
+#else
+#define NUM_THREADS 1
 #endif
 
 #define INGAIN     1
@@ -34,10 +38,11 @@ int PitchEngineTs()
 	parameterCombinations_t paramCombs;
 
 	paramCombs["inputFile"] = { "sine_short" };
-	paramCombs["steps"]     = { 0, 5, 7, 12};
+	paramCombs["steps"]     = { 0, 3 };
+	paramCombs["hopA"]      = { 256, 512, 1024 };
 	paramCombs["algo"]      = { "pv" };
 	paramCombs["magTol"]    = { 1e-4 };
-	paramCombs["buflen"]    = { 4096 };
+	paramCombs["buflen"]    = { 1024, 2048, 4096 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
 	runTest(paramCombs, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
@@ -89,8 +94,10 @@ std::string constructVariationName(parameterInstanceMap_t& paramInstance)
 void runTest(parameterCombinations_t& paramCombs, std::string inputFileDir, std::string outputFileDir)
 {
 
-#ifdef USE_MULTITHREADING
-	std::vector<std::thread> vecThread;
+	std::queue<std::thread> threadQ;
+
+#ifdef USE_PROGRESS_BAR and NUM_THREADS > 1
+	threadQ.push(std::thread{ printProgress });
 #endif
 
 	for (size_t paramIdx = 0; paramIdx < paramCombs["buflen"].size(); paramIdx++)
@@ -118,29 +125,25 @@ void runTest(parameterCombinations_t& paramCombs, std::string inputFileDir, std:
 
 		// Create directory for this test case
 		outputFilePath += "/";
-#ifdef WIN32
+
 		std::filesystem::create_directory(outputFilePath);
-#else
-		std::experimental::filesystem::create_directory(outputFilePath);
-#endif
 
 		std::string variationName = constructVariationName(paramInstance);
 
 		outputFilePath += variationName + ".wav";
 
-#ifdef USE_MULTITHREADING
-		vecThread.push_back(std::thread{ runPitchEngine, inputFilePath, outputFilePath, paramInstance, variationName });
+		threadQ.push(std::thread{ runPitchEngine, inputFilePath, outputFilePath, paramInstance, variationName });
+		if (threadQ.size() + 1 >= NUM_THREADS)
+		{
+			threadQ.front().join();
+			threadQ.pop();
+		}
 	}
-#ifdef USE_PROGRESS_BAR
-	vecThread.push_back(std::thread{ printProgress });
-#endif
-	for (auto& thread : vecThread) {
-		thread.join();
+	while (threadQ.size() > 0)
+	{
+		threadQ.front().join();
+		threadQ.pop();
 	}
-#else
-		runPitchEngine(inputFilePath, outputFilePath, paramInstance, variationName);
-	}
-#endif
 }
 
 void runPitchEngine(std::string inputFilePath, std::string outputFilePath, parameterInstanceMap_t paramInstance, std::string variationName)
@@ -151,7 +154,8 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	int audio_ptr   = 0;                       // Wav file sample pointer
 	int buflen      = std::get<int>(paramInstance["buflen"]);
 	int steps       = std::get<int>(paramInstance["steps"]);
-	int hopA        = (1.0 - (ANALYSIS_FRAME_OVERLAP / 100.0)) * buflen;
+	int hopA        = std::get<int>(paramInstance["hopA"]);
+	//int hopA        = (1.0 - (ANALYSIS_FRAME_OVERLAP / 100.0)) * buflen;
 	my_float magTol = std::get<my_float>(paramInstance["magTol"]);
 	int sampleRate  = 44100;
 
