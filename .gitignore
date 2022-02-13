@@ -9,6 +9,7 @@ bin/*
 CMakeSettings.json
 .git_token
 build/
+data/testAudio/*
 data/outputAudio/*
 data/matlabAudio/*
 data/debugData/*
