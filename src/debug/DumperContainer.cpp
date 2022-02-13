@@ -9,6 +9,7 @@
 #include <thread>
 
 std::mutex dumperContainerMutex;
+std::mutex createDumperContainerMutex;
 
 DumperContainer::DumperContainer(std::string path)
 {
@@ -52,6 +53,7 @@ void DumperContainer::createDumper(const std::string& name, int& audio_ptr,
 // Dumper for timings
 void DumperContainer::createDumper(const std::string& name)
 {
+	std::lock_guard<std::mutex> createDumperLock(createDumperContainerMutex);
 	std::string& folderDir = getPath();
 #ifdef WIN32
 	std::filesystem::create_directory(folderDir);

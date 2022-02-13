@@ -33,8 +33,8 @@ int PitchEngineTs()
 {
 	parameterCombinations_t paramCombs;
 
-	paramCombs["inputFile"] = { "sine_short"};
-	paramCombs["steps"]     = { 12, 13 };
+	paramCombs["inputFile"] = { "sine_short" };
+	paramCombs["steps"]     = { 0, 5, 7, 12};
 	paramCombs["algo"]      = { "pv" };
 	paramCombs["magTol"]    = { 1e-4 };
 	paramCombs["buflen"]    = { 4096 };
@@ -42,9 +42,14 @@ int PitchEngineTs()
 	paramCombs = generateParameterCombinations(paramCombs);
 	runTest(paramCombs, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 
-	int result = 0;
+	std::vector<std::string> failedTests = getFailedTests(paramCombs, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 
-	return result;
+	for (auto& failedTest : failedTests)
+	{
+		std::cout << "Test: " << failedTest << " failed." << std::endl;
+	}
+
+	return failedTests.size() != 0;
 
 }
 
@@ -149,26 +154,19 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	int hopA        = (1.0 - (ANALYSIS_FRAME_OVERLAP / 100.0)) * buflen;
 	my_float magTol = std::get<my_float>(paramInstance["magTol"]);
 	int sampleRate  = 44100;
-	int numSamp     = 0;
 
 	my_float shift = POW(2, (steps/12));
 	int hopS       = static_cast<int>(ROUND(hopA * shift));
 	int numFrames  = static_cast<int>(buflen / hopA);
 
 	// Load contents of wave file
-	my_float* in_audio = readWav(numSamp, inputFilePath);                            // Get input audio from wav file and fetch the size
-
-	my_float* out_audio = (my_float *)  calloc(numSamp, sizeof(my_float));
-
-	PRINT_LOG("Input file: %s\n",  inputFilePath);
-	PRINT_LOG("Output file: %s\n", outputFilePath);
+	std::vector<float> in_audio = readWav(inputFilePath);
+	std::vector<float> out_audio(in_audio.size(), 0.0);
 
 	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, std::get<std::string>(paramInstance["inputFile"]));
 
-	PROGRESS_BAR_CREATE(variationName, static_cast<int>(numSamp / buflen));
+	PROGRESS_BAR_CREATE(variationName, static_cast<int>(in_audio.size() / buflen));
 	
-	PRINT_LOG("Buffer length: %i.\n", buflen);
-
 	std::unique_ptr<PitchEngine> pe;
 	std::string& algo = std::get<std::string>(paramInstance["algo"]);
 	if (algo == "pv")
@@ -184,7 +182,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 		pe = std::make_unique<CQPVEngine>(steps, buflen, hopA, sampleRate, magTol);
 	}
 
-	while(audio_ptr < (numSamp - buflen))
+	while(audio_ptr < (in_audio.size() - buflen))
 	{
 		for (int k = 0; k < buflen; k++)
 		{
@@ -210,21 +208,9 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 	PROGRESS_BAR_FINISH(variationName);
 
-	// Reconvert floating point audio to 16bit
-	//for (int i = 0; i < numSamp; i++)
-	//{
-	//	out_audio[i] = out_audio[i] * MAXVAL16;
-	//}
+	writeWav(out_audio, inputFilePath, outputFilePath);
 
-	// Save the processed audio to the output file
-	writeWav(out_audio, inputFilePath, outputFilePath, numSamp);
-
-	// Deallocate memory
-	free(in_audio);
-	free(out_audio);
-
-	END_TIMER("runPitchEngine")
-	DUMP_TIMINGS("timings.csv")
+	DUMP_TIMINGS("timings.csv");
 
 }
 
@@ -347,11 +333,59 @@ parameterCombinations_t generateParameterCombinations(parameterCombinations_t& p
 	return newParamCombs;
 }
 
-void printProgress()
+std::vector<std::string> getFailedTests(parameterCombinations_t& paramCombs, std::string testFileDir, std::string outputFileDir)
 {
-	while (!ProgressBarContainer::getProgressBarContainer()->allFinished() ||
-		ProgressBarContainer::getProgressBarContainer()->getProgressBarMap().size() == 0)
+	std::vector<std::string> failedTests;
+	for (size_t paramIdx = 0; paramIdx < paramCombs["buflen"].size(); paramIdx++)
 	{
-		ProgressBarContainer::getProgressBarContainer()->print();
+
+		std::string testFilePath{ testFileDir };
+		std::string outputFilePath{ outputFileDir };
+
+		parameterInstanceMap_t paramInstance;
+		for (auto& [paramName, paramValues] : paramCombs) {
+			paramInstance[paramName] = paramValues[paramIdx];
+		}
+
+		std::string inputFileName =  std::get<std::string>(paramInstance["inputFile"]);
+
+		// Remove possible file extension ".wav"
+		size_t lastIndex = inputFileName.find_last_of(".");
+		if (lastIndex != std::string::npos) {
+			inputFileName = inputFileName.substr(0, lastIndex);
+		}
+
+		std::string variationName = constructVariationName(paramInstance);
+
+		outputFilePath += inputFileName;
+		testFilePath   += inputFileName;
+		outputFilePath += "/";
+		testFilePath   += "/";
+		outputFilePath += variationName + ".wav";
+		testFilePath   += variationName + ".wav";
+
+		if (!std::filesystem::exists(outputFilePath) || !std::filesystem::exists(testFilePath))
+		{
+			continue;
+		}
+
+		std::vector<float> output_audio = readWav(outputFilePath);
+		std::vector<float> test_audio = readWav(testFilePath);
+
+		if (output_audio.size() != test_audio.size())
+		{
+			failedTests.push_back(variationName);
+			continue;
+		}
+		bool failed = false;
+		for (int i = 0; i < output_audio.size() && !failed; i++)
+		{
+			if (output_audio[i] != test_audio[i])
+			{
+				failedTests.push_back(variationName);
+				failed = true;
+			}
+		}
 	}
+	return failedTests;
 }

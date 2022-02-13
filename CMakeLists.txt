@@ -12,14 +12,18 @@ set(PITCH_ENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/)
 set(DATA_DIR ${PROJECT_SOURCE_DIR}/data/)
 set(INPUT_AUDIO_DIR ${DATA_DIR}inputAudio/)
 set(OUTPUT_AUDIO_DIR ${DATA_DIR}outputAudio/)
+set(TEST_AUDIO_DIR ${DATA_DIR}testAudio/)
 set(DEBUG_DIR ${DATA_DIR}debugData/)
 
 file(MAKE_DIRECTORY ${DEBUG_DIR})
+file(MAKE_DIRECTORY ${INPUT_AUDIO_DIR})
 file(MAKE_DIRECTORY ${OUTPUT_AUDIO_DIR})
+file(MAKE_DIRECTORY ${TEST_AUDIO_DIR})
 
 target_compile_definitions(PitchEngine PUBLIC "DATA_DIR=\"${DATA_DIR}\"")
 target_compile_definitions(PitchEngine PUBLIC "INPUT_AUDIO_DIR=\"${INPUT_AUDIO_DIR}\"")
 target_compile_definitions(PitchEngine PUBLIC "OUTPUT_AUDIO_DIR=\"${OUTPUT_AUDIO_DIR}\"")
+target_compile_definitions(PitchEngine PUBLIC "TEST_AUDIO_DIR=\"${TEST_AUDIO_DIR}\"")
 target_compile_definitions(PitchEngine PUBLIC "DEBUG_DIR=\"${DEBUG_DIR}\"")
 
 if(MSVC)

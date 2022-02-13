@@ -5,9 +5,14 @@
 #include <vector>
 
 #ifdef USE_PROGRESS_BAR
+	#define PROGRESS_BAR_CREATE(x,y) ProgressBarContainer::getProgressBarContainer()->createProgressBar(x,y)
+#ifdef USE_MULTITHREADING
 	#define PROGRESS_BAR_PROGRESS(x) ProgressBarContainer::getProgressBarContainer()->progress(x)
 	#define PROGRESS_BAR_FINISH(x) ProgressBarContainer::getProgressBarContainer()->finish(x)
-	#define PROGRESS_BAR_CREATE(x,y) ProgressBarContainer::getProgressBarContainer()->createProgressBar(x,y)
+#else
+	#define PROGRESS_BAR_PROGRESS(x) ProgressBarContainer::getProgressBarContainer()->progress(x); printProgress();
+	#define PROGRESS_BAR_FINISH(x) ProgressBarContainer::getProgressBarContainer()->finish(x); printProgress();
+#endif
 #else
 	#define PROGRESS_BAR_PROGRESS(x)
 	#define PROGRESS_BAR_FINISH(x)
@@ -30,6 +35,9 @@ public:
     bool allFinished();
     void print();
     progressBarMap_t& getProgressBarMap();
+    std::vector<std::string>& getProgressBarNameVec();
 
 };
+
+void printProgress();
 

@@ -2,13 +2,12 @@
 #include "stdint.h"
 #include "kiss_fft.h"
 
-#define WINCONST   (my_float)0.5            // Constant used for the hamming window
-#define HAMCONST   (my_float)0.53836        // Constant used for the hamming window
-#define BUFLEN     (uint32_t) 4096          // Size of the buffer
-#define HOPA       (uint32_t) 256           // Size of the frame in the analysis stage
-#define PI         (my_float)3.1415926535   // Pi constant
-#define MAXVAL16   (my_float)32768          // Maximum
-#define SEMITONES_PER_OCTAVE 12.0
+#define WINCONST               (my_float)0.5            // Constant used for the hamming window
+#define HAMCONST               (my_float)0.53836        // Constant used for the hamming window
+#define PI                     (my_float)3.1415926535   // Pi constant
+#define MAXVAL16               (my_float)32768          // Maximum
+#define SEMITONES_PER_OCTAVE   (my_float)12.0
+#define ANALYSIS_FRAME_OVERLAP (my_float)75.0
 
 typedef kiss_fft_cpx cpx;
 

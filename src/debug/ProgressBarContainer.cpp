@@ -4,6 +4,10 @@
 
 std::mutex getProgressBarContainerMutex;
 std::mutex getProgressBarMapMutex;
+std::mutex createProgressBarMapMutex;
+std::mutex printProgressBarMutex;
+std::mutex allFinishedProgressBarMutex;
+std::mutex getProgressBarNameVecMutex;
 
 ProgressBarContainer* ProgressBarContainer::getProgressBarContainer()
 {
@@ -16,14 +20,21 @@ ProgressBarContainer* ProgressBarContainer::getProgressBarContainer()
 
 void ProgressBarContainer::createProgressBar(std::string& name, int numCycles)
 {
-	progressBarMap_[name] = std::move(std::make_unique<ProgressBar>(name,numCycles));
-	progressBarNameVec_.push_back(name);
+	std::lock_guard<std::mutex> createProgressBarContainerLock(createProgressBarMapMutex);
+	getProgressBarMap()[name] = std::move(std::make_unique<ProgressBar>(name,numCycles));
+	getProgressBarNameVec().push_back(name);
 }
 
 progressBarMap_t& ProgressBarContainer::getProgressBarMap()
 {
 	std::lock_guard<std::mutex> getProgressBarLock(getProgressBarMapMutex);
 	return progressBarMap_;
+}
+
+std::vector<std::string>& ProgressBarContainer::getProgressBarNameVec()
+{
+	std::lock_guard<std::mutex> getProgressBarNameVecLock(getProgressBarNameVecMutex);
+	return progressBarNameVec_;
 }
 
 void ProgressBarContainer::progress(std::string& name)
@@ -33,9 +44,10 @@ void ProgressBarContainer::progress(std::string& name)
 
 bool ProgressBarContainer::allFinished()
 {
-	for (size_t i = 0; i < progressBarMap_.size(); i++)
+	std::lock_guard<std::mutex> allFinishedProgressBar(allFinishedProgressBarMutex);
+	for (auto& progressBar : getProgressBarMap())
 	{
-		if (!getProgressBarMap()[progressBarNameVec_[i]]->printedAfterFinished_)
+		if (!progressBar.second.get()->printedAfterFinished_)
 		{
 			return false;
 		}
@@ -45,13 +57,19 @@ bool ProgressBarContainer::allFinished()
 
 void ProgressBarContainer::print()
 {
+	std::lock_guard<std::mutex> printProgressBarLock(printProgressBarMutex);
+	if (getProgressBarMap().size() == 0)
+	{
+		return;
+	}
 	for (size_t i = 0; i < getProgressBarMap().size() - 1; i++)
 	{
 		std::cout << "\033[1A";
 	}
-	for (size_t i = 0; i < progressBarMap_.size(); i++)
+	int i = 0;
+	for (auto& progressBarIter : getProgressBarMap())
 	{
-		ProgressBar* progressBar = getProgressBarMap()[progressBarNameVec_[i]].get();
+		ProgressBar* progressBar = progressBarIter.second.get();
 		if (progressBar->first_ && i != 0) {
 			progressBar->first_ = false;
 			std::cout << std::endl;
@@ -69,15 +87,28 @@ void ProgressBarContainer::print()
 #ifndef USE_MULTITHREADING
 		}
 #endif
-		if (i < getProgressBarMap().size() - 1 && !getProgressBarMap()[progressBarNameVec_[i + 1]]->first_)
+		if (i < getProgressBarMap().size() - 1 && !getProgressBarMap()[getProgressBarNameVec()[i + 1]]->first_)
 		{
 			std::cout << "\033[1B";
 		}
+		i++;
 	}
 }
 
 void ProgressBarContainer::finish(std::string& name)
 {
-	progressBarMap_[name]->finish();
+	getProgressBarMap()[name]->finish();
 }
 
+void printProgress()
+{
+#ifdef USE_MULTITHREADING
+	while (!ProgressBarContainer::getProgressBarContainer()->allFinished() ||
+		ProgressBarContainer::getProgressBarContainer()->getProgressBarMap().size() == 0)
+	{
+		ProgressBarContainer::getProgressBarContainer()->print();
+	}
+#else
+	ProgressBarContainer::getProgressBarContainer()->print();
+#endif
+}
