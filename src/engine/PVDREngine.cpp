@@ -37,6 +37,7 @@ PVDREngine::PVDREngine(int steps, int buflen, int hopA, my_float magTol)
 	, maxMagPrev_(0)
 	, magTol_(magTol)
 {
+	algorithmName = "Phase Vocoder Done Right";
 	allocateMemoryPVDR();
 }
 

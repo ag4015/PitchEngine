@@ -19,6 +19,7 @@ PVEngine::PVEngine(int steps, int buflen_, int hopA)
 	, vTimeIdx_(0)
 	, pOutBuffLastSample_(0)
 {
+	algorithmName = "Phase Vocoder";
 
 	hopS_      = static_cast<int>(ROUND(hopA_ * alpha_));
 	numFrames_ = static_cast<int>(buflen_ / hopA_);

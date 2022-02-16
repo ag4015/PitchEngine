@@ -1,5 +1,6 @@
 #pragma once
-#include  "pe_common_defs.h"
+#include "pe_common_defs.h"
+#include <string>
 
 class PitchEngine
 {
@@ -13,6 +14,7 @@ public:
     my_float alpha_;
     my_float* inbuffer_;
     my_float* outbuffer_;
+    std::string algorithmName;
 
 protected:
 
