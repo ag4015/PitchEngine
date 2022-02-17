@@ -15,7 +15,7 @@ CQPVEngine::CQPVEngine(uint32_t steps, uint32_t buflen, uint32_t hopA, uint32_t 
   , bpo_(64)
   , sampleRate_(sampleRate)
 {
-	algorithmName = "Constant Q Phase Vocoder";
+	algorithmName_ = "Constant Q Phase Vocoder";
 	CQParameters params(sampleRate_, minFreq_, maxFreq_, bpo_);
 	ConstantQ cq(params);
 	CQInverse cqi(params);

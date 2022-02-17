@@ -2,6 +2,7 @@
 #include "PitchEngineTs.h"
 #include "wavio.h"
 #include "stdint.h"
+#include "StrechEngine.h"
 #include "CQPVEngine.h"
 #include "PVDREngine.h"
 #include "PVEngine.h"
@@ -37,12 +38,12 @@ int PitchEngineTs()
 {
 	parameterCombinations_t paramCombs;
 
-	paramCombs["inputFile"] = { "sine_short" };
-	paramCombs["steps"]     = { 0, 3 };
-	paramCombs["hopA"]      = { 256, 512, 1024 };
-	paramCombs["algo"]      = { "pv" };
+	paramCombs["inputFile"] = { "constant_guitar_short" };
+	paramCombs["steps"]     = { 0, 3, 5, 6, 8,9,10,11,12,13};
+	paramCombs["hopA"]      = { 256 };
+	paramCombs["algo"]      = { "se", "pv" };
 	paramCombs["magTol"]    = { 1e-4 };
-	paramCombs["buflen"]    = { 1024, 2048, 4096 };
+	paramCombs["buflen"]    = { 1024 };
 
 	paramCombs = generateParameterCombinations(paramCombs);
 	runTest(paramCombs, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
@@ -185,6 +186,10 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	{
 		pe = std::make_unique<CQPVEngine>(steps, buflen, hopA, sampleRate, magTol);
 	}
+	else if (algo == "se")
+	{
+		pe = std::make_unique<StrechEngine>(steps, buflen, hopA);
+	}
 
 	while(audio_ptr < (in_audio.size() - buflen))
 	{
@@ -246,6 +251,7 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("phi_sPrev.csv" , audio_ptr, buflen, buflen, -1, -1);
 	//INIT_DUMPER("cpxIn.csv"     , audio_ptr, buflen, buflen,  40, -1);
 	//INIT_DUMPER("cpxOut.csv"    , audio_ptr, buflen, buflen,  40, -1);
+	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, -1);
 	//INIT_DUMPER("inbuffer.csv"  , audio_ptr, buflen, buflen, 40, -1);
 	//INIT_DUMPER("outbuffer.csv" , audio_ptr, buflen, buflen, 10, -1);
 	//INIT_DUMPER("inwin.csv"     , audio_ptr, buflen, buflen, 40, -1);

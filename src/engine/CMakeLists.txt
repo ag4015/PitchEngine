@@ -11,5 +11,7 @@ target_sources(PitchEngine
 	   PVDREngine.h
 	   CQPVEngine.cpp
 	   CQPVEngine.h
+	   StrechEngine.cpp
+	   StrechEngine.h
 )
 

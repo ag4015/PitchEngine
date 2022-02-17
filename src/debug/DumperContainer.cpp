@@ -10,6 +10,7 @@
 
 std::mutex dumperContainerMutex;
 std::mutex createDumperContainerMutex;
+std::mutex getPathMutex;
 
 DumperContainer::DumperContainer(std::string path)
 {
@@ -18,6 +19,7 @@ DumperContainer::DumperContainer(std::string path)
 
 std::string& DumperContainer::getPath()
 {
+	std::lock_guard<std::mutex> getPathLock(getPathMutex);
 	return pathMap_[std::this_thread::get_id()];
 }
 

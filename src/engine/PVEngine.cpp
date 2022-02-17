@@ -19,7 +19,7 @@ PVEngine::PVEngine(int steps, int buflen_, int hopA)
 	, vTimeIdx_(0)
 	, pOutBuffLastSample_(0)
 {
-	algorithmName = "Phase Vocoder";
+	algorithmName_ = "Phase Vocoder";
 
 	hopS_      = static_cast<int>(ROUND(hopA_ * alpha_));
 	numFrames_ = static_cast<int>(buflen_ / hopA_);
@@ -65,14 +65,15 @@ PVEngine::~PVEngine()
 void PVEngine::process()
 {
 	CREATE_TIMER("process", timeUnit::MILISECONDS);
+	// TODO what happens to numFrames_ with different steps?
 	for (int f = 0; f < numFrames_; f++)
 	{
 		swapPingPongPV();
 
         /************ ANALYSIS STAGE ***********************/
 
-		DUMP_ARRAY(inframe_, "inframe.csv");
 		createFrame(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
+		DUMP_ARRAY(inframe_,  "inframe.csv");
 		DUMP_ARRAY(outframe_, "outframe.csv");
 
 		// TODO: Need to fix this for floats
@@ -90,7 +91,6 @@ void PVEngine::process()
 
 		processFrame();
 
-		DUMP_ARRAY(cpxOut_  , "cpxOut.csv");
 		DUMP_ARRAY(inbuffer_, "inbuffer.csv");
 		DUMP_ARRAY(inwin_   , "inwin.csv");
 		DUMP_ARRAY(outwin_  , "outwin.csv");
@@ -99,12 +99,14 @@ void PVEngine::process()
 
 		inverseTransform(cpxIn_ , cpxOut_);
 
-		DUMP_ARRAY(cpxIn_, "cpxOut.csv");
+		DUMP_ARRAY(cpxOut_, "cpxOut.csv");
 
 		for (int k = 0; k < buflen_; k++)
 		{
 			outframe_[k] = cpxOut_[k].r * (outwin_[k] / buflen_) / outWinScale_;
 		}
+
+		DUMP_ARRAY(outframe_, "outframe.csv");
 
         /************ SYNTHESIS STAGE ***********************/
 
@@ -147,7 +149,6 @@ void PVEngine::processFrame()
 	DUMP_ARRAY(mag_      , "mag.csv");
 	DUMP_ARRAY(phi_a_    , "phi_a.csv");
 	DUMP_ARRAY(phi_s_    , "phi_s.csv");
-	DUMP_ARRAY(phi_sPrev_, "phi_sPrev.csv");
 
 }
 

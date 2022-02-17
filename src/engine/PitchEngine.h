@@ -14,7 +14,7 @@ public:
     my_float alpha_;
     my_float* inbuffer_;
     my_float* outbuffer_;
-    std::string algorithmName;
+    std::string algorithmName_;
 
 protected:
 
