@@ -10,8 +10,6 @@ public:
 
 protected:
 
-    void process() override;
-    //void transform(cpx* input, cpx* output) override;
-    //void inverseTransform(cpx* input, cpx* output) override;
+    void processFrame() override;
 
 };
