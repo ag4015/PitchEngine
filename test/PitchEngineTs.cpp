@@ -11,6 +11,7 @@
 #include "DumperContainer.h"
 #include "TimerContainer.h"
 #include "ProgressBarContainer.h"
+#include "parameterValidation.h"
 #include <time.h>
 #include <cmath>
 #ifdef WIN32
@@ -37,18 +38,25 @@ ProgressBarContainer* ProgressBarContainer::instance = 0;
 int PitchEngineTs()
 {
 	parameterCombinations_t paramCombs;
+	dontCares_t dontCares;
 
 	paramCombs["inputFile"] = { "constant_guitar_short" };
-	paramCombs["steps"]     = { 0, 3, 5, 6, 8,9,10,11,12,13};
+	paramCombs["steps"]     = { 0, 3, 5, 7 };
 	paramCombs["hopA"]      = { 256 };
-	paramCombs["algo"]      = { "se", "pv" };
-	paramCombs["magTol"]    = { 1e-4 };
-	paramCombs["buflen"]    = { 1024 };
+	paramCombs["algo"]      = { "se", "pvdr", "pv"};
+	paramCombs["magTol"]    = { 1e-4, 1e-5, 1e-6 };
+	paramCombs["buflen"]    = { 1024, 2048 };
 
-	paramCombs = generateParameterCombinations(paramCombs);
-	runTest(paramCombs, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+	// List of parameters that don't affect the algorithm
+	dontCares["se"]   = { "magTol" };
+	dontCares["pv"]   = { "magTol" };
+	dontCares["pvdr"] = {};
 
-	std::vector<std::string> failedTests = getFailedTests(paramCombs, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+	parameterInstanceSet_t paramInstanceSet = generateInstanceSet(paramCombs, dontCares);
+
+	runTest(paramInstanceSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+
+	std::vector<std::string> failedTests = getFailedTests(paramInstanceSet, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 
 	for (auto& failedTest : failedTests)
 	{
@@ -59,40 +67,7 @@ int PitchEngineTs()
 
 }
 
-std::string constructVariationName(parameterInstanceMap_t& paramInstance)
-{
-	std::string variationName;
-	for (auto [paramName, paramValue] : paramInstance) {
-
-		if (paramName == "inputFile")
-		{
-			variationName += std::get<std::string>(paramValue) + "_";
-		}
-		else if (paramName == "algo")
-		{
-			variationName += paramName + "_" + std::get<std::string>(paramValue) + "_";
-		} 
-		else if (paramName == "magTol")
-		{
-			std::stringstream ss;
-			ss << std::get<my_float>(paramValue) << std::scientific;
-			variationName += paramName + "_" + ss.str() + "_";
-		}
-		else
-		{
-			variationName += paramName + "_" + std::to_string(std::get<int>(paramValue)) + "_";
-		}
-	}
-
-	// Remove trailing "_"
-	size_t lastIndex = variationName.find_last_of("_");
-	variationName = variationName.substr(0, lastIndex);
-
-	return variationName;
-
-}
-
-void runTest(parameterCombinations_t& paramCombs, std::string inputFileDir, std::string outputFileDir)
+void runTest(parameterInstanceSet_t& paramInstanceSet, std::string inputFileDir, std::string outputFileDir)
 {
 
 	std::queue<std::thread> threadQ;
@@ -101,19 +76,13 @@ void runTest(parameterCombinations_t& paramCombs, std::string inputFileDir, std:
 	threadQ.push(std::thread{ printProgress });
 #endif
 
-	for (size_t paramIdx = 0; paramIdx < paramCombs["buflen"].size(); paramIdx++)
+	for (auto& paramInstance : paramInstanceSet)
 	{
 
 		std::string outputFilePath{ outputFileDir };
 		std::string inputFilePath{ inputFileDir };
 
-		// Select the parameters to use for this iteration of the test
-		parameterInstanceMap_t paramInstance;
-		for (auto& [paramName, paramValues] : paramCombs) {
-			paramInstance[paramName] = paramValues[paramIdx];
-		}
-
-		std::string inputFileName =  std::get<std::string>(paramInstance["inputFile"]);
+		std::string inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
 
 		// Remove possible file extension ".wav"
 		size_t lastIndex = inputFileName.find_last_of(".");
@@ -261,103 +230,18 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
-void CartesianRecurse(std::vector<std::vector<int64_t>> &accum, std::vector<int64_t> stack,
-	std::vector<std::vector<int64_t>> sequences,int64_t index)
+std::vector<std::string> getFailedTests(parameterInstanceSet_t& paramInstanceSet, std::string testFileDir, std::string outputFileDir)
 {
-	std::vector<int64_t> sequence = sequences[index];
-	for (int64_t i : sequence)
-	{
-		stack.push_back(i);
-		if (index == 0) {
-			accum.push_back(stack);
-		}
-		else {
-			CartesianRecurse(accum, stack, sequences, index - 1);
-		}
-		stack.pop_back();
-	}
-}
-std::vector<std::vector<int64_t>> CartesianProduct(std::vector<std::vector<int64_t>>& sequences)
-{
-	std::vector<std::vector<int64_t>> accum;
-	std::vector<int64_t> stack;
-	if (sequences.size() > 0) {
-		CartesianRecurse(accum, stack, sequences, sequences.size() - 1);
-	}
-	return accum;
-}
 
-parameterCombinations_t generateParameterCombinations(parameterCombinations_t& paramCombs)
-{
-	// Convert parameterCombinations_t to a vector of vector of ints
-	std::vector<std::vector<int64_t>> sequences;
-	for (auto& param : paramCombs) {
-		std::vector<int64_t> seq;
-		if (param.first == "inputFile" || param.first == "algo")
-		{
-			for (auto& val : param.second) {
-				std::string* strAddress = &std::get<std::string>(val);
-				seq.push_back(reinterpret_cast<int64_t&>(strAddress));
-			}
-		}
-		else
-		{
-			for (auto& val : param.second) {
-				seq.push_back(reinterpret_cast<int64_t&>(val));
-			}
-		}
-		sequences.push_back(seq);
-	}
-
-	std::vector<std::vector<int64_t>> res = CartesianProduct(sequences);
-	// Eliminate duplicates
-	std::set<std::vector<int64_t>> resSet;
-	for (auto& v : res) {
-		resSet.insert(v);
-	}
-	parameterCombinations_t newParamCombs;
-	for (auto& set : resSet) {
-		int i = 0;
-		for (auto& param : paramCombs) {
-			// Reverse the set and insert
-			if (param.first == "magTol")
-			{
-				int64_t a = static_cast<int64_t>(set[set.size() - i - 1]);
-				my_float b = reinterpret_cast<my_float&>(a);
-				newParamCombs[param.first].push_back(b);
-			}
-			else if (param.first == "inputFile" || param.first == "algo")
-			{
-				int64_t a = static_cast<int64_t>(set[set.size() - i - 1]);
-				std::string* b = reinterpret_cast<std::string*>(a);
-				newParamCombs[param.first].push_back(*b);
-			}
-			else
-			{
-				auto a = static_cast<int>(set[set.size() - i - 1]);
-				newParamCombs[param.first].push_back(a);
-			}
-			i++;
-		}
-	}
-	return newParamCombs;
-}
-
-std::vector<std::string> getFailedTests(parameterCombinations_t& paramCombs, std::string testFileDir, std::string outputFileDir)
-{
 	std::vector<std::string> failedTests;
-	for (size_t paramIdx = 0; paramIdx < paramCombs["buflen"].size(); paramIdx++)
+
+	for (auto& paramInstance : paramInstanceSet)
 	{
 
 		std::string testFilePath{ testFileDir };
 		std::string outputFilePath{ outputFileDir };
 
-		parameterInstanceMap_t paramInstance;
-		for (auto& [paramName, paramValues] : paramCombs) {
-			paramInstance[paramName] = paramValues[paramIdx];
-		}
-
-		std::string inputFileName =  std::get<std::string>(paramInstance["inputFile"]);
+		std::string inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
 
 		// Remove possible file extension ".wav"
 		size_t lastIndex = inputFileName.find_last_of(".");
@@ -399,3 +283,4 @@ std::vector<std::string> getFailedTests(parameterCombinations_t& paramCombs, std
 	}
 	return failedTests;
 }
+
