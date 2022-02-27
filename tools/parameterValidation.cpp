@@ -62,7 +62,7 @@ std::vector<std::vector<int64_t>> CartesianProduct(std::vector<std::vector<int64
 	return accum;
 }
 
-parameterInstanceSet_t generateInstanceSet(parameterCombinations_t& paramCombs, dontCares_t& dontCares)
+parameterInstanceSet_t generateParameterInstanceSet(parameterCombinations_t& paramCombs, dontCares_t& dontCares)
 {
 	// Convert parameterCombinations_t to a vector of vector of ints
 	std::vector<std::vector<int64_t>> sequences;
@@ -136,3 +136,4 @@ parameterInstanceSet_t generateInstanceSet(parameterCombinations_t& paramCombs, 
 
 	return paramInstanceSet;
 }
+

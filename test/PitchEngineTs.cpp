@@ -52,7 +52,7 @@ int PitchEngineTs()
 	dontCares["pv"]   = { "magTol" };
 	dontCares["pvdr"] = {};
 
-	parameterInstanceSet_t paramInstanceSet = generateInstanceSet(paramCombs, dontCares);
+	parameterInstanceSet_t paramInstanceSet = generateParameterInstanceSet(paramCombs, dontCares);
 
 	runTest(paramInstanceSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 

@@ -65,7 +65,7 @@ PVEngine::~PVEngine()
 void PVEngine::process()
 {
 	CREATE_TIMER("process", timeUnit::MILISECONDS);
-	// TODO what happens to numFrames_ with different steps?
+
 	for (int f = 0; f < numFrames_; f++)
 	{
 		swapPingPongPV();

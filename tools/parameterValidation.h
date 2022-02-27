@@ -58,6 +58,6 @@ struct ParameterInstanceSetCompare
 
 using parameterInstanceSet_t = std::set<parameterInstanceMap_t, ParameterInstanceSetCompare>;
 
-parameterInstanceSet_t generateInstanceSet(parameterCombinations_t& paramCombs, dontCares_t& dontCares);
+parameterInstanceSet_t generateParameterInstanceSet(parameterCombinations_t& paramCombs, dontCares_t& dontCares);
 std::string constructVariationName(const parameterInstanceMap_t& paramInstance);
 
