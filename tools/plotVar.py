@@ -2,55 +2,73 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+from scipy import signal
 from numpy import genfromtxt
-import os
-import glob
-import pdb
+from os import listdir
+from os.path import isfile, join
 
-# path = "/mnt/c/Users/alexg/Google Drive/Projects/Guitar Pedal/Software/Pedal/DSPSimulator/debugData/"
-path = "/mnt/c/Users/alexg/source/repos/DSPSim/resources/debugData/"
-extension = 'csv'
-os.chdir(path)
+def plot_delta_t(delta_t, N, fsamp, hopA):
+    delta_t = delta_t * fsamp/(2*np.pi)
+    fig = plt.figure()
+    im = plt.imshow(delta_t[:,:int(N/2)].T, cmap='jet', interpolation='nearest', aspect='auto', origin="lower", extent=[0,(delta_t.shape[0] * hopA)/fsamp,0,fsamp/2])
+    plt.colorbar(im)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    plt.savefig(path + "delta_t" + ".png", dpi=300)
+    plt.close()
 
-FFTLEN = 1024
-NFREQ = 1 + FFTLEN/2
+def plot_delta_f(delta_f, N, fsamp, hopA):
+    delta_f = delta_f * fsamp/(2*np.pi)
+    fig = plt.figure()
+    im = plt.imshow(abs(delta_f[:,:int(N/2)].T), cmap='jet', interpolation='nearest', aspect='auto', origin="lower", extent=[0,(delta_f.shape[0] * hopA)/fsamp,0,fsamp/2])
+    plt.colorbar(im)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    plt.savefig(path + "delta_f" + ".png", dpi=300)
+    plt.close()
+
+def plot_mag(mag, N, fsamp, hopA):
+    fig = plt.figure()
+    im = plt.imshow(mag[:,:int(N/2)].T, cmap='jet', interpolation='nearest', aspect='auto', origin="lower", extent=[0,(mag.shape[0] * hopA)/fsamp,0,fsamp/2])
+    plt.colorbar(im)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    plt.savefig(path + "mag" + ".png", dpi=300)
+    plt.close()
+
+def plot_everything(buflen, fsamp, hopA):
+    for name in onlyfiles:
+        if name == "timings.csv":
+            continue
+        var = genfromtxt(path + name, delimiter=';',dtype=float)
+        var = var[:, ~np.isnan(var).any(axis=0)]
+        if len(var) == 0:
+            continue
+        elif name == "delta_t.csv":
+            plot_delta_t(var, buflen, fsamp, hopA)
+        elif name == "delta_f.csv":
+            plot_delta_f(var, buflen, fsamp, hopA)
+        elif name == "mag.csv":
+            plot_mag(var, buflen, fsamp, hopA)
+
+BUFLEN = 1024
 FSAMP = 44100
-TFRAME = (1/FSAMP)*FFTLEN
-hopA = 256
-steps = 0 
-numFrames = int(FFTLEN/hopA)
-hopS = int(hopA*2**(steps/12))
+TFRAME = (1/FSAMP)*BUFLEN
+HOPA = 256
+steps = 3 
+numFrames = int(BUFLEN/HOPA)
+hopS = int(HOPA*2**(steps/12))
+algo = "pvdr"
+#filename = "sine_chirp_impulse_short"
+filename = "sine_short"
+magTol = "1e-06"
 
-def plot_everything():
-    names = glob.glob('*.{}'.format(extension))
-    for name in names:
-        fig = plt.figure()
-        var = np.nan_to_num(genfromtxt(path + name, delimiter=';',dtype=float))
-        plt.plot(var)
-        plt.savefig(path + name[:-4] + "Plot.png", dpi=300);
-        plt.close()
+variationName = "algo_" + algo + "_buflen_" + str(BUFLEN) + "_hopA_" + str(HOPA) + "_" + filename + "_magTol_" + magTol + "_steps_" + str(steps) + "/"
 
-def plot_delta():
-    delta_t = np.nan_to_num(genfromtxt("delta_t" + ".csv", delimiter=';',dtype=float))
-    delta_t = delta_t * FSAMP/(2*np.pi)
-    delta_f = np.nan_to_num(genfromtxt("delta_f" + ".csv", delimiter=';',dtype=float))
+path = "C:/Users/alexg/source/repos/PitchEngine/data/debugData"
+path += "/" + filename + "/" + variationName
 
-    fig = plt.figure()
-    im = plt.imshow(np.flip(delta_t[:,int(FFTLEN/2):].T,0), cmap='jet', interpolation='nearest', aspect='auto', origin="lowest")
-    plt.colorbar(im)
-    plt.xlabel('Frame')
-    plt.ylabel('Frequency bin')
-    plt.savefig(path + "delta_t" + "Plot.png", dpi=300)
-    plt.close()
+onlyfiles = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:] == '.csv']
 
-    fig = plt.figure()
-    im = plt.imshow(np.flip(delta_f[:,int(FFTLEN/2):].T,0), cmap='jet', interpolation='nearest', aspect='auto', origin="lowest")
-    plt.colorbar(im)
-    plt.xlabel('Frame')
-    plt.ylabel('Frequency bin')
-    plt.savefig(path + "delta_f" + "Plot.png", dpi=300)
-    plt.close()
+plot_everything(BUFLEN, FSAMP, HOPA)
 
-
-
-plot_everything()
