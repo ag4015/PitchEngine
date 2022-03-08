@@ -176,6 +176,9 @@ void PVEngine::computeDifferenceStep()
 		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
 		delta_t_[k] = deltaPhiPrimeMod_t_back/hopA_ + (2 * PI * k)/buflen_;
 	}
+
+	DUMP_ARRAY(delta_t_, "delta_t.csv");
+
 }
 
 void PVEngine::propagatePhase()

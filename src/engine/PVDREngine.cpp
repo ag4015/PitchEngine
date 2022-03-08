@@ -57,8 +57,8 @@ void PVDREngine::propagatePhase()
 	my_float b_s = b_a_ * alpha_;
 
 	// STEP 1
-	my_float maxMag     = *std::max_element(mag_, mag_ + buflen_);
-	my_float abstol  = magTol_ * ((maxMag >= maxMagPrev_) ? (maxMag) : (maxMagPrev_));
+	my_float maxMag = *std::max_element(mag_, mag_ + buflen_);
+	my_float abstol = magTol_ * ((maxMag >= maxMagPrev_) ? (maxMag) : (maxMagPrev_));
 	maxMagPrev_ = maxMag;
 
 	for (uint16_t m = 0; m < buflen_; m++)
@@ -105,11 +105,6 @@ void PVDREngine::propagatePhase()
 			}
 		}
 	}
-
-	DUMP_ARRAY(delta_f_, "delta_f.csv");
-	DUMP_ARRAY(delta_t_, "delta_t.csv");
-
-	return;
 }
 
 void PVDREngine::computeDifferenceStep()
@@ -160,6 +155,9 @@ void PVDREngine::computeDifferenceStep()
                    ? (0.5f * (delta_f_back + delta_f_fwd))
 			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 	}
+
+	DUMP_ARRAY(delta_f_, "delta_f.csv");
+	DUMP_ARRAY(delta_t_, "delta_t.csv");
 }
 
 void PVDREngine::resetData()
