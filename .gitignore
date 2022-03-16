@@ -11,6 +11,7 @@ CMakeSettings.json
 build/
 data/testAudio/*
 data/outputAudio/*
+data/inputAudio/generated_audio/*
 data/matlabAudio/*
 data/debugData/*
 data/debugDataOld/

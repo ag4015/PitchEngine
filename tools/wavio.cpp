@@ -4,12 +4,7 @@
 #include "logger.h"
 #include <iostream>
 #include <system_error>
-
-#ifdef _WIN32 
-#define FOPEN(a,b,c) fopen_s(&a,b,c)
-#else
-#define FOPEN(a,b,c) a = fopen(b,c)
-#endif
+#include <filesystem>
 
 std::vector<float> readWav(std::string& filePath)
 {
@@ -39,20 +34,18 @@ std::vector<float> readWav(std::string& filePath)
 	return content;
 }
 
-void writeWav(std::vector<float>& audio, std::string& inputFilePath, std::string& outputFilePath)
+void writeWav(std::vector<float>& audio, std::string& outputFilePath, int sampleRate = 44100, int bitsPerSample = 16)
 {
-	wave::File read_file;
-	wave::Error err = read_file.Open(inputFilePath, wave::kIn);
 
-	wave::File write_file;
-    err = write_file.Open(outputFilePath, wave::kOut);
+	wave::File  write_file;
+    wave::Error err = write_file.Open(outputFilePath, wave::kOut);
 	if (err) {
 		std::cout << "Error, couldn't open output file: " << outputFilePath << std::endl;
         exit(EXIT_FAILURE);
 	}
 
-	write_file.set_sample_rate(read_file.sample_rate());
-	write_file.set_bits_per_sample(read_file.bits_per_sample());
+	write_file.set_sample_rate(sampleRate);
+	write_file.set_bits_per_sample(bitsPerSample);
 	write_file.set_channel_number(1);
 
 	err = write_file.Write(audio);

@@ -12,6 +12,7 @@
 #include "TimerContainer.h"
 #include "ProgressBarContainer.h"
 #include "parameterValidation.h"
+#include "../deps/waveform-generator/WaveformGenerator/waveform_generator.h"
 #include <time.h>
 #include <cmath>
 #ifdef WIN32
@@ -23,7 +24,7 @@
 #include <thread>
 #include <queue>
 #ifdef USE_MULTITHREADING
-#define NUM_THREADS 7
+#define NUM_THREADS 32
 #else
 #define NUM_THREADS 1
 #endif
@@ -40,12 +41,13 @@ int PitchEngineTs()
 	parameterCombinations_t paramCombs;
 	dontCares_t dontCares;
 
-	paramCombs["inputFile"] = { "constant_guitar_short" };
-	paramCombs["steps"]     = { 0, 3, 5, 7 };
+	// List of parameters to test
+	paramCombs["inputFile"] = { "signal_sine" };
+	paramCombs["steps"]     = { 3 };
 	paramCombs["hopA"]      = { 256 };
-	paramCombs["algo"]      = { "se", "pvdr", "pv"};
-	paramCombs["magTol"]    = { 1e-4, 1e-5, 1e-6 };
-	paramCombs["buflen"]    = { 1024, 2048 };
+	paramCombs["algo"]      = { "pv", "pvdr" };
+	paramCombs["magTol"]    = { 1e-6 };
+	paramCombs["buflen"]    = { 1024 };
 
 	// List of parameters that don't affect the algorithm
 	dontCares["se"]   = { "magTol" };
@@ -54,7 +56,11 @@ int PitchEngineTs()
 
 	parameterInstanceSet_t paramInstanceSet = generateParameterInstanceSet(paramCombs, dontCares);
 
+	auto t1 = std::chrono::high_resolution_clock::now();
 	runTest(paramInstanceSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+	auto t2 = std::chrono::high_resolution_clock::now();
+	auto exTime = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
+	std::cout << "Test took " << exTime.count() << "s." << std::endl;
 
 	std::vector<std::string> failedTests = getFailedTests(paramInstanceSet, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 
@@ -91,6 +97,10 @@ void runTest(parameterInstanceSet_t& paramInstanceSet, std::string inputFileDir,
 		}
 
 		outputFilePath += inputFileName;
+		if (inputFileName.rfind("signal_", 0) != std::string::npos)
+		{
+			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
+		}
 		inputFilePath += inputFileName + ".wav";
 
 		// Create directory for this test case
@@ -121,20 +131,44 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
 
-	int audio_ptr   = 0;                       // Wav file sample pointer
-	int buflen      = std::get<int>(paramInstance["buflen"]);
-	int steps       = std::get<int>(paramInstance["steps"]);
-	int hopA        = std::get<int>(paramInstance["hopA"]);
-	//int hopA        = (1.0 - (ANALYSIS_FRAME_OVERLAP / 100.0)) * buflen;
-	my_float magTol = std::get<my_float>(paramInstance["magTol"]);
-	int sampleRate  = 44100;
+	int audio_ptr         = 0;                       // Wav file sample pointer
+	int buflen            = std::get<int>(paramInstance["buflen"]);
+	int steps             = std::get<int>(paramInstance["steps"]);
+	int hopA              = std::get<int>(paramInstance["hopA"]);
+	my_float magTol       = std::get<my_float>(paramInstance["magTol"]);
+	std::string inputFile = std::get<std::string>(paramInstance.at("inputFile"));
+	int sampleRate        = 44100;
 
-	my_float shift = POW(2, (steps/12));
-	int hopS       = static_cast<int>(ROUND(hopA * shift));
-	int numFrames  = static_cast<int>(buflen / hopA);
+	my_float shift    = POW(2, (steps/12));
+	int hopS          = static_cast<int>(ROUND(hopA * shift));
+	int numFrames     = static_cast<int>(buflen / hopA);
+	int sigNumSamp    = sampleRate * 3;
+	int bitsPerSample = 16;
 
-	// Load contents of wave file
-	std::vector<float> in_audio = readWav(inputFilePath);
+	std::vector<float> in_audio(sigNumSamp);
+
+	if (inputFile.rfind("signal_", 0) != std::string::npos)
+	{
+		int frequency = 440;
+		int amplitude = 1;
+		std::unique_ptr<WaveformGenerator> waveformGenerator;
+
+		if (inputFile.find("sine") != std::string::npos)
+		{
+			waveformGenerator = std::make_unique<WafeformGenerator::SineWaveF>(amplitude, frequency, 0);
+		}
+		waveformGenerator->setStepSize(1.0 / sampleRate);
+		for (int i = 0; i < in_audio.size(); i++)
+		{
+			in_audio[i] = waveformGenerator->generate();
+		}
+		writeWav(in_audio, inputFilePath, sampleRate, bitsPerSample);
+	}
+	else
+	{
+		in_audio = readWav(inputFilePath);
+	}
+
 	std::vector<float> out_audio(in_audio.size(), 0.0);
 
 	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, std::get<std::string>(paramInstance["inputFile"]));
@@ -143,22 +177,15 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	
 	std::unique_ptr<PitchEngine> pe;
 	std::string& algo = std::get<std::string>(paramInstance["algo"]);
+
 	if (algo == "pv")
-	{
 		pe = std::make_unique<PVEngine>(steps, buflen, hopA);
-	}
 	else if (algo == "pvdr")
-	{
 		pe = std::make_unique<PVDREngine>(steps, buflen, hopA, magTol);
-	}
 	else if (algo == "cqpv")
-	{
 		pe = std::make_unique<CQPVEngine>(steps, buflen, hopA, sampleRate, magTol);
-	}
 	else if (algo == "se")
-	{
 		pe = std::make_unique<StrechEngine>(steps, buflen, hopA);
-	}
 
 	while(audio_ptr < (in_audio.size() - buflen))
 	{
@@ -186,7 +213,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 	PROGRESS_BAR_FINISH(variationName);
 
-	writeWav(out_audio, inputFilePath, outputFilePath);
+	writeWav(out_audio, outputFilePath, sampleRate, bitsPerSample);
 
 	DUMP_TIMINGS("timings.csv");
 

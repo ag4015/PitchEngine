@@ -81,6 +81,7 @@ if(USE_KISSFFT)
 			${KISSFFT_DIR}
 			${KISSFFT_TOOLS_DIR}
 	)
+	target_link_libraries(constant_q_lib PUBLIC kissfft)
 else()
 	set(KISSFFT_EXTRA_SOURCE_FILES "")
     set(KISSFFT_TOOLS_DIR "")
@@ -96,7 +97,6 @@ target_sources(constant_q_lib
 		${KISSFFT_HEADER_FILES}
 )
 
-target_link_libraries(constant_q_lib PUBLIC kissfft)
 
 target_include_directories(constant_q_lib PUBLIC
 			  ${CONSTANT_Q_SRC_DIR}
@@ -104,6 +104,19 @@ target_include_directories(constant_q_lib PUBLIC
 			  ${CONSTANT_Q_SRC_DSP_DIR}
 			  ${CONSTANT_Q_CQ_MISC_DIR}
 )
+
+add_library(waveform_generator "")
+
+set(WAVEFORM_GENERATOR_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}waveform-generator/)
+set(WAVEFORM_GENERATOR_SRC_DIR ${WAVEFORM_GENERATOR_DIR}WaveformGenerator/)
+
+set(WAVEFORM_GENERATOR_SOURCE_FILES
+		   ${WAVEFORM_GENERATOR_SRC_DIR}waveform_generator.cpp
+		   )
+
+target_sources(waveform_generator PUBLIC ${WAVEFORM_GENERATOR_SOURCE_FILES})
+
+target_link_libraries(constant_q_lib PUBLIC kissfft)
 
 target_link_libraries(PitchEngine PUBLIC constant_q_lib wave)
 

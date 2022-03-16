@@ -4,6 +4,7 @@ set(PITCH_ENGINE_TEST_DIR ${PITCH_ENGINE_DIR}test/)
 add_executable(PitchEngineTs
                main.cpp
                PitchEngineTs.cpp
+               ../deps/waveform-generator/WaveformGenerator/waveform_generator.h
                )
 
 
@@ -14,12 +15,15 @@ target_include_directories(PitchEngineTs PUBLIC
                            ../src/Engine/
                            ${PITCH_ENGINE_SRC_DIR}
                            ${PITCH_ENGINE_SRC_DIR}Engine/
+                           ${WAVEFORM_GENERATOR_DIR}
+                           ${WAVEFORM_GENERATOR_SRC_DIR}
                            ../kissfft/tools/
                            ../deps/cpptqdm/
                            )
 
 target_link_libraries(PitchEngineTs PUBLIC
                         PitchEngine
+                        waveform_generator
                         )
 
 option(USE_MULTITHREADING "Use multithreading for each parameter" ON)

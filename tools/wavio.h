@@ -10,5 +10,5 @@ typedef float my_float;
 #endif
 
 std::vector<float> readWav(std::string& filePath);
-void    writeWav(std::vector<float>& audio, std::string& inputFilePath, std::string& outputFilePath);
+void writeWav(std::vector<float>& audio, std::string& outputFilePath, int sampleRate, int bitsPerSample);
 
