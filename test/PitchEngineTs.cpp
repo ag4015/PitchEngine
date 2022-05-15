@@ -11,7 +11,7 @@
 #include "DumperContainer.h"
 #include "TimerContainer.h"
 #include "ProgressBarContainer.h"
-#include "parameterValidation.h"
+#include "parameterCombinations.h"
 #include "../deps/waveform-generator/WaveformGenerator/waveform_generator.h"
 #include <time.h>
 #include <cmath>
@@ -40,29 +40,38 @@ int PitchEngineTs()
 {
 	parameterCombinations_t paramCombs;
 	dontCares_t dontCares;
+	parameterTypeMap_t parameterTypeMap;
 
 	// List of parameters to test
-	paramCombs["inputFile"] = { "signal_sine" };
+	paramCombs["inputFile"] = { "sine_short" };
+	paramCombs["freq"]      = { 440 };
 	paramCombs["steps"]     = { 3 };
 	paramCombs["hopA"]      = { 256 };
-	paramCombs["algo"]      = { "pv", "pvdr" };
+	paramCombs["algo"]      = { "pv" };
 	paramCombs["magTol"]    = { 1e-6 };
 	paramCombs["buflen"]    = { 1024 };
 
 	// List of parameters that don't affect the algorithm
-	dontCares["se"]   = { "magTol" };
-	dontCares["pv"]   = { "magTol" };
-	dontCares["pvdr"] = {};
+	std::string dontCareKey = "algo";
+	dontCares["se"]       = { "magTol", "freq"};
+	dontCares["pv"]       = { "magTol", "freq"};
+	dontCares["pvdr"]     = { "freq" };
+	dontCares["pv_train"] = {"magTol"};
 
-	parameterInstanceSet_t paramInstanceSet = generateParameterInstanceSet(paramCombs, dontCares);
+	// Type of each of the parameters
+	parameterTypeMap["string"] = { "inputFile", "algo" };
+	parameterTypeMap["double"] = { "magTol" };
+	parameterTypeMap["int"]    = { "freq", "steps", "hopA", "algo", "magTol", "buflen" };
+
+	ParameterCombinations paramSet(paramCombs, dontCares, dontCareKey, parameterTypeMap);
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	runTest(paramInstanceSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+	runTest(paramSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto exTime = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
 	std::cout << "Test took " << exTime.count() << "s." << std::endl;
 
-	std::vector<std::string> failedTests = getFailedTests(paramInstanceSet, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+	std::vector<std::string> failedTests = getFailedTests(paramSet, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 
 	for (auto& failedTest : failedTests)
 	{
@@ -73,7 +82,7 @@ int PitchEngineTs()
 
 }
 
-void runTest(parameterInstanceSet_t& paramInstanceSet, std::string inputFileDir, std::string outputFileDir)
+void runTest(ParameterCombinations& paramSet, std::string inputFileDir, std::string outputFileDir)
 {
 
 	std::queue<std::thread> threadQ;
@@ -82,7 +91,7 @@ void runTest(parameterInstanceSet_t& paramInstanceSet, std::string inputFileDir,
 	threadQ.push(std::thread{ printProgress });
 #endif
 
-	for (auto& paramInstance : paramInstanceSet)
+	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
 	{
 
 		std::string outputFilePath{ outputFileDir };
@@ -108,7 +117,7 @@ void runTest(parameterInstanceSet_t& paramInstanceSet, std::string inputFileDir,
 
 		std::filesystem::create_directory(outputFilePath);
 
-		std::string variationName = constructVariationName(paramInstance);
+		std::string variationName = paramSet.constructVariationName(paramInstance);
 
 		outputFilePath += variationName + ".wav";
 
@@ -178,7 +187,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	std::unique_ptr<PitchEngine> pe;
 	std::string& algo = std::get<std::string>(paramInstance["algo"]);
 
-	if (algo == "pv")
+	if (algo == "pv" || algo == "pv_train")
 		pe = std::make_unique<PVEngine>(steps, buflen, hopA);
 	else if (algo == "pvdr")
 		pe = std::make_unique<PVDREngine>(steps, buflen, hopA, magTol);
@@ -257,12 +266,12 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
-std::vector<std::string> getFailedTests(parameterInstanceSet_t& paramInstanceSet, std::string testFileDir, std::string outputFileDir)
+std::vector<std::string> getFailedTests(ParameterCombinations& paramSet, std::string testFileDir, std::string outputFileDir)
 {
 
 	std::vector<std::string> failedTests;
 
-	for (auto& paramInstance : paramInstanceSet)
+	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
 	{
 
 		std::string testFilePath{ testFileDir };
@@ -276,7 +285,7 @@ std::vector<std::string> getFailedTests(parameterInstanceSet_t& paramInstanceSet
 			inputFileName = inputFileName.substr(0, lastIndex);
 		}
 
-		std::string variationName = constructVariationName(paramInstance);
+		std::string variationName = paramSet.constructVariationName(paramInstance);
 
 		outputFilePath += inputFileName;
 		testFilePath   += inputFileName;
