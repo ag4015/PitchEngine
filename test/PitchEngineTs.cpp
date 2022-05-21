@@ -11,7 +11,7 @@
 #include "DumperContainer.h"
 #include "TimerContainer.h"
 #include "ProgressBarContainer.h"
-#include "parameterCombinations.h"
+#include "parameterTemplates.h"
 #include "../deps/waveform-generator/WaveformGenerator/waveform_generator.h"
 #include <time.h>
 #include <cmath>
@@ -38,32 +38,8 @@ ProgressBarContainer* ProgressBarContainer::instance = 0;
 
 int PitchEngineTs()
 {
-	parameterCombinations_t paramCombs;
-	dontCares_t dontCares;
-	parameterTypeMap_t parameterTypeMap;
-
-	// List of parameters to test
-	paramCombs["inputFile"] = { "sine_short" };
-	paramCombs["freq"]      = { 440 };
-	paramCombs["steps"]     = { 3 };
-	paramCombs["hopA"]      = { 256 };
-	paramCombs["algo"]      = { "pv" };
-	paramCombs["magTol"]    = { 1e-6 };
-	paramCombs["buflen"]    = { 1024 };
-
-	// List of parameters that don't affect the algorithm
-	std::string dontCareKey = "algo";
-	dontCares["se"]       = { "magTol", "freq"};
-	dontCares["pv"]       = { "magTol", "freq"};
-	dontCares["pvdr"]     = { "freq" };
-	dontCares["pv_train"] = {"magTol"};
-
-	// Type of each of the parameters
-	parameterTypeMap["string"] = { "inputFile", "algo" };
-	parameterTypeMap["double"] = { "magTol" };
-	parameterTypeMap["int"]    = { "freq", "steps", "hopA", "algo", "magTol", "buflen" };
-
-	ParameterCombinations paramSet(paramCombs, dontCares, dontCareKey, parameterTypeMap);
+	//ParameterCombinations paramSet = generateInputFileCombinations();
+	ParameterCombinations paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	runTest(paramSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
@@ -96,21 +72,26 @@ void runTest(ParameterCombinations& paramSet, std::string inputFileDir, std::str
 
 		std::string outputFilePath{ outputFileDir };
 		std::string inputFilePath{ inputFileDir };
+		std::string inputFileName;
 
-		std::string inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
-
-		// Remove possible file extension ".wav"
-		size_t lastIndex = inputFileName.find_last_of(".");
-		if (lastIndex != std::string::npos) {
-			inputFileName = inputFileName.substr(0, lastIndex);
-		}
-
-		outputFilePath += inputFileName;
-		if (inputFileName.rfind("signal_", 0) != std::string::npos)
+		// Reading from file
+		if (paramInstance.count("inputFile"))
 		{
-			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
+			inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
+			removeFileExtension(inputFileName);
+			outputFilePath += inputFileName;
+			inputFilePath  += inputFileName + ".wav";
 		}
-		inputFilePath += inputFileName + ".wav";
+		// Synthezising signal
+		else if (paramInstance.count("signal"))
+		{
+			inputFileName = std::get<std::string>(paramInstance.at("signal"));
+			int freq = std::get<int>(paramInstance.at("freq"));
+			inputFileName += "_" + std::to_string(freq);
+			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
+			inputFilePath += inputFileName + ".wav";
+			outputFilePath += inputFileName;
+		}
 
 		// Create directory for this test case
 		outputFilePath += "/";
@@ -145,8 +126,8 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	int steps             = std::get<int>(paramInstance["steps"]);
 	int hopA              = std::get<int>(paramInstance["hopA"]);
 	my_float magTol       = std::get<my_float>(paramInstance["magTol"]);
-	std::string inputFile = std::get<std::string>(paramInstance.at("inputFile"));
 	int sampleRate        = 44100;
+	std::string debugFolder;
 
 	my_float shift    = POW(2, (steps/12));
 	int hopS          = static_cast<int>(ROUND(hopA * shift));
@@ -156,38 +137,27 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 	std::vector<float> in_audio(sigNumSamp);
 
-	if (inputFile.rfind("signal_", 0) != std::string::npos)
+	if (paramInstance.count("signal"))
 	{
-		int frequency = 440;
-		int amplitude = 1;
-		std::unique_ptr<WaveformGenerator> waveformGenerator;
-
-		if (inputFile.find("sine") != std::string::npos)
-		{
-			waveformGenerator = std::make_unique<WafeformGenerator::SineWaveF>(amplitude, frequency, 0);
-		}
-		waveformGenerator->setStepSize(1.0 / sampleRate);
-		for (int i = 0; i < in_audio.size(); i++)
-		{
-			in_audio[i] = waveformGenerator->generate();
-		}
+		generateSignal(in_audio, paramInstance, debugFolder, sampleRate);
 		writeWav(in_audio, inputFilePath, sampleRate, bitsPerSample);
 	}
-	else
+	else if (paramInstance.count("inputFile"))
 	{
+		debugFolder = std::get<std::string>(paramInstance.at("inputFile"));
 		in_audio = readWav(inputFilePath);
 	}
 
 	std::vector<float> out_audio(in_audio.size(), 0.0);
 
-	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, std::get<std::string>(paramInstance["inputFile"]));
+	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, debugFolder);
 
 	PROGRESS_BAR_CREATE(variationName, static_cast<int>(in_audio.size() / buflen));
 	
 	std::unique_ptr<PitchEngine> pe;
 	std::string& algo = std::get<std::string>(paramInstance["algo"]);
 
-	if (algo == "pv" || algo == "pv_train")
+	if (algo == "pv")
 		pe = std::make_unique<PVEngine>(steps, buflen, hopA);
 	else if (algo == "pvdr")
 		pe = std::make_unique<PVDREngine>(steps, buflen, hopA, magTol);
@@ -230,13 +200,9 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName)
 {
-	// Remove possible file extension ".wav"
-	std::string debugPath{ DEBUG_DIR };
-	debugPath += fileName;
-	size_t lastIndex = debugPath.find_last_of(".");
-	if (lastIndex != std::string::npos) {
-		debugPath = debugPath.substr(0, lastIndex);
-	}
+	std::string debugPath{ DEBUG_DIR + fileName };
+
+	removeFileExtension(debugPath);
 
 	// Create directory for this test case
 	debugPath += "/";
@@ -274,16 +240,17 @@ std::vector<std::string> getFailedTests(ParameterCombinations& paramSet, std::st
 	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
 	{
 
+		if (paramInstance.count("signal"))
+		{
+			return failedTests;
+		}
+
 		std::string testFilePath{ testFileDir };
 		std::string outputFilePath{ outputFileDir };
 
 		std::string inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
 
-		// Remove possible file extension ".wav"
-		size_t lastIndex = inputFileName.find_last_of(".");
-		if (lastIndex != std::string::npos) {
-			inputFileName = inputFileName.substr(0, lastIndex);
-		}
+		removeFileExtension(inputFileName);
 
 		std::string variationName = paramSet.constructVariationName(paramInstance);
 
@@ -318,5 +285,35 @@ std::vector<std::string> getFailedTests(ParameterCombinations& paramSet, std::st
 		}
 	}
 	return failedTests;
+}
+
+void removeFileExtension(std::string& str)
+{
+	size_t lastIndex = str.find_last_of(".");
+	if (lastIndex != std::string::npos)
+	{
+		str = str.substr(0, lastIndex);
+	}
+}
+
+void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate)
+{
+	int frequency = std::get<int>(paramInstance.at("freq"));
+	int amplitude = 1;
+	std::string signalType = std::get<std::string>(paramInstance.at("signal"));
+	std::unique_ptr<WaveformGenerator> waveformGenerator;
+
+	debugFolder = signalType + "_" + std::to_string(frequency);
+
+	if (signalType == "sine")
+	{
+		waveformGenerator = std::make_unique<WafeformGenerator::SineWaveF>(amplitude, frequency, 0);
+	}
+	waveformGenerator->setStepSize(1.0 / sampleRate);
+	for (int i = 0; i < signal.size(); i++)
+	{
+		signal[i] = waveformGenerator->generate();
+	}
+
 }
 

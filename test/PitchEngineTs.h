@@ -22,4 +22,6 @@ void runTest(ParameterCombinations& paramSet, std::string inputFileDir, std::str
 void runPitchEngine(std::string inputFilePath, std::string outputFilePath,
 	parameterInstanceMap_t paramInstance, std::string variationName);
 std::vector<std::string> getFailedTests(ParameterCombinations& paramSet, std::string testFileDir, std::string outputFileDir);
+void removeFileExtension(std::string& str);
+void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate);
 

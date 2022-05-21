@@ -20,6 +20,7 @@ using parameterInstanceMap_t  = std::map<std::string, var_t >;
 using parameterCombinations_t = std::unordered_map<std::string, std::vector<var_t> >;
 using dontCares_t = std::unordered_map<std::string, std::set<std::string> >;
 using parameterTypeMap_t = std::unordered_map<std::string, std::set<std::string> >;
+using printableParams_t = std::set<std::string>;
 
 struct ParameterInstanceSetCompare
 {
@@ -77,7 +78,8 @@ class ParameterCombinations
 {
 public:
 
-	ParameterCombinations(parameterCombinations_t& paramCombs, dontCares_t& dontCares, std::string& dontCareKey, parameterTypeMap_t& parameterTypeMap);
+	ParameterCombinations(parameterCombinations_t& paramCombs, dontCares_t& dontCares, std::string& dontCareKey,
+		parameterTypeMap_t& parameterTypeMap, printableParams_t& printableParameters);
 	std::string constructVariationName(const parameterInstanceMap_t& paramInstance);
 	const parameterInstanceSet_t* getParameterInstanceSet();
 private:
@@ -87,6 +89,7 @@ private:
 
 	parameterTypeMap_t parameterTypeMap_;
 	std::unique_ptr<parameterInstanceSet_t> parameterInstanceSet_;
+	printableParams_t printableParameters_;
 
 };
 

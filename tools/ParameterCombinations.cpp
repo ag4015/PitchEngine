@@ -30,8 +30,10 @@ std::vector<std::vector<int64_t>> ParameterCombinations::CartesianProduct(std::v
 	return accum;
 }
 
-ParameterCombinations::ParameterCombinations(parameterCombinations_t& paramCombs, dontCares_t& dontCares, std::string& dontCareKey, parameterTypeMap_t& parameterTypeMap)
+ParameterCombinations::ParameterCombinations(parameterCombinations_t& paramCombs, dontCares_t& dontCares, std::string& dontCareKey,
+	parameterTypeMap_t& parameterTypeMap, printableParams_t& printableParameters)
 	: parameterTypeMap_(parameterTypeMap)
+	, printableParameters_(printableParameters)
 {
 	// Convert parameterCombinations_t to a vector of vector of ints
 	std::vector<std::vector<int64_t>> sequences;
@@ -107,9 +109,13 @@ ParameterCombinations::ParameterCombinations(parameterCombinations_t& paramCombs
 std::string ParameterCombinations::constructVariationName(const parameterInstanceMap_t& paramInstance)
 {
 	std::string variationName;
-	for (auto [paramName, paramValue] : paramInstance) {
-
-		if (paramName == "inputFile")
+	for (auto [paramName, paramValue] : paramInstance)
+	{
+		if (!printableParameters_.count(paramName))
+		{
+			continue;
+		}
+		if (paramName == "inputFile" || paramName == "signal")
 		{
 			variationName += std::get<std::string>(paramValue) + "_";
 		}
@@ -117,7 +123,7 @@ std::string ParameterCombinations::constructVariationName(const parameterInstanc
 		{
 			variationName += paramName + "_" + std::get<std::string>(paramValue) + "_";
 		} 
-		else if (paramName == "magTol")
+		else if (parameterTypeMap_["double"].count(paramName))
 		{
 			std::stringstream ss;
 			ss << std::get<my_float>(paramValue) << std::scientific;
