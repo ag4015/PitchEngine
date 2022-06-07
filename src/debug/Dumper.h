@@ -52,7 +52,7 @@ public:
 			(*audioPtr_ != auPMax_ && auPMax_ != -1)) { return; }
 		
 		// Store in a format understandable by numpy in python
-		for (int i = 0; i < bufferSize_; i++) {
+		for (int i = 0; i < dumpSize_; i++) {
 			if constexpr (std::is_floating_point<remove_pointer_t>::value) {
 				outFile_ << buf[i] << ";";
 			}
