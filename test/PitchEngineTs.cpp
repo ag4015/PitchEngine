@@ -132,10 +132,9 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	my_float shift    = POW(2, (steps/12));
 	int hopS          = static_cast<int>(ROUND(hopA * shift));
 	int numFrames     = static_cast<int>(buflen / hopA);
-	int sigNumSamp    = sampleRate * 3;
 	int bitsPerSample = 16;
 
-	std::vector<float> in_audio(sigNumSamp);
+	std::vector<float> in_audio;
 
 	if (paramInstance.count("signal"))
 	{
@@ -216,8 +215,8 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
 	//INIT_DUMPER("inframe.csv"   , audio_ptr, buflen, buflen, 40, -1);
 	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("mag.csv"       , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("phi_a.csv"     , audio_ptr, buflen, buflen, -1, -1);
+	INIT_DUMPER("mag.csv"       , audio_ptr, buflen/2 + 1, buflen, -1, -1);
+	INIT_DUMPER("phi_a.csv"     , audio_ptr, buflen/2, buflen, -1, -1);
 	//INIT_DUMPER("phi_s.csv"     , audio_ptr, buflen, buflen, -1, -1);
 	//INIT_DUMPER("phi_sPrev.csv" , audio_ptr, buflen, buflen, -1, -1);
 	//INIT_DUMPER("cpxIn.csv"     , audio_ptr, buflen, buflen,  40, -1);
@@ -299,6 +298,7 @@ void removeFileExtension(std::string& str)
 void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate)
 {
 	int frequency = std::get<int>(paramInstance.at("freq"));
+	int numSamp   = std::get<int>(paramInstance.at("numSamp"));
 	int amplitude = 1;
 	std::string signalType = std::get<std::string>(paramInstance.at("signal"));
 	std::unique_ptr<WaveformGenerator> waveformGenerator;
@@ -310,7 +310,8 @@ void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramIns
 		waveformGenerator = std::make_unique<WafeformGenerator::SineWaveF>(amplitude, frequency, 0);
 	}
 	waveformGenerator->setStepSize(1.0 / sampleRate);
-	for (int i = 0; i < signal.size(); i++)
+	signal.resize(numSamp);
+	for (int i = 0; i < numSamp; i++)
 	{
 		signal[i] = waveformGenerator->generate();
 	}
