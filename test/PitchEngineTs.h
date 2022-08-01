@@ -1,5 +1,5 @@
 #pragma once
-#include "parameterCombinations.h"
+#include "ParameterManager.h"
 #include <math.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -18,10 +18,10 @@ typedef float my_float;
 
 int PitchEngineTs();
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName);
-void runTest(ParameterCombinations& paramSet, std::string inputFileDir, std::string outputFileDir);
+void runTest(ParameterManager& paramSet, std::string inputFileDir, std::string outputFileDir);
 void runPitchEngine(std::string inputFilePath, std::string outputFilePath,
 	parameterInstanceMap_t paramInstance, std::string variationName);
-std::vector<std::string> getFailedTests(ParameterCombinations& paramSet, std::string testFileDir, std::string outputFileDir);
+std::vector<std::string> getFailedTests(ParameterManager& paramSet, std::string testFileDir, std::string outputFileDir);
 void removeFileExtension(std::string& str);
 void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate);
 

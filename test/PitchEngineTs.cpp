@@ -38,8 +38,8 @@ ProgressBarContainer* ProgressBarContainer::instance = 0;
 
 int PitchEngineTs()
 {
-	//ParameterCombinations paramSet = generateInputFileCombinations();
-	ParameterCombinations paramSet = sineSweepCombinations();
+	//ParameterManager paramSet = generateInputFileCombinations();
+	ParameterManager paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	runTest(paramSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
@@ -58,7 +58,7 @@ int PitchEngineTs()
 
 }
 
-void runTest(ParameterCombinations& paramSet, std::string inputFileDir, std::string outputFileDir)
+void runTest(ParameterManager& paramSet, std::string inputFileDir, std::string outputFileDir)
 {
 
 	std::queue<std::thread> threadQ;
@@ -231,7 +231,7 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
-std::vector<std::string> getFailedTests(ParameterCombinations& paramSet, std::string testFileDir, std::string outputFileDir)
+std::vector<std::string> getFailedTests(ParameterManager& paramSet, std::string testFileDir, std::string outputFileDir)
 {
 
 	std::vector<std::string> failedTests;

@@ -1,7 +1,36 @@
 #pragma once
-#include "ParameterCombinations.h"
+#include "ParameterManager.h"
 
-ParameterCombinations generateInputFileCombinations()
+ParameterManager generateExpectedDataSetFromTrainingDataSet(ParameterManager& trainingData)
+{
+	dontCares_t             dontCares;
+	parameterTypeMap_t      parameterTypeMap;
+	printableParams_t		printableParams;
+
+	ParameterManager expectedDataSet = trainingData;
+
+	parameterCombinations_t trainingCombs;
+	const parameterCombinations_t* paramCombs  = trainingData.getParameterCombinations();
+
+	for (const auto& freq : paramCombs->at("freq"))
+	{
+		for (auto& steps : paramCombs->at("steps"))
+		{
+			trainingCombs["freq"].push_back(std::get<int>(freq) * std::get<int>(steps));
+		}
+	}
+
+
+	
+	// List of parameters that don't affect the algorithm
+	std::string dontCareKey = "steps";
+
+	expectedDataSet.addParametersWithoutRegeneratingCombinations(trainingCombs, dontCares, dontCareKey, parameterTypeMap);
+
+	return expectedDataSet;
+}
+
+ParameterManager generateInputFileCombinations()
 {
 	parameterCombinations_t paramCombs;
 	dontCares_t             dontCares;
@@ -17,7 +46,7 @@ ParameterCombinations generateInputFileCombinations()
 	paramCombs["buflen"]    = { 1024 };
 
 	// List of parameters that don't affect the algorithm
-	std::string dontCareKey = "algo";
+	dontCareKey_t dontCareKey = "algo";
 	dontCares["se"]         = { "magTol" };
 	dontCares["pv"]         = { "magTol" };
 
@@ -28,16 +57,16 @@ ParameterCombinations generateInputFileCombinations()
 
 	printableParams = { "inputFile", "steps", "hopA", "algo", "buflen" };
 
-	ParameterCombinations paramSet(paramCombs, dontCares, dontCareKey, parameterTypeMap, printableParams);
+	ParameterManager parameterManager(paramCombs, dontCares, dontCareKey, parameterTypeMap, printableParams);
 
-	return paramSet;
+	return parameterManager;
 }
 
-ParameterCombinations sineSweepCombinations()
+ParameterManager sineSweepCombinations()
 {
 	parameterCombinations_t paramCombs;
-	dontCares_t dontCares;
-	parameterTypeMap_t parameterTypeMap;
+	dontCares_t             dontCares;
+	parameterTypeMap_t      parameterTypeMap;
 	printableParams_t		printableParams;
 
 	// List of parameters to test
@@ -48,6 +77,43 @@ ParameterCombinations sineSweepCombinations()
 	paramCombs["algo"]      = { "pv" };
 	paramCombs["magTol"]    = { 1e-6 };
 	paramCombs["buflen"]    = { 1024 };
+	paramCombs["numSamp"]   = { 1024*120 };
+	paramCombs["data"]      = { "input" };
+
+	// List of parameters that don't affect the algorithm
+	std::string dontCareKey = "algo";
+	dontCares["se"]         = { "magTol" };
+	dontCares["pv"]         = { "magTol" };
+
+	// Type of each of the parameters
+	parameterTypeMap["string"] = { "inputFile", "algo", "signal", "data"};
+	parameterTypeMap["double"] = { "magTol" };
+	parameterTypeMap["int"]    = { "freq", "steps", "hopA", "algo", "magTol", "buflen" };
+
+	printableParams = { "signal", "steps", "algo", "buflen", "freq", "numSamp"};
+
+	ParameterManager trainingData(paramCombs, dontCares, dontCareKey, parameterTypeMap, printableParams);
+	ParameterManager expectedData = generateExpectedDataSetFromTrainingDataSet(trainingData);
+
+	return expectedData;
+}
+
+ParameterManager trainEngineSine()
+{
+	parameterCombinations_t paramCombs;
+	dontCares_t             dontCares;
+	parameterTypeMap_t      parameterTypeMap;
+	printableParams_t		printableParams;
+
+	// List of parameters to test
+	paramCombs["signal"]    = { "sine" };
+	paramCombs["freq"]      = { 440 };
+	paramCombs["steps"]     = { 3 };
+	paramCombs["hopA"]      = { 256 };
+	paramCombs["algo"]      = { "pv" };
+	paramCombs["magTol"]    = { 1e-6 };
+	paramCombs["buflen"]    = { 1024 };
+	paramCombs["numSamp"]   = { 1024*120 };
 
 	// List of parameters that don't affect the algorithm
 	std::string dontCareKey = "algo";
@@ -59,9 +125,10 @@ ParameterCombinations sineSweepCombinations()
 	parameterTypeMap["double"] = { "magTol" };
 	parameterTypeMap["int"]    = { "freq", "steps", "hopA", "algo", "magTol", "buflen" };
 
-	printableParams = { "signal", "steps", "algo", "buflen", "freq"};
+	printableParams = { "signal", "steps", "algo", "buflen", "freq", "numSamp"};
 
-	ParameterCombinations paramSet(paramCombs, dontCares, dontCareKey, parameterTypeMap, printableParams);
+	ParameterManager paramSet(paramCombs, dontCares, dontCareKey, parameterTypeMap, printableParams);
+	ParameterManager trainingSet = generateExpectedDataSetFromTrainingDataSet(paramSet);
 
 	return paramSet;
 }
