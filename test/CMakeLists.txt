@@ -21,8 +21,9 @@ target_include_directories(PitchEngineTs PUBLIC
                            ../deps/cpptqdm/
                            )
 
-target_link_libraries(PitchEngineTs PUBLIC
+target_link_libraries(PitchEngineTs PRIVATE
                         PitchEngine
+                        ParameterCombinator
                         waveform_generator
                         )
 

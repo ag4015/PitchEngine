@@ -3,6 +3,7 @@ set(PITCH_ENGINE_DEPENDENCIES_DIR ${PITCH_ENGINE_DIR}deps/)
 
 add_subdirectory(wave)
 add_subdirectory(googletest)
+add_subdirectory(ParameterCombinator)
 
 # CONSTANT_Q Folder
 set(CONSTANT_Q_LIB_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}constant-q-cpp/)
@@ -118,7 +119,7 @@ target_sources(waveform_generator PUBLIC ${WAVEFORM_GENERATOR_SOURCE_FILES})
 
 target_link_libraries(constant_q_lib PUBLIC kissfft)
 
-target_link_libraries(PitchEngine PUBLIC constant_q_lib wave)
+target_link_libraries(PitchEngine PUBLIC constant_q_lib wave ParameterCombinator)
 
 set(CPP_TQDM_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}cpptqdm/)
 set(PROGRESSBAR_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}progressbar/)

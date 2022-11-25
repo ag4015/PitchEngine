@@ -62,7 +62,7 @@ else()
     set(KISSFFT_FLOAT_TYPE  "float")
 endif()
 
-add_subdirectory(src)
 add_subdirectory(deps)
+add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(tools)

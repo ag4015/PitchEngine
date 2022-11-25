@@ -60,7 +60,7 @@ numFrames = int(BUFLEN/HOPA)
 hopS = int(HOPA*2**(steps/12))
 algo = "pvdr"
 #filename = "sine_chirp_impulse_short"
-filename = "sine_short"
+filename = "sine_short_higher_pitch"
 magTol = "1e-06"
 
 variationName = "algo_" + algo + "_buflen_" + str(BUFLEN) + "_hopA_" + str(HOPA) + "_" + filename + "_magTol_" + magTol + "_steps_" + str(steps) + "/"

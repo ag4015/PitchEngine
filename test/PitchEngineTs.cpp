@@ -38,8 +38,8 @@ ProgressBarContainer* ProgressBarContainer::instance = 0;
 
 int PitchEngineTs()
 {
-	//ParameterManager paramSet = generateInputFileCombinations();
-	ParameterManager paramSet = sineSweepCombinations();
+	//ParameterCombinator paramSet = generateInputFileCombinations();
+	ParameterCombinator paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	runTest(paramSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
@@ -58,7 +58,7 @@ int PitchEngineTs()
 
 }
 
-void runTest(ParameterManager& paramSet, std::string inputFileDir, std::string outputFileDir)
+void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::string outputFileDir)
 {
 
 	std::queue<std::thread> threadQ;
@@ -77,7 +77,7 @@ void runTest(ParameterManager& paramSet, std::string inputFileDir, std::string o
 		// Reading from file
 		if (paramInstance.count("inputFile"))
 		{
-			inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
+			inputFileName = getVal<const char*>(paramInstance, "inputFile");
 			removeFileExtension(inputFileName);
 			outputFilePath += inputFileName;
 			inputFilePath  += inputFileName + ".wav";
@@ -85,8 +85,8 @@ void runTest(ParameterManager& paramSet, std::string inputFileDir, std::string o
 		// Synthezising signal
 		else if (paramInstance.count("signal"))
 		{
-			inputFileName = std::get<std::string>(paramInstance.at("signal"));
-			int freq = std::get<int>(paramInstance.at("freq"));
+			inputFileName = getVal<std::string>(paramInstance.at("signal"));
+			int freq = getVal<int>(paramInstance.at("freq"));
 			inputFileName += "_" + std::to_string(freq);
 			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
 			inputFilePath += inputFileName + ".wav";
@@ -231,7 +231,7 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
-std::vector<std::string> getFailedTests(ParameterManager& paramSet, std::string testFileDir, std::string outputFileDir)
+std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::string testFileDir, std::string outputFileDir)
 {
 
 	std::vector<std::string> failedTests;
@@ -317,4 +317,42 @@ void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramIns
 	}
 
 }
+
+
+//std::string ParameterCombinator::constructVariationName(const parameterInstanceMap_t& paramInstance)
+//{
+//	std::string variationName;
+//	for (auto [paramName, paramValue] : paramInstance)
+//	{
+//		if (!printableParameters_.count(paramName))
+//		{
+//			continue;
+//		}
+//		if (paramName == "inputFile" || paramName == "signal")
+//		{
+//			variationName += std::get<std::string>(paramValue) + "_";
+//		}
+//		else if (paramName == "algo")
+//		{
+//			variationName += paramName + "_" + std::get<std::string>(paramValue) + "_";
+//		} 
+//		else if (parameterTypeMap_["double"].count(paramName))
+//		{
+//			std::stringstream ss;
+//			ss << std::get<my_float>(paramValue) << std::scientific;
+//			variationName += paramName + "_" + ss.str() + "_";
+//		}
+//		else
+//		{
+//			variationName += paramName + "_" + std::to_string(std::get<int>(paramValue)) + "_";
+//		}
+//	}
+//
+//	// Remove trailing "_"
+//	size_t lastIndex = variationName.find_last_of("_");
+//	variationName = variationName.substr(0, lastIndex);
+//
+//	return variationName;
+//
+//}
 
