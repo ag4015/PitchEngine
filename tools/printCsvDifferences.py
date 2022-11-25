@@ -1,21 +1,18 @@
-import sys
+import csv
 
+t1 = open("/mnt/c/Users/alexg/source/repos/PitchEngine/data/debugData/constant_guitar_short/algo_pvdr_buflen_2048_hopA_256_constant_guitar_short_magTol_1e-06_steps_3/delta_t.csv")
+t2 = open("/mnt/c/Users/alexg/source/repos/PitchEngine/data/debugData/constant_guitar_short/algo_pv_buflen_2048_hopA_256_constant_guitar_short_magTol_1e-06_steps_3/delta_t.csv")
 
-file1 = "/mnt/c/Users/alexg/source/repos/DSPSim/data/debugData/constant_guitar_short/buflen_1024_hopS_256_hopA_256_algo_pv/cpxIn.csv"
-file2 = "/mnt/c/Users/alexg/source/repos/DSPSim/data/debugData/constant_guitar_short/buflen_1024_hopS_256_hopA_256_algo_au/cpxIn.csv"
+fileone = t1.readlines()
+filetwo = t2.readlines()
+t1.close()
+t2.close()
 
-#if len(sys.argv) != 2:
-#    print("Error, incorrect number of arguments")
-
-with open(file1, 'r') as t1, open(file2, 'r') as t2:
-    fileone = t1.readlines()
-    filetwo = t2.readlines()
-
-with open('diff.csv', 'w') as outFile:
-    for line in filetwo:
-        if line not in fileone:
-            outFile.write(line)
-
-
-
+outFile = open('diff.csv', 'w')
+x = 0
+for i in fileone:
+    if i != filetwo[x]:
+        outFile.write(filetwo[x])
+    x += 1
+outFile.close()
 
