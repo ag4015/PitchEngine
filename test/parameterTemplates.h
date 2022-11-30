@@ -1,11 +1,13 @@
 #pragma once
 #include "ParameterCombinator.h"
 
+using namespace parameterCombinator;
+
 ParameterCombinator generateExpectedDataSetFromTrainingDataSet(ParameterCombinator& trainingData)
 {
 	//dontCares_t             dontCares;
 
-	//ParameterCombinator expectedDataSet = trainingData;
+	ParameterCombinator expectedDataSet = trainingData;
 
 	//parameterCombinations_t trainingCombs;
 	//const parameterCombinations_t* paramCombs  = trainingData.getParameterCombinations();
@@ -33,7 +35,7 @@ ParameterCombinator generateInputFileCombinations()
 
 	// List of parameters to test
 	paramCombs["inputFile"] = { "sine_short" };
-	paramCombs["steps"]     = { 3 };
+	paramCombs["steps"]     = { 3, 12 };
 	paramCombs["hopA"]      = { 256 };
 	paramCombs["algo"]      = { "pv" };
 	paramCombs["magTol"]    = { 1e-6 };

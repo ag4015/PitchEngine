@@ -16,6 +16,8 @@ typedef double my_float;
 typedef float my_float;
 #endif
 
+using namespace parameterCombinator;
+
 int PitchEngineTs();
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName);
 void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::string outputFileDir);

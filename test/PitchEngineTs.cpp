@@ -10,9 +10,8 @@
 #include "logger.h"
 #include "DumperContainer.h"
 #include "TimerContainer.h"
-#include "ProgressBarContainer.h"
 #include "parameterTemplates.h"
-#include "../deps/waveform-generator/WaveformGenerator/waveform_generator.h"
+#include "maximilian.h"
 #include <time.h>
 #include <cmath>
 #ifdef WIN32
@@ -34,12 +33,11 @@
 
 DumperContainer* DumperContainer::instance = 0;
 TimerContainer* TimerContainer::instance = 0;
-ProgressBarContainer* ProgressBarContainer::instance = 0;
 
 int PitchEngineTs()
 {
-	//ParameterCombinator paramSet = generateInputFileCombinations();
-	ParameterCombinator paramSet = sineSweepCombinations();
+	ParameterCombinator paramSet = generateInputFileCombinations();
+	//ParameterCombinator paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	runTest(paramSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
@@ -63,10 +61,6 @@ void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::strin
 
 	std::queue<std::thread> threadQ;
 
-#ifdef USE_PROGRESS_BAR and NUM_THREADS > 1
-	threadQ.push(std::thread{ printProgress });
-#endif
-
 	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
 	{
 
@@ -85,8 +79,8 @@ void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::strin
 		// Synthezising signal
 		else if (paramInstance.count("signal"))
 		{
-			inputFileName = getVal<std::string>(paramInstance.at("signal"));
-			int freq = getVal<int>(paramInstance.at("freq"));
+			inputFileName = getVal<const char*>(paramInstance, "signal");
+			int freq = getVal<int>(paramInstance, "freq");
 			inputFileName += "_" + std::to_string(freq);
 			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
 			inputFilePath += inputFileName + ".wav";
@@ -98,7 +92,7 @@ void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::strin
 
 		std::filesystem::create_directory(outputFilePath);
 
-		std::string variationName = paramSet.constructVariationName(paramInstance);
+		std::string variationName = paramSet.generateCombinationName(paramInstance);
 
 		outputFilePath += variationName + ".wav";
 
@@ -121,12 +115,11 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
 
-	int audio_ptr         = 0;                       // Wav file sample pointer
-	int buflen            = std::get<int>(paramInstance["buflen"]);
-	int steps             = std::get<int>(paramInstance["steps"]);
-	int hopA              = std::get<int>(paramInstance["hopA"]);
-	my_float magTol       = std::get<my_float>(paramInstance["magTol"]);
-	int sampleRate        = 44100;
+	int audio_ptr   = 0;                       // Wav file sample pointer
+	int buflen      = getVal<int>(paramInstance, "buflen");
+	int steps       = getVal<int>(paramInstance, "steps");
+	int hopA        = getVal<int>(paramInstance, "hopA");
+	int sampleRate  = 44100;
 	std::string debugFolder;
 
 	my_float shift    = POW(2, (steps/12));
@@ -143,7 +136,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	}
 	else if (paramInstance.count("inputFile"))
 	{
-		debugFolder = std::get<std::string>(paramInstance.at("inputFile"));
+		std::string	debugFolder = getVal<const char*>(paramInstance, "inputFile");
 		in_audio = readWav(inputFilePath);
 	}
 
@@ -151,19 +144,27 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, debugFolder);
 
-	PROGRESS_BAR_CREATE(variationName, static_cast<int>(in_audio.size() / buflen));
-	
 	std::unique_ptr<PitchEngine> pe;
-	std::string& algo = std::get<std::string>(paramInstance["algo"]);
+	std::string	algo = getVal<const char*>(paramInstance, "algo");
 
 	if (algo == "pv")
+	{
 		pe = std::make_unique<PVEngine>(steps, buflen, hopA);
+	}
 	else if (algo == "pvdr")
+	{
+		my_float magTol = getVal<my_float>(paramInstance, "magTol");
 		pe = std::make_unique<PVDREngine>(steps, buflen, hopA, magTol);
+	}
 	else if (algo == "cqpv")
+	{
+		my_float magTol = getVal<my_float>(paramInstance, "magTol");
 		pe = std::make_unique<CQPVEngine>(steps, buflen, hopA, sampleRate, magTol);
+	}
 	else if (algo == "se")
+	{
 		pe = std::make_unique<StrechEngine>(steps, buflen, hopA);
+	}
 
 	while(audio_ptr < (in_audio.size() - buflen))
 	{
@@ -171,8 +172,6 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 		{
 			pe->inbuffer_[k] = in_audio[audio_ptr + k] * INGAIN;
 		}
-
-		PROGRESS_BAR_PROGRESS(variationName);
 
 		pe->process();
 
@@ -188,8 +187,6 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 		}
 		audio_ptr += buflen;
 	}
-
-	PROGRESS_BAR_FINISH(variationName);
 
 	writeWav(out_audio, outputFilePath, sampleRate, bitsPerSample);
 
@@ -247,11 +244,11 @@ std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::stri
 		std::string testFilePath{ testFileDir };
 		std::string outputFilePath{ outputFileDir };
 
-		std::string inputFileName =  std::get<std::string>(paramInstance.at("inputFile"));
+		std::string	inputFileName = getVal<const char*>(paramInstance, "inputFile");
 
 		removeFileExtension(inputFileName);
 
-		std::string variationName = paramSet.constructVariationName(paramInstance);
+		std::string variationName = paramSet.generateCombinationName(paramInstance);
 
 		outputFilePath += inputFileName;
 		testFilePath   += inputFileName;
@@ -297,62 +294,22 @@ void removeFileExtension(std::string& str)
 
 void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate)
 {
-	int frequency = std::get<int>(paramInstance.at("freq"));
-	int numSamp   = std::get<int>(paramInstance.at("numSamp"));
+	int frequency = getVal<int>(paramInstance, "freq");
+	int numSamp   = getVal<int>(paramInstance, "numSamp");
 	int amplitude = 1;
-	std::string signalType = std::get<std::string>(paramInstance.at("signal"));
-	std::unique_ptr<WaveformGenerator> waveformGenerator;
+	std::string signalType  = getVal<const char*>(paramInstance, "signal");
+	maxiOsc functionGen;
 
 	debugFolder = signalType + "_" + std::to_string(frequency);
 
+	signal.resize(numSamp);
+
 	if (signalType == "sine")
 	{
-		waveformGenerator = std::make_unique<WafeformGenerator::SineWaveF>(amplitude, frequency, 0);
+		for (int i = 0; i < numSamp; i++)
+		{
+			signal[i] = static_cast<float>(functionGen.sinewave(frequency));
+		}
 	}
-	waveformGenerator->setStepSize(1.0 / sampleRate);
-	signal.resize(numSamp);
-	for (int i = 0; i < numSamp; i++)
-	{
-		signal[i] = waveformGenerator->generate();
-	}
-
 }
-
-
-//std::string ParameterCombinator::constructVariationName(const parameterInstanceMap_t& paramInstance)
-//{
-//	std::string variationName;
-//	for (auto [paramName, paramValue] : paramInstance)
-//	{
-//		if (!printableParameters_.count(paramName))
-//		{
-//			continue;
-//		}
-//		if (paramName == "inputFile" || paramName == "signal")
-//		{
-//			variationName += std::get<std::string>(paramValue) + "_";
-//		}
-//		else if (paramName == "algo")
-//		{
-//			variationName += paramName + "_" + std::get<std::string>(paramValue) + "_";
-//		} 
-//		else if (parameterTypeMap_["double"].count(paramName))
-//		{
-//			std::stringstream ss;
-//			ss << std::get<my_float>(paramValue) << std::scientific;
-//			variationName += paramName + "_" + ss.str() + "_";
-//		}
-//		else
-//		{
-//			variationName += paramName + "_" + std::to_string(std::get<int>(paramValue)) + "_";
-//		}
-//	}
-//
-//	// Remove trailing "_"
-//	size_t lastIndex = variationName.find_last_of("_");
-//	variationName = variationName.substr(0, lastIndex);
-//
-//	return variationName;
-//
-//}
 

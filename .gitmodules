@@ -4,9 +4,9 @@
 [submodule "deps/constant-q-cpp"]
 	path = deps/constant-q-cpp
 	url = https://github.com/ag4015/constant-q-cpp.git
-[submodule "deps/googletest"]
-	path = deps/googletest
-	url = https://github.com/google/googletest.git
 [submodule "deps/ParameterCombinator"]
 	path = deps/ParameterCombinator
 	url = https://github.com/alex-gilson/ParameterCombinator.git
+[submodule "deps/Maximilian"]
+	path = deps/Maximilian
+	url = https://github.com/micknoise/Maximilian.git

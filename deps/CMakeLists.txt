@@ -2,7 +2,6 @@
 set(PITCH_ENGINE_DEPENDENCIES_DIR ${PITCH_ENGINE_DIR}deps/)
 
 add_subdirectory(wave)
-add_subdirectory(googletest)
 add_subdirectory(ParameterCombinator)
 
 # CONSTANT_Q Folder
@@ -106,27 +105,27 @@ target_include_directories(constant_q_lib PUBLIC
 			  ${CONSTANT_Q_CQ_MISC_DIR}
 )
 
-add_library(waveform_generator "")
-
-set(WAVEFORM_GENERATOR_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}waveform-generator/)
-set(WAVEFORM_GENERATOR_SRC_DIR ${WAVEFORM_GENERATOR_DIR}WaveformGenerator/)
-
-set(WAVEFORM_GENERATOR_SOURCE_FILES
-		   ${WAVEFORM_GENERATOR_SRC_DIR}waveform_generator.cpp
-		   )
-
-target_sources(waveform_generator PUBLIC ${WAVEFORM_GENERATOR_SOURCE_FILES})
-
 target_link_libraries(constant_q_lib PUBLIC kissfft)
+
+add_library(Maximilian "")
+
+set(MAXIMILIAN_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}Maximilian/)
+set(MAXIMILIAN_SRC_DIR ${MAXIMILIAN_DIR}src/)
+
+set(MAXIMILIAN_SOURCE_FILES
+			   ${MAXIMILIAN_SRC_DIR}maximilian.cpp
+			   )
+
+target_sources(Maximilian PUBLIC ${MAXIMILIAN_SOURCE_FILES} )
+
+target_include_directories(Maximilian PUBLIC ${MAXIMILIAN_SRC_DIR})
 
 target_link_libraries(PitchEngine PUBLIC constant_q_lib wave ParameterCombinator)
 
 set(CPP_TQDM_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}cpptqdm/)
-set(PROGRESSBAR_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}progressbar/)
 
 target_include_directories(PitchEngine
 	PUBLIC 
 		${CPP_TQDM_DIR}
-		${PROGRESSBAR_DIR}
 )
 
