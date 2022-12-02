@@ -12,14 +12,7 @@ configure_file(PitchEngineConfig.h.in ${PITCH_ENGINE_SRC_DIR}/PitchEngineConfig.
 add_subdirectory(engine)
 add_subdirectory(debug)
 
-target_include_directories(PitchEngine PUBLIC
-                           src/
-                           src/Engine/
-                           constant-q-cpp/cq
-                           constant-q-cpp/src
-                           ${KISSFFT_LIB_DIR}
-                           ${KISSFFT_TOOLS_DIR}
-                           )
+target_include_directories(PitchEngine PUBLIC . )
 
 if(NOT MSVC)
 	target_link_libraries(PitchEngine PRIVATE stdc++fs)

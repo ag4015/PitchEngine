@@ -1,6 +1,9 @@
 
 set(PITCH_ENGINE_DEPENDENCIES_DIR ${PITCH_ENGINE_DIR}deps/)
 
+# override wave_enable_tests from the subproject wave
+SET(wave_enable_tests OFF CACHE BOOL "Build Unit tests wave")
+
 add_subdirectory(wave)
 add_subdirectory(ParameterCombinator)
 
@@ -29,21 +32,10 @@ set(CONSTANT_Q_SOURCE_FILES
 			   ${CONSTANT_Q_SRC_DSP_DIR}SincWindow.cpp;
 			   ${CONSTANT_Q_SRC_DSP_DIR}KaiserWindow.cpp;
 			   )
-set(CONSTANT_Q_HEADER_FILES
-			   ${CONSTANT_Q_CQ_DIR}ConstantQConfig.h
-			   ${CONSTANT_Q_SRC_DSP_DIR}FFT.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}KaiserWindow.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}MathUtilities.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}nan-inf.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}pi.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}Resampler.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}SincWindow.h;
-			   ${CONSTANT_Q_SRC_DSP_DIR}Window.h;
-			   )
 
 
 target_sources(constant_q_lib
-	PUBLIC
+	PRIVATE
 		${CONSTANT_Q_SOURCE_FILES}
 )
 target_include_directories(constant_q_lib
@@ -92,11 +84,8 @@ endif()
 target_sources(constant_q_lib
 	PUBLIC
 		${CONSTANT_Q_SOURCE_FILES}
-		${CONSTANT_Q_HEADER_FILES}
 		${KISSFFT_SOURCE_FILES}
-		${KISSFFT_HEADER_FILES}
 )
-
 
 target_include_directories(constant_q_lib PUBLIC
 			  ${CONSTANT_Q_SRC_DIR}
@@ -107,6 +96,7 @@ target_include_directories(constant_q_lib PUBLIC
 
 target_link_libraries(constant_q_lib PUBLIC kissfft)
 
+# Maximilian folder
 add_library(Maximilian "")
 
 set(MAXIMILIAN_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}Maximilian/)
@@ -121,11 +111,4 @@ target_sources(Maximilian PUBLIC ${MAXIMILIAN_SOURCE_FILES} )
 target_include_directories(Maximilian PUBLIC ${MAXIMILIAN_SRC_DIR})
 
 target_link_libraries(PitchEngine PUBLIC constant_q_lib wave ParameterCombinator)
-
-set(CPP_TQDM_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}cpptqdm/)
-
-target_include_directories(PitchEngine
-	PUBLIC 
-		${CPP_TQDM_DIR}
-)
 

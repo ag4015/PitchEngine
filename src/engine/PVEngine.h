@@ -1,6 +1,5 @@
 #pragma once
 #include "PitchEngine.h"
-#include "kiss_fft.h"
 
 // Classical phase vocoder
 class PVEngine : public PitchEngine

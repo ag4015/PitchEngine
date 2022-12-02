@@ -5,8 +5,6 @@
 #include <experimental/filesystem>
 #endif
 #include <mutex>
-#include <chrono>
-#include <thread>
 
 std::mutex dumperContainerMutex;
 std::mutex createDumperContainerMutex;

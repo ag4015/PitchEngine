@@ -1,7 +1,5 @@
 #pragma once
 #include "Timer.h"
-#include <stdint.h>
-#include <string>
 #include <fstream>
 #include <unordered_map>
 

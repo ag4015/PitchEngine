@@ -1,7 +1,6 @@
 
 #include "PitchEngineTs.h"
 #include "wavio.h"
-#include "stdint.h"
 #include "StrechEngine.h"
 #include "CQPVEngine.h"
 #include "PVDREngine.h"
@@ -12,14 +11,11 @@
 #include "TimerContainer.h"
 #include "parameterTemplates.h"
 #include "maximilian.h"
-#include <time.h>
-#include <cmath>
 #ifdef WIN32
 #include <filesystem>
 #else
 #include <experimental/filesystem>
 #endif
-#include <memory>
 #include <thread>
 #include <queue>
 #ifdef USE_MULTITHREADING

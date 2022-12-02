@@ -1,8 +1,6 @@
 #pragma once
 #include "Dumper.h"
-#include <unordered_map>
 #include <memory>
-#include <string>
 #include <thread>
 
 #if defined(DEBUG_DUMP) || defined(DEBUG_TIMING)

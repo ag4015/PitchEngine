@@ -1,14 +1,5 @@
 #pragma once
 #include "ParameterCombinator.h"
-#include <math.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <string>
-#include <vector>
-#include <map>
-#include <set>
-#include <variant>
-#include <unordered_map>
 
 #ifdef USE_DOUBLE
 typedef double my_float;

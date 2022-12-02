@@ -35,7 +35,7 @@ ParameterCombinator generateInputFileCombinations()
 
 	// List of parameters to test
 	paramCombs["inputFile"] = { "sine_short" };
-	paramCombs["steps"]     = { 3, 12 };
+	paramCombs["steps"]     = { 3 };
 	paramCombs["hopA"]      = { 256 };
 	paramCombs["algo"]      = { "pv" };
 	paramCombs["magTol"]    = { 1e-6 };

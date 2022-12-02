@@ -1,8 +1,5 @@
 #pragma once
 #include "DumperContainer.h"
-#include "Timer.h"
-#include <unordered_map>
-#include <string>
 
 class TimerContainer
 {

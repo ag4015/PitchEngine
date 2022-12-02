@@ -1,5 +1,4 @@
 #pragma once
-#include "stdint.h"
 #include "kiss_fft.h"
 
 #define WINCONST               (my_float)0.5            // Constant used for the hamming window

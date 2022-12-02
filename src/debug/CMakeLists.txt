@@ -4,20 +4,12 @@ set(PITCH_ENGINE_SRC_DEBUG_DIR ${PITCH_ENGINE_SRC_DIR}debug/)
 target_sources(PitchEngine 
     PRIVATE
 		Dumper.cpp
-		Dumper.h
 		DumperContainer.cpp
-		DumperContainer.h
 		Timer.cpp
-		Timer.h
 		TimerContainer.cpp
-		TimerContainer.h
-		logger.h
 )
 
-target_include_directories(PitchEngine
-	PUBLIC
-		.
-)
+target_include_directories(PitchEngine PUBLIC . )
 
 option(DEBUG_DUMP "Store variables in csv files" ON)
 if(DEBUG_DUMP)
