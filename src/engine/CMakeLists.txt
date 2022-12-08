@@ -8,6 +8,7 @@ target_sources(PitchEngine
 	   PVDREngine.cpp
 	   CQPVEngine.cpp
 	   StrechEngine.cpp
+	   NNPVEngineTrainer.cpp
 )
 
 target_include_directories(PitchEngine PUBLIC .)

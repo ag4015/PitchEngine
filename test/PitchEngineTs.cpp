@@ -4,8 +4,7 @@
 #include "StrechEngine.h"
 #include "CQPVEngine.h"
 #include "PVDREngine.h"
-#include "PVEngine.h"
-#include "PitchEngine.h"
+#include "NNPVEngineTrainer.h"
 #include "logger.h"
 #include "DumperContainer.h"
 #include "TimerContainer.h"
@@ -76,7 +75,7 @@ void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::strin
 		else if (paramInstance.count("signal"))
 		{
 			inputFileName = getVal<const char*>(paramInstance, "signal");
-			int freq = getVal<int>(paramInstance, "freq");
+			double freq = getVal<double>(paramInstance, "freq");
 			inputFileName += "_" + std::to_string(freq);
 			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
 			inputFilePath += inputFileName + ".wav";
@@ -146,6 +145,10 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	if (algo == "pv")
 	{
 		pe = std::make_unique<PVEngine>(steps, buflen, hopA);
+	}
+	else if (algo == "trainNN")
+	{
+		pe = std::make_unique<NNPVEngineTrainer>(steps, buflen, hopA);
 	}
 	else if (algo == "pvdr")
 	{
@@ -290,7 +293,7 @@ void removeFileExtension(std::string& str)
 
 void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate)
 {
-	int frequency = getVal<int>(paramInstance, "freq");
+	double frequency = getVal<double>(paramInstance, "freq");
 	int numSamp   = getVal<int>(paramInstance, "numSamp");
 	int amplitude = 1;
 	std::string signalType  = getVal<const char*>(paramInstance, "signal");

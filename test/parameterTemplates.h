@@ -1,32 +1,32 @@
 #pragma once
 #include "ParameterCombinator.h"
+#include "pe_common_defs.h"
 
 using namespace parameterCombinator;
 
-ParameterCombinator generateExpectedDataSetFromTrainingDataSet(ParameterCombinator& trainingData)
+ParameterCombinator generateExpectedDataSetFromTrainingDataSet(parameterCombinations_t& paramCombs)
 {
-	//dontCares_t             dontCares;
+	dontCares_t             dontCares;
+	ParameterCombinator     expectedDataSet;
+	parameterCombinations_t expectedCombs;
 
-	ParameterCombinator expectedDataSet = trainingData;
+	// The expected frequency is the pitch shifted version of the original frequency
+	for (auto& freqParam : paramCombs["freq"])
+	{
+		int freq = getVal<int>(freqParam);
+		for (auto& stepsParam : paramCombs["steps"])
+		{
+			int steps = getVal<int>(stepsParam);
+			expectedCombs["freq"].push_back(freq * POW(2, (steps / SEMITONES_PER_OCTAVE)));
+		}
+	}
 
-	//parameterCombinations_t trainingCombs;
-	//const parameterCombinations_t* paramCombs  = trainingData.getParameterCombinations();
+	expectedCombs["numSamp"] = paramCombs["numSamp"];
+	expectedCombs["data"]    = { "training" };
 
-	//for (const auto& freq : paramCombs->at("freq"))
-	//{
-	//	for (auto& steps : paramCombs->at("steps"))
-	//	{
-	//		trainingCombs["freq"].push_back(static_cast<int>(std::get<int>(freq) * POW(2, (std::get<int>(steps)/ SEMITONES_PER_OCTAVE ))));
-	//	}
-	//}
+	expectedDataSet.combine(expectedCombs, dontCares);
 
-	//// List of parameters that don't affect the algorithm
-	//std::string dontCareKey = "steps";
-
-	//expectedDataSet.addParametersWithoutRecombining(trainingCombs, dontCares, dontCareKey, parameterTypeMap);
-
-	//return expectedDataSet;
-	return trainingData;
+	return expectedDataSet;
 }
 
 ParameterCombinator generateInputFileCombinations()
@@ -37,12 +37,12 @@ ParameterCombinator generateInputFileCombinations()
 	paramCombs["inputFile"] = { "sine_short" };
 	paramCombs["steps"]     = { 3 };
 	paramCombs["hopA"]      = { 256 };
-	paramCombs["algo"]      = { "pv" };
+	paramCombs["algo"]      = { "pv", "trainNN"};
 	paramCombs["magTol"]    = { 1e-6 };
 	paramCombs["buflen"]    = { 1024 };
 
 	// List of parameters that don't affect the algorithm
-	dontCares_t dontCares = { {"algo", { {"se", {"magTol"} }, {"pv", {"magTol"} } } } };
+	dontCares_t dontCares = { {"algo", { {"trainNN", {"magTol"} }, {"se", {"magTol"} }, {"pv", {"magTol"} } } } };
 
 	ParameterCombinator parameterCombinator;
 	parameterCombinator.combine(paramCombs, dontCares);
@@ -55,15 +55,15 @@ ParameterCombinator sineSweepCombinations()
 	parameterCombinations_t paramCombs;
 
 	// List of parameters to test
-	paramCombs["signal"]    = { "sine" };
-	paramCombs["freq"]      = { 440 };
-	paramCombs["steps"]     = { 3 };
-	paramCombs["hopA"]      = { 256 };
-	paramCombs["algo"]      = { "pv" };
-	paramCombs["magTol"]    = { 1e-6 };
-	paramCombs["buflen"]    = { 1024 };
-	paramCombs["numSamp"]   = { 1024*120 };
-	paramCombs["data"]      = { "input" };
+	paramCombs["signal"]  = { "sine" };
+	paramCombs["freq"]    = { 440 };
+	paramCombs["steps"]   = { 3 };
+	paramCombs["hopA"]    = { 256 };
+	paramCombs["algo"]    = { "pv" };
+	paramCombs["magTol"]  = { 1e-6 };
+	paramCombs["buflen"]  = { 1024 };
+	paramCombs["numSamp"] = { 1024*120 };
+	paramCombs["data"]    = { "input" };
 
 	// List of parameters that don't affect the algorithm
 	dontCares_t dontCares = { {"algo", { {"se", {"magTol"} }, {"pv", {"magTol"} } } } };
@@ -71,9 +71,13 @@ ParameterCombinator sineSweepCombinations()
 	ParameterCombinator parameterCombinator;
 	parameterCombinator.combine(paramCombs, dontCares);
 
-	ParameterCombinator expectedData = generateExpectedDataSetFromTrainingDataSet(parameterCombinator);
+	ParameterCombinator expectedDataCombinator = generateExpectedDataSetFromTrainingDataSet(paramCombs);
 
-	return expectedData;
+	// Add the two combinators as they are, no recombination
+	dontCares.clear();
+	parameterCombinator.addCombinations(parameterCombinator, expectedDataCombinator, dontCares);
+
+	return parameterCombinator;
 }
 
 ParameterCombinator trainEngineSine()
@@ -96,7 +100,7 @@ ParameterCombinator trainEngineSine()
 	ParameterCombinator parameterCombinator;
 	parameterCombinator.combine(paramCombs, dontCares);
 
-	ParameterCombinator trainingSet = generateExpectedDataSetFromTrainingDataSet(parameterCombinator);
+	ParameterCombinator trainingSet = generateExpectedDataSetFromTrainingDataSet(paramCombs);
 
 	return parameterCombinator;
 }

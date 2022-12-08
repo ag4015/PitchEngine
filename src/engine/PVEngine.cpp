@@ -6,12 +6,6 @@
 #include <complex>
 #include <algorithm>
 
-#ifdef RESET_BUFFER
-#define RESET_PV() if (++reset_counter == 256) { resetDataPV(); reset_counter = 0; }
-#else
-#define RESET_PV()
-#endif
-
 PVEngine::PVEngine(int steps, int buflen_, int hopA)
 	: PitchEngine(buflen_, steps)
 	, hopA_(hopA)

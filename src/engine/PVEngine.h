@@ -1,6 +1,12 @@
 #pragma once
 #include "PitchEngine.h"
 
+#ifdef RESET_BUFFER
+#define RESET_PV() if (++reset_counter == 256) { resetDataPV(); reset_counter = 0; }
+#else
+#define RESET_PV()
+#endif
+
 // Classical phase vocoder
 class PVEngine : public PitchEngine
 {
