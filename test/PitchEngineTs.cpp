@@ -31,11 +31,11 @@ TimerContainer* TimerContainer::instance = 0;
 
 int PitchEngineTs()
 {
-	ParameterCombinator paramSet = generateInputFileCombinations();
-	//ParameterCombinator paramSet = sineSweepCombinations();
+	//ParameterCombinator paramSet = generateInputFileCombinations();
+	ParameterCombinator paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	runTest(paramSet, INPUT_AUDIO_DIR, OUTPUT_AUDIO_DIR);
+	runTest(paramSet);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto exTime = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
 	std::cout << "Test took " << exTime.count() << "s." << std::endl;
@@ -51,7 +51,7 @@ int PitchEngineTs()
 
 }
 
-void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::string outputFileDir)
+void runTest(ParameterCombinator& paramSet)
 {
 
 	std::queue<std::thread> threadQ;
@@ -59,37 +59,34 @@ void runTest(ParameterCombinator& paramSet, std::string inputFileDir, std::strin
 	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
 	{
 
-		std::string outputFilePath{ outputFileDir };
-		std::string inputFilePath{ inputFileDir };
-		std::string inputFileName;
+		std::string outputFilePath;
+		std::string inputFilePath;
+
+		std::string variationName = paramSet.generateCombinationName(paramInstance);
 
 		// Reading from file
 		if (paramInstance.count("inputFile"))
 		{
-			inputFileName = getVal<const char*>(paramInstance, "inputFile");
+			std::string inputFileName = getVal<const char*>(paramInstance, "inputFile");
 			removeFileExtension(inputFileName);
-			outputFilePath += inputFileName;
-			inputFilePath  += inputFileName + ".wav";
+			inputFilePath  = INPUT_AUDIO_DIR + inputFileName + ".wav";
+
+			outputFilePath = OUTPUT_AUDIO_DIR + inputFileName + "/";
+			std::filesystem::create_directory(outputFilePath);
+			outputFilePath += variationName + ".wav";
 		}
 		// Synthezising signal
 		else if (paramInstance.count("signal"))
 		{
-			inputFileName = getVal<const char*>(paramInstance, "signal");
-			double freq = getVal<double>(paramInstance, "freq");
-			inputFileName += "_" + std::to_string(freq);
-			inputFilePath += GENERATED_INPUT_AUDIO_FOLDER_NAME;
-			inputFilePath += inputFileName + ".wav";
-			outputFilePath += inputFileName;
+			if (!strcmp(getVal<const char*>(paramInstance, "data"), "features"))
+			{
+				outputFilePath = INPUT_FOR_TRAINING_AUDIO_DIR + variationName + ".wav";
+			}
+			else if (!strcmp(getVal<const char*>(paramInstance, "data"), "labels"))
+			{
+				outputFilePath = TRAINING_AUDIO_DIR + variationName + ".wav";
+			}
 		}
-
-		// Create directory for this test case
-		outputFilePath += "/";
-
-		std::filesystem::create_directory(outputFilePath);
-
-		std::string variationName = paramSet.generateCombinationName(paramInstance);
-
-		outputFilePath += variationName + ".wav";
 
 		threadQ.push(std::thread{ runPitchEngine, inputFilePath, outputFilePath, paramInstance, variationName });
 		if (threadQ.size() + 1 >= NUM_THREADS)
@@ -110,30 +107,42 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
 
-	int audio_ptr   = 0;                       // Wav file sample pointer
-	int buflen      = getVal<int>(paramInstance, "buflen");
-	int steps       = getVal<int>(paramInstance, "steps");
-	int hopA        = getVal<int>(paramInstance, "hopA");
-	int sampleRate  = 44100;
+	int audio_ptr     = 0;                       // Wav file sample pointer
+	int sampleRate    = 44100;
+	int bitsPerSample = 16;
 	std::string debugFolder;
+
+	std::vector<float> in_audio;
+
+	// Generate training data
+	if (paramInstance.count("data"))
+	{
+		generateSignal(in_audio, paramInstance, debugFolder, sampleRate);
+		if (!strcmp(getVal<const char*>(paramInstance, "data"), "labels"))
+		{
+			writeWav(in_audio, outputFilePath, sampleRate, bitsPerSample);
+			return;
+		}
+		// Generated audio for training the NN
+		else if (!strcmp(getVal<const char*>(paramInstance, "data"), "features"))
+		{
+			writeWav(in_audio, outputFilePath, sampleRate, bitsPerSample);
+		}
+	}
+	// Test algorithm 
+	else if (paramInstance.count("inputFile"))
+	{
+		debugFolder = getVal<const char*>(paramInstance, "inputFile");
+		in_audio = readWav(inputFilePath);
+	}
+
+	int buflen = getVal<int>(paramInstance, "buflen");
+	int steps  = getVal<int>(paramInstance, "steps");
+	int hopA   = getVal<int>(paramInstance, "hopA");
 
 	my_float shift    = POW(2, (steps/12));
 	int hopS          = static_cast<int>(ROUND(hopA * shift));
 	int numFrames     = static_cast<int>(buflen / hopA);
-	int bitsPerSample = 16;
-
-	std::vector<float> in_audio;
-
-	if (paramInstance.count("signal"))
-	{
-		generateSignal(in_audio, paramInstance, debugFolder, sampleRate);
-		writeWav(in_audio, inputFilePath, sampleRate, bitsPerSample);
-	}
-	else if (paramInstance.count("inputFile"))
-	{
-		std::string	debugFolder = getVal<const char*>(paramInstance, "inputFile");
-		in_audio = readWav(inputFilePath);
-	}
 
 	std::vector<float> out_audio(in_audio.size(), 0.0);
 
@@ -174,20 +183,28 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 		pe->process();
 
-		for (int k = 0; k < buflen; k++)
+		// Algorithm is being tested
+		if (paramInstance.count("inputFile"))
 		{
-			out_audio[audio_ptr + k] = pe->outbuffer_[k] * OUTGAIN;
-
-			// Avoid uint16_t overflow and clip the signal instead.
-			if (std::abs(out_audio[audio_ptr + k]) > 1)
+			for (int k = 0; k < buflen; k++)
 			{
-				out_audio[audio_ptr + k] = (out_audio[audio_ptr + k] < 0) ? -1.0 : 1.0;
+				out_audio[audio_ptr + k] = pe->outbuffer_[k] * OUTGAIN;
+
+				// Avoid uint16_t overflow and clip the signal instead.
+				if (std::abs(out_audio[audio_ptr + k]) > 1)
+				{
+					out_audio[audio_ptr + k] = (out_audio[audio_ptr + k] < 0) ? -1.0 : 1.0;
+				}
 			}
 		}
 		audio_ptr += buflen;
 	}
 
-	writeWav(out_audio, outputFilePath, sampleRate, bitsPerSample);
+	// Algorithm is being tested
+	if (paramInstance.count("inputFile"))
+	{
+		writeWav(out_audio, outputFilePath, sampleRate, bitsPerSample);
+	}
 
 	DUMP_TIMINGS("timings.csv");
 
@@ -312,3 +329,17 @@ void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramIns
 	}
 }
 
+void replaceDotsWithUnderscores(std::string& str)
+{
+	// Find the position of the last dot in the string
+	size_t lastDotPos = str.find_last_of('.');
+
+	// Replace all dots except the last one with underscores
+	for (size_t i = 0; i < str.length(); i++)
+	{
+		if (str[i] == '.' && i != lastDotPos)
+		{
+			str[i] = '_';
+		}
+	}
+}

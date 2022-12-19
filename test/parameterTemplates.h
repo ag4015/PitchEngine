@@ -13,7 +13,7 @@ ParameterCombinator generateExpectedDataSetFromTrainingDataSet(parameterCombinat
 	// The expected frequency is the pitch shifted version of the original frequency
 	for (auto& freqParam : paramCombs["freq"])
 	{
-		int freq = getVal<int>(freqParam);
+		double freq = getVal<double>(freqParam);
 		for (auto& stepsParam : paramCombs["steps"])
 		{
 			int steps = getVal<int>(stepsParam);
@@ -22,7 +22,8 @@ ParameterCombinator generateExpectedDataSetFromTrainingDataSet(parameterCombinat
 	}
 
 	expectedCombs["numSamp"] = paramCombs["numSamp"];
-	expectedCombs["data"]    = { "training" };
+	expectedCombs["data"]    = { "labels" };
+	expectedCombs["signal"] = paramCombs["signal"];
 
 	expectedDataSet.combine(expectedCombs, dontCares);
 
@@ -56,14 +57,14 @@ ParameterCombinator sineSweepCombinations()
 
 	// List of parameters to test
 	paramCombs["signal"]  = { "sine" };
-	paramCombs["freq"]    = { 440 };
+	paramCombs["freq"]    = { 440.0 };
 	paramCombs["steps"]   = { 3 };
 	paramCombs["hopA"]    = { 256 };
 	paramCombs["algo"]    = { "pv" };
 	paramCombs["magTol"]  = { 1e-6 };
 	paramCombs["buflen"]  = { 1024 };
 	paramCombs["numSamp"] = { 1024*120 };
-	paramCombs["data"]    = { "input" };
+	paramCombs["data"]    = { "features" };
 
 	// List of parameters that don't affect the algorithm
 	dontCares_t dontCares = { {"algo", { {"se", {"magTol"} }, {"pv", {"magTol"} } } } };
