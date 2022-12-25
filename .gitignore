@@ -15,4 +15,6 @@ data/inputAudio/generated_audio/*
 data/matlabAudio/*
 data/debugData/*
 data/debugDataOld/
+data/trainingAudio/
+data/inputForTraining/
 src/PitchEngineConfig.h
