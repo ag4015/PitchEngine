@@ -10,6 +10,7 @@
 #include "TimerContainer.h"
 #include "parameterTemplates.h"
 #include "maximilian.h"
+#include "TaskScheduler.h"
 #ifdef WIN32
 #include <filesystem>
 #else
@@ -18,7 +19,7 @@
 #include <thread>
 #include <queue>
 #ifdef USE_MULTITHREADING
-#define NUM_THREADS 32
+#define NUM_THREADS 12
 #else
 #define NUM_THREADS 1
 #endif
@@ -26,11 +27,15 @@
 #define INGAIN     1
 #define OUTGAIN    1
 
+using task_t = std::tuple<std::string, std::string, std::string, parameterInstanceMap_t>;
+
 DumperContainer* DumperContainer::instance = 0;
 TimerContainer* TimerContainer::instance = 0;
+TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
 
 int PitchEngineTs()
 {
+	PRINT_LOG("Starting test");
 	//ParameterCombinator paramSet = generateInputFileCombinations();
 	ParameterCombinator paramSet = sineSweepCombinations();
 
@@ -38,7 +43,7 @@ int PitchEngineTs()
 	runTest(paramSet);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto exTime = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
-	std::cout << "Test took " << exTime.count() << "s." << std::endl;
+	PRINT_LOG("Test took ", exTime.count(), "s");
 
 	std::vector<std::string> failedTests = getFailedTests(paramSet, TEST_AUDIO_DIR, OUTPUT_AUDIO_DIR);
 
@@ -53,16 +58,21 @@ int PitchEngineTs()
 
 void runTest(ParameterCombinator& paramSet)
 {
-
-	std::queue<std::thread> threadQ;
+	std::queue<task_t> tasks;
+	TaskScheduler<task_t>* taskScheduler = TaskScheduler<task_t>::getInstance(NUM_THREADS);
 
 	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
 	{
+		task_t task{};
 
-		std::string outputFilePath;
-		std::string inputFilePath;
+		std::string& inputFilePath  = std::get<0>(task);
+		std::string& outputFilePath = std::get<1>(task);
+		std::string& variationName  = std::get<2>(task);
 
-		std::string variationName = paramSet.generateCombinationName(paramInstance);
+		parameterInstanceMap_t& paramInstanceTask = std::get<3>(task);
+		paramInstanceTask = paramInstance;
+
+		variationName = ParameterCombinator::generateCombinationName(paramInstance);
 
 		// Reading from file
 		if (paramInstance.count("inputFile"))
@@ -87,22 +97,12 @@ void runTest(ParameterCombinator& paramSet)
 				outputFilePath = TRAINING_AUDIO_DIR + variationName + ".wav";
 			}
 		}
-
-		threadQ.push(std::thread{ runPitchEngine, inputFilePath, outputFilePath, paramInstance, variationName });
-		if (threadQ.size() + 1 >= NUM_THREADS)
-		{
-			threadQ.front().join();
-			threadQ.pop();
-		}
+		taskScheduler->addTask(std::move(task));
 	}
-	while (threadQ.size() > 0)
-	{
-		threadQ.front().join();
-		threadQ.pop();
-	}
+	taskScheduler->run();
 }
 
-void runPitchEngine(std::string inputFilePath, std::string outputFilePath, parameterInstanceMap_t paramInstance, std::string variationName)
+void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::string variationName, parameterInstanceMap_t paramInstance)
 {
 	PRINT_LOG("Test ", variationName);
 	CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
@@ -212,7 +212,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, param
 
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName)
 {
-	std::string debugPath{ DEBUG_DIR + fileName };
+	std::string debugPath{ DEBUG_DIR };
 
 	removeFileExtension(debugPath);
 
@@ -224,7 +224,7 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 	std::experimental::filesystem::create_directory(debugPath);
 #endif
 
-	CREATE_DUMPER_C0NTAINER(debugPath);
+	CREATE_DUMPER_C0NTAINER(DEBUG_DIR);
 	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
 	//INIT_DUMPER("inframe.csv"   , audio_ptr, buflen, buflen, 40, -1);
 	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, -1);
@@ -329,17 +329,3 @@ void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramIns
 	}
 }
 
-void replaceDotsWithUnderscores(std::string& str)
-{
-	// Find the position of the last dot in the string
-	size_t lastDotPos = str.find_last_of('.');
-
-	// Replace all dots except the last one with underscores
-	for (size_t i = 0; i < str.length(); i++)
-	{
-		if (str[i] == '.' && i != lastDotPos)
-		{
-			str[i] = '_';
-		}
-	}
-}

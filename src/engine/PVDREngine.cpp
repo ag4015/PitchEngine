@@ -1,6 +1,5 @@
 
 #include "PVDREngine.h"
-#include "logger.h"
 #include "DumperContainer.h"
 #include <set>
 #include <vector>

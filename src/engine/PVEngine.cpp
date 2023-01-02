@@ -1,6 +1,5 @@
 
 #include "PVEngine.h"
-#include "logger.h"
 #include "DumperContainer.h"
 #include <utility>
 #include <complex>

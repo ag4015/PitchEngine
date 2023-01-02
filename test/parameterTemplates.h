@@ -4,6 +4,33 @@
 
 using namespace parameterCombinator;
 
+template<typename T>
+ParametersVec linspace(T start_in, T end_in, int num_in)
+{
+
+	ParametersVec linspaced;
+
+	double start = static_cast<double>(start_in);
+	double end   = static_cast<double>(end_in);
+	double num   = static_cast<double>(num_in);
+
+	if (num == 0) { return linspaced; }
+	if (num == 1)
+	{
+		linspaced.push_back(start);
+		return linspaced;
+	}
+
+	double delta = (end - start) / (num - 1);
+
+	for (int i = 0; i < num - 1; ++i)
+	{
+		linspaced.push_back(start + delta * i);
+	}
+	linspaced.push_back(end);
+	return linspaced;
+}
+
 ParameterCombinator generateExpectedDataSetFromTrainingDataSet(parameterCombinations_t& paramCombs)
 {
 	dontCares_t             dontCares;
@@ -57,10 +84,12 @@ ParameterCombinator sineSweepCombinations()
 
 	// List of parameters to test
 	paramCombs["signal"]  = { "sine" };
-	paramCombs["freq"]    = { 440.0 };
-	paramCombs["steps"]   = { 3 };
+	paramCombs["freq"]    = { 9096.0 };
+	paramCombs["freq"]    = linspace(20.0, 20e3, 48);
+	//paramCombs["freq"]    = { 440., 450. };
+	paramCombs["steps"]   = { 12 };
 	paramCombs["hopA"]    = { 256 };
-	paramCombs["algo"]    = { "pv" };
+	paramCombs["algo"]    = { "trainNN" };
 	paramCombs["magTol"]  = { 1e-6 };
 	paramCombs["buflen"]  = { 1024 };
 	paramCombs["numSamp"] = { 1024*120 };

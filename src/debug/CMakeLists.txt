@@ -23,7 +23,7 @@ if(DEBUG_TIMING)
 	target_compile_definitions(PitchEngine PUBLIC -DDEBUG_TIMING)
 endif()
 
-option(DEBUG_LOG "Enable logs" OFF)
+option(DEBUG_LOG "Enable logs" ON)
 if(DEBUG_LOG)
     message("Logs activated")
 	target_compile_definitions(PitchEngine PUBLIC -DDEBUG_LOG)

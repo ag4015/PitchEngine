@@ -1,7 +1,6 @@
 
 #include "wavio.h"
 #include "wave/file.h"
-#include "logger.h"
 #include <iostream>
 #include <system_error>
 #include <filesystem>
