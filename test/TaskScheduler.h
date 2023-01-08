@@ -38,12 +38,8 @@ public:
 		}
 		return instance;
 	}
-
-    void addTask(Task&& task)
-    {
-		tasks_.push(task);
-    }
-    void addTask(Task& task)
+	template<typename TaskType>
+    void addTask(TaskType task)
     {
 		tasks_.push(task);
     }
