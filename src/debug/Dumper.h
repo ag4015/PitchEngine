@@ -27,19 +27,20 @@ public:
     const int maxCount_;
     const int auPMax_;
     int count_;
+	std::string data_;
     std::ofstream outFile_;
 
 public:
     Dumper(std::string fileName, int* audio_ptr, int dumpSize,
         int bufferSize, int maxCount, int auPMax);
     Dumper(std::string fileName);
-    Dumper(const Dumper& other);
 	Dumper(Dumper& other) = delete;
     ~Dumper();
 	// Default dumper
 	template<typename T>
 	void dump(T buf)
 	{
+		CREATE_TIMER("dumpVar", timeUnit::MILISECONDS);
 		if (!audioPtr_) { return; }
 		using remove_pointer_t = typename std::remove_pointer<T>::type;
 
@@ -50,15 +51,20 @@ public:
 			(*audioPtr_ != auPMax_ && auPMax_ != -1)) { return; }
 		
 		// Store in a format understandable by numpy in python
-		for (int i = 0; i < dumpSize_; i++) {
-			if constexpr (std::is_floating_point<remove_pointer_t>::value) {
-				outFile_ << buf[i] << ";";
+		for (int i = 0; i < dumpSize_; i++)
+		{
+			std::stringstream ss;
+			if constexpr (std::is_floating_point<remove_pointer_t>::value)
+			{
+				ss << buf[i] << ";";
 			}
-			else {
-				outFile_ << buf[i].r << ";";
+			else
+			{
+				ss << buf[i].r << ";";
 			}
+			data_ += std::move(ss.str());
 		}
-		outFile_ << std::endl;
+		data_ += "\n";
 		count_++;
 	}
 	// Timer dumper

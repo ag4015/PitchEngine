@@ -9,20 +9,11 @@ Dumper::Dumper(std::string fileName, int* audio_ptr, int dumpSize,
   , maxCount_(maxCount)
   , auPMax_(auPMax)
   , count_(0)
+  , data_()
   , outFile_(fileName_, std::ios::out)
 {
 }
-Dumper::Dumper(const Dumper& other)
-  :	fileName_(other.fileName_)
-  , audioPtr_(other.audioPtr_)
-  , dumpSize_(other.dumpSize_)
-  , bufferSize_(other.bufferSize_)
-  , maxCount_(other.maxCount_)
-  , auPMax_(other.auPMax_)
-  , count_(other.count_)
-  , outFile_(other.fileName_, std::ios::out)
-{
-}
+
 Dumper::Dumper(std::string fileName)
   :	fileName_(fileName)
   , audioPtr_(nullptr)
@@ -31,12 +22,15 @@ Dumper::Dumper(std::string fileName)
   , maxCount_(0)
   , auPMax_(0)
   , count_(0)
+  , data_()
   , outFile_(fileName, std::ios::out)
 {
 }
 
 Dumper::~Dumper()
 {
+	CREATE_TIMER("dumper_detructor", timeUnit::MILISECONDS);
+	outFile_ << data_;
 	outFile_.close();
 }
 

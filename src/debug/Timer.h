@@ -2,6 +2,16 @@
 #include <chrono>
 #include <string>
 
+#ifdef DEBUG_TIMING
+       #define CREATE_TIMER(a,b) Timer timer(a,b)
+       #define END_TIMER(a) timer.endMeasurement()
+       #define DUMP_TIMINGS(a) TimerContainer::getTimerContainer()->dumpTimings(a)
+#else
+       #define CREATE_TIMER(a,b)
+       #define END_TIMER(a)
+       #define DUMP_TIMINGS(a)
+#endif
+
 enum class timeUnit
 {
 	MICROSECONDS,

@@ -19,7 +19,7 @@
 #include <thread>
 #include <queue>
 #ifdef USE_MULTITHREADING
-#define NUM_THREADS 12
+#define NUM_THREADS 8
 #else
 #define NUM_THREADS 1
 #endif
@@ -207,7 +207,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 	}
 
 	DUMP_TIMINGS("timings.csv");
-
+	DESTROY_DUMPERS();
 }
 
 void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName)

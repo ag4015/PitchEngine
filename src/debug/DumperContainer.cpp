@@ -4,11 +4,8 @@
 #else
 #include <experimental/filesystem>
 #endif
-#include <mutex>
 
 std::mutex dumperContainerMutex;
-std::mutex createDumperContainerMutex;
-std::mutex getPathMutex;
 
 DumperContainer::DumperContainer(std::string path)
 {
@@ -17,7 +14,6 @@ DumperContainer::DumperContainer(std::string path)
 
 std::string& DumperContainer::getPath()
 {
-	std::lock_guard<std::mutex> getPathLock(getPathMutex);
 	return pathMap_[std::this_thread::get_id()];
 }
 
@@ -32,6 +28,7 @@ DumperContainer* DumperContainer::getDumperContainer(const std::string& path)
 
 void DumperContainer::updatePath(const std::string& path)
 {
+	std::lock_guard<std::mutex> updatePathLock(updatePathMutex_);
 	pathMap_[std::this_thread::get_id()] = path;
 }
 
@@ -39,6 +36,7 @@ void DumperContainer::updatePath(const std::string& path)
 void DumperContainer::createDumper(const std::string& name, int& audio_ptr,
 	int bufferSize, int dumpSize, int countMax, int auPMax)
 {
+	std::lock_guard<std::mutex> createDumperVarLock(writeToDumperMapMutex_);
 	std::string& folderDir = getPath();
 	std::string folderDir2 = folderDir;
 #ifdef WIN32
@@ -47,13 +45,13 @@ void DumperContainer::createDumper(const std::string& name, int& audio_ptr,
 	std::experimental::filesystem::create_directory(folderDir2);
 #endif
 	std::string fileName = folderDir + name;
-	dumperMap_[fileName] = std::move(std::make_unique<Dumper>(Dumper(fileName, &audio_ptr, bufferSize, dumpSize, countMax, auPMax)));
+	dumperMap_[fileName] = std::make_unique<Dumper>(fileName, &audio_ptr, bufferSize, dumpSize, countMax, auPMax);
 }
 
 // Dumper for timings
 void DumperContainer::createDumper(const std::string& name)
 {
-	std::lock_guard<std::mutex> createDumperLock(createDumperContainerMutex);
+	std::lock_guard<std::mutex> createDumperTimingLock(writeToDumperMapMutex_);
 	std::string& folderDir = getPath();
 #ifdef WIN32
 	std::filesystem::create_directory(folderDir);
@@ -61,6 +59,35 @@ void DumperContainer::createDumper(const std::string& name)
 	std::experimental::filesystem::create_directory(folderDir);
 #endif
 	std::string fileName = folderDir + name;
-	dumperMap_[fileName] = std::move(std::make_unique<Dumper>(Dumper(fileName)));
+	dumperMap_[fileName] = std::make_unique<Dumper>(fileName);
+}
+
+void DumperContainer::destroyDumpers()
+{
+	CREATE_TIMER("destroyDumpers", timeUnit::MILISECONDS);
+	std::lock_guard<std::mutex> destroyDumpersLock(writeToDumperMapMutex_);
+	std::vector<std::string> mapKeys;
+	for (auto& dumperIt : dumperMap_)
+	{
+		// Check that dumper belongs to current process.
+		if (dumperIt.first.find(getPath()) != std::string::npos)
+		{
+			mapKeys.push_back(dumperIt.first);
+		}
+	}
+	for (auto& mapKey : mapKeys)
+	{
+		dumperMap_.erase(mapKey);
+	}
+}
+
+Dumper* DumperContainer::getDumper(const std::string& name)
+{
+	auto dumperIt = dumperMap_.find(getPath() + name);
+	if (dumperIt != dumperMap_.end())
+	{
+		return dumperIt->second.get();
+	}
+	return nullptr;
 }
 
