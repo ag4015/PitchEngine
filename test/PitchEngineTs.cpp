@@ -136,9 +136,10 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 		in_audio = readWav(inputFilePath);
 	}
 
-	int buflen = getVal<int>(paramInstance, "buflen");
-	int steps  = getVal<int>(paramInstance, "steps");
-	int hopA   = getVal<int>(paramInstance, "hopA");
+	int buflen  = getVal<int>(paramInstance, "buflen");
+	int steps   = getVal<int>(paramInstance, "steps");
+	int hopA    = getVal<int>(paramInstance, "hopA");
+	int numSamp = getVal<int>(paramInstance, "numSamp");
 
 	my_float shift    = POW(2, (steps/12));
 	int hopS          = static_cast<int>(ROUND(hopA * shift));
@@ -146,7 +147,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 
 	std::vector<float> out_audio(in_audio.size(), 0.0);
 
-	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, variationName, debugFolder);
+	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, numSamp, variationName, debugFolder);
 
 	std::unique_ptr<PitchEngine> pe;
 	std::string	algo = getVal<const char*>(paramInstance, "algo");
@@ -210,7 +211,7 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 	DESTROY_DUMPERS();
 }
 
-void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std::string& variationName, std::string& fileName)
+void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, int numSamp, std::string& variationName, std::string& fileName)
 {
 	std::string debugPath{ DEBUG_DIR };
 
@@ -226,21 +227,21 @@ void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, std:
 
 	CREATE_DUMPER_C0NTAINER(DEBUG_DIR);
 	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
-	//INIT_DUMPER("inframe.csv"   , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, -1);
-	INIT_DUMPER("mag.csv"       , audio_ptr, buflen/2 + 1, buflen, -1, -1);
-	INIT_DUMPER("phi_a.csv"     , audio_ptr, buflen/2, buflen, -1, -1);
-	//INIT_DUMPER("phi_s.csv"     , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("phi_sPrev.csv" , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("cpxIn.csv"     , audio_ptr, buflen, buflen,  40, -1);
-	//INIT_DUMPER("cpxOut.csv"    , audio_ptr, buflen, buflen,  40, -1);
-	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("inbuffer.csv"  , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("outbuffer.csv" , audio_ptr, buflen, buflen, 10, -1);
-	//INIT_DUMPER("inwin.csv"     , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("outwin.csv"    , audio_ptr, buflen, buflen, 40, -1);
-	//INIT_DUMPER("delta_f.csv"   , audio_ptr, buflen, buflen, -1, -1);
-	//INIT_DUMPER("delta_t.csv"   , audio_ptr, buflen, buflen, -1, -1);
+	//INIT_DUMPER("inframe.csv"   , audio_ptr, buflen, buflen, 40, numSamp);
+	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, numSamp);
+	INIT_DUMPER("mag.csv"       , audio_ptr, buflen/2 + 1, buflen, -1, numSamp);
+	INIT_DUMPER("phi_a.csv"     , audio_ptr, buflen/2,     buflen, -1, numSamp);
+	//INIT_DUMPER("phi_s.csv"     , audio_ptr, buflen, buflen, -1, numSamp);
+	//INIT_DUMPER("phi_sPrev.csv" , audio_ptr, buflen, buflen, -1, numSamp);
+	//INIT_DUMPER("cpxIn.csv"     , audio_ptr, buflen, buflen,  40, numSamp);
+	//INIT_DUMPER("cpxOut.csv"    , audio_ptr, buflen, buflen,  40, numSamp);
+	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, numSamp);
+	//INIT_DUMPER("inbuffer.csv"  , audio_ptr, buflen, buflen, 40, numSamp);
+	//INIT_DUMPER("outbuffer.csv" , audio_ptr, buflen, buflen, 10, numSamp);
+	//INIT_DUMPER("inwin.csv"     , audio_ptr, buflen, buflen, 40, numSamp);
+	//INIT_DUMPER("outwin.csv"    , audio_ptr, buflen, buflen, 40, numSamp);
+	//INIT_DUMPER("delta_f.csv"   , audio_ptr, buflen, buflen, -1, numSamp);
+	//INIT_DUMPER("delta_t.csv"   , audio_ptr, buflen, buflen, -1, numSamp);
 	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 

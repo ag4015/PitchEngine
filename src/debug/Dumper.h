@@ -28,6 +28,7 @@ public:
     const int auPMax_;
     int count_;
 	std::string data_;
+	//std::vector<std::vector<double>> data_;
     std::ofstream outFile_;
 
 public:
@@ -48,7 +49,14 @@ public:
 		static_assert(std::is_floating_point<remove_pointer_t>::value || isComplex<remove_pointer_t>::value);
 
 		if ((count_ > maxCount_ && maxCount_ != -1) ||
-			(*audioPtr_ != auPMax_ && auPMax_ != -1)) { return; }
+			(*audioPtr_ > auPMax_ && auPMax_ != -1)) { return; }
+
+		// If it's the first dump and we know the number of samples, reserve memory
+		if (!count_ && auPMax_ != -1)
+		{
+			constexpr int numberOfCharactersPerDouble = 12;
+			data_.reserve(auPMax_*numberOfCharactersPerDouble);
+		}
 		
 		// Store in a format understandable by numpy in python
 		for (int i = 0; i < dumpSize_; i++)

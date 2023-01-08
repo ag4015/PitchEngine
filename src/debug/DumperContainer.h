@@ -5,19 +5,19 @@
 #include <mutex>
 
 #if defined(DEBUG_DUMP) || defined(DEBUG_TIMING)
-	   #define INITIALIZE_DUMPERS(a,b,c,d,e,f) initializeDumpers(a,b,c,d,e,f)
+	   #define INITIALIZE_DUMPERS(a,b,c,d,e,f,g) initializeDumpers(a,b,c,d,e,f,g)
        #define CREATE_DUMPER_C0NTAINER(a) DumperContainer::getDumperContainer(a)
        #define UPDATE_DUMPER_CONTAINER_PATH(a) DumperContainer::getDumperContainer()->updatePath(a)
        #define DESTROY_DUMPERS() DumperContainer::getDumperContainer()->destroyDumpers()
 #else
-	   #define INITIALIZE_DUMPERS(a,b,c,d,e,f)
+	   #define INITIALIZE_DUMPERS(a,b,c,d,e,f,g)
        #define CREATE_DUMPER_C0NTAINER(a)
        #define UPDATE_DUMPER_CONTAINER_PATH(a)
        #define DESTROY_DUMPERS()
 #endif
 
 #ifdef DEBUG_DUMP
-       #define INIT_DUMPER(a,b,c,d,e,f,g) DumperContainer::getDumperContainer()->createDumper(a,b,c,d,e,f)
+       #define INIT_DUMPER(a,b,c,d,e,f) DumperContainer::getDumperContainer()->createDumper(a,b,c,d,e,f)
        #define DUMP_ARRAY(a,b) DumperContainer::getDumperContainer()->dump(a,b)
 #else
        #define INIT_DUMPER(a,b,c,d,e,f)
