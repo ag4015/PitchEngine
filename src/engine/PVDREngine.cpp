@@ -1,6 +1,6 @@
 
 #include "PVDREngine.h"
-#include "DumperContainer.h"
+//#include "VariableDumper.h"
 #include <set>
 #include <vector>
 #include <random>
@@ -154,9 +154,6 @@ void PVDREngine::computeDifferenceStep()
                    ? (0.5f * (delta_f_back + delta_f_fwd))
 			   	   : (!delta_f_back ? delta_f_fwd : delta_f_back);
 	}
-
-	DUMP_ARRAY(delta_f_, "delta_f.csv");
-	DUMP_ARRAY(delta_t_, "delta_t.csv");
 }
 
 void PVDREngine::resetData()

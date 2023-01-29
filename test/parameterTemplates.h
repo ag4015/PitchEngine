@@ -84,7 +84,6 @@ ParameterCombinator sineSweepCombinations()
 
 	// List of parameters to test
 	paramCombs["signal"]  = { "sine" };
-	paramCombs["freq"]    = { 9096.0 };
 	paramCombs["freq"]    = linspace(20.0, 20e3, 48);
 	//paramCombs["freq"]    = { 440., 450. };
 	paramCombs["steps"]   = { 12 };

@@ -19,6 +19,6 @@ void TimerContainer::updateTimer(std::string& name, uint64_t elapsedTimeUs, time
 
 void TimerContainer::dumpTimings(std::string name)
 {
-	DumperContainer::getDumperContainer()->createDumper(name);
-	DumperContainer::getDumperContainer()->dump(timerMap_, name);
+	// DUMPerContainer::get// DUMPerContainer()->create// DUMPer(name);
+	// DUMPerContainer::get// DUMPerContainer()->// DUMP(timerMap_, name);
 }

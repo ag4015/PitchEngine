@@ -1,6 +1,6 @@
 
 #include "StrechEngine.h"
-#include "DumperContainer.h"
+#include "VariableDumper.h"
 
 #include <complex>
 
@@ -17,7 +17,7 @@ StrechEngine::~StrechEngine()
 
 void StrechEngine::processFrame()
 {
-	CREATE_TIMER("processFrame", timeUnit::MICROSECONDS);
+	// CREATE_TIMER("processFrame", timeUnit::MICROSECONDS);
 
 	computeDifferenceStep();
 	
@@ -29,9 +29,7 @@ void StrechEngine::processFrame()
 		cpxOut_[k].r = std::real(z);
 		cpxOut_[k].i = std::imag(z);
 	}
-
-	DUMP_ARRAY(mag_      , "mag.csv");
-	DUMP_ARRAY(phi_a_    , "phi_a.csv");
-
+	 DUMP_VAR("mag",   mag_,   buflen_/2 + 1);
+	 DUMP_VAR("phi_a", phi_a_, buflen_/2);
 }
 

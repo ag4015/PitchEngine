@@ -5,9 +5,9 @@
 #include "CQPVEngine.h"
 #include "PVDREngine.h"
 #include "NNPVEngineTrainer.h"
+#include "VariableDumper.h"
 #include "logger.h"
-#include "DumperContainer.h"
-#include "TimerContainer.h"
+//#include "TimerContainer.h"
 #include "parameterTemplates.h"
 #include "maximilian.h"
 #include "TaskScheduler.h"
@@ -29,8 +29,7 @@
 
 using task_t = std::tuple<std::string, std::string, std::string, parameterInstanceMap_t>;
 
-DumperContainer* DumperContainer::instance = 0;
-TimerContainer* TimerContainer::instance = 0;
+//TimerContainer* TimerContainer::instance = 0;
 TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
 
 int PitchEngineTs()
@@ -105,7 +104,8 @@ void runTest(ParameterCombinator& paramSet)
 void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::string variationName, parameterInstanceMap_t paramInstance)
 {
 	PRINT_LOG("Test ", variationName);
-	CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
+	// CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
+	SET_DUMPERS_PATH(DEBUG_DIR + variationName + "/");
 
 	int audio_ptr     = 0;                       // Wav file sample pointer
 	int sampleRate    = 44100;
@@ -146,8 +146,6 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 	int numFrames     = static_cast<int>(buflen / hopA);
 
 	std::vector<float> out_audio(in_audio.size(), 0.0);
-
-	INITIALIZE_DUMPERS(audio_ptr, buflen, numFrames, hopS, numSamp, variationName, debugFolder);
 
 	std::unique_ptr<PitchEngine> pe;
 	std::string	algo = getVal<const char*>(paramInstance, "algo");
@@ -207,42 +205,8 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 		writeWav(out_audio, outputFilePath, sampleRate, bitsPerSample);
 	}
 
-	DUMP_TIMINGS("timings.csv");
+	// DUMP_TIMINGS("timings.csv");
 	DESTROY_DUMPERS();
-}
-
-void initializeDumpers(int& audio_ptr, int buflen, int numFrames, int hopS, int numSamp, std::string& variationName, std::string& fileName)
-{
-	std::string debugPath{ DEBUG_DIR };
-
-	removeFileExtension(debugPath);
-
-	// Create directory for this test case
-	debugPath += "/";
-#ifdef WIN32
-	std::filesystem::create_directory(debugPath);
-#else
-	std::experimental::filesystem::create_directory(debugPath);
-#endif
-
-	CREATE_DUMPER_C0NTAINER(DEBUG_DIR);
-	UPDATE_DUMPER_CONTAINER_PATH(debugPath + variationName + "/");
-	//INIT_DUMPER("inframe.csv"   , audio_ptr, buflen, buflen, 40, numSamp);
-	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, numSamp);
-	INIT_DUMPER("mag.csv"       , audio_ptr, buflen/2 + 1, buflen, -1, numSamp);
-	INIT_DUMPER("phi_a.csv"     , audio_ptr, buflen/2,     buflen, -1, numSamp);
-	//INIT_DUMPER("phi_s.csv"     , audio_ptr, buflen, buflen, -1, numSamp);
-	//INIT_DUMPER("phi_sPrev.csv" , audio_ptr, buflen, buflen, -1, numSamp);
-	//INIT_DUMPER("cpxIn.csv"     , audio_ptr, buflen, buflen,  40, numSamp);
-	//INIT_DUMPER("cpxOut.csv"    , audio_ptr, buflen, buflen,  40, numSamp);
-	//INIT_DUMPER("outframe.csv"  , audio_ptr, buflen, buflen, 40, numSamp);
-	//INIT_DUMPER("inbuffer.csv"  , audio_ptr, buflen, buflen, 40, numSamp);
-	//INIT_DUMPER("outbuffer.csv" , audio_ptr, buflen, buflen, 10, numSamp);
-	//INIT_DUMPER("inwin.csv"     , audio_ptr, buflen, buflen, 40, numSamp);
-	//INIT_DUMPER("outwin.csv"    , audio_ptr, buflen, buflen, 40, numSamp);
-	//INIT_DUMPER("delta_f.csv"   , audio_ptr, buflen, buflen, -1, numSamp);
-	//INIT_DUMPER("delta_t.csv"   , audio_ptr, buflen, buflen, -1, numSamp);
-	//INIT_DUMPER("vTime.csv"     , audio_ptr, numFrames*hopS*2, numFrames*hopS*2, 40, -1);
 }
 
 std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::string testFileDir, std::string outputFileDir)

@@ -1,6 +1,6 @@
 
 #include "PVEngine.h"
-#include "DumperContainer.h"
+#include "VariableDumper.h"
 #include <utility>
 #include <complex>
 #include <algorithm>
@@ -57,7 +57,7 @@ PVEngine::~PVEngine()
 
 void PVEngine::process()
 {
-	CREATE_TIMER("process", timeUnit::MILISECONDS);
+	// CREATE_TIMER("process", timeUnit::MILISECONDS);
 
 	for (int f = 0; f < numFrames_; f++)
 	{
@@ -66,8 +66,6 @@ void PVEngine::process()
         /************ ANALYSIS STAGE ***********************/
 
 		createFrame(inbuffer_, inframe_, outframe_, hopA_, frameNum_);
-		DUMP_ARRAY(inframe_,  "inframe.csv");
-		DUMP_ARRAY(outframe_, "outframe.csv");
 
 		// TODO: Need to fix this for floats
 		RESET_PV();
@@ -84,28 +82,18 @@ void PVEngine::process()
 
 		processFrame();
 
-		DUMP_ARRAY(inbuffer_, "inbuffer.csv");
-		DUMP_ARRAY(inwin_   , "inwin.csv");
-		DUMP_ARRAY(outwin_  , "outwin.csv");
-
 		std::swap(cpxIn_, cpxOut_);
 
 		inverseTransform(cpxIn_ , cpxOut_);
-
-		DUMP_ARRAY(cpxOut_, "cpxOut.csv");
 
 		for (int k = 0; k < buflen_; k++)
 		{
 			outframe_[k] = cpxOut_[k].r * (outwin_[k] / buflen_) / outWinScale_;
 		}
 
-		DUMP_ARRAY(outframe_, "outframe.csv");
-
         /************ SYNTHESIS STAGE ***********************/
 
 		strechFrame(outframe_, vTime_);
-
-		DUMP_ARRAY(vTime_, "vTime.csv");
 
 		if ((++frameNum_) >= numFrames_) frameNum_ = 0;
 
@@ -115,8 +103,6 @@ void PVEngine::process()
 
 	interpolate(vTime_, outbuffer_);
 
-    DUMP_ARRAY(outbuffer_, "outbuffer.csv");
-
 	vTimeIdx_ += numFrames_ * hopS_;
 	if ((vTimeIdx_) >= numFrames_ * hopS_ * 2) vTimeIdx_ = 0;
 
@@ -124,7 +110,7 @@ void PVEngine::process()
 
 void PVEngine::processFrame()
 {
-	CREATE_TIMER("processFrame", timeUnit::MICROSECONDS);
+	// CREATE_TIMER("processFrame", timeUnit::MICROSECONDS);
 
 	computeDifferenceStep();
 	
@@ -139,9 +125,9 @@ void PVEngine::processFrame()
 		cpxOut_[k].i = std::imag(z);
 	}
 
-	DUMP_ARRAY(mag_      , "mag.csv");
-	DUMP_ARRAY(phi_a_    , "phi_a.csv");
-	DUMP_ARRAY(phi_s_    , "phi_s.csv");
+	 DUMP_VAR("mag",   mag_,   buflen_/2 + 1);
+	 DUMP_VAR("phi_a", phi_a_, buflen_/2);
+	 DUMP_VAR("phi_s", phi_s_, buflen_/2);
 
 }
 
@@ -169,9 +155,6 @@ void PVEngine::computeDifferenceStep()
 		deltaPhiPrimeMod_t_back = std::remainder(deltaPhiPrime_t_back, 2 * PI);
 		delta_t_[k] = deltaPhiPrimeMod_t_back/hopA_ + (2 * PI * k)/buflen_;
 	}
-
-	DUMP_ARRAY(delta_t_, "delta_t.csv");
-
 }
 
 void PVEngine::propagatePhase()
@@ -184,22 +167,20 @@ void PVEngine::propagatePhase()
 
 void PVEngine::transform(cpx* input, cpx* output)
 {
-	DUMP_ARRAY(cpxIn_, "cpxIn.csv");
-	CREATE_TIMER("fwd_fft", timeUnit::MICROSECONDS);
+	// CREATE_TIMER("fwd_fft", timeUnit::MICROSECONDS);
 	kiss_fft(cfg_, input, output); // TODO Change to kiss_fftr, it's faster
-	END_TIMER("fwd_fft");
-	DUMP_ARRAY(cpxOut_, "cpxOut.csv");
+	// END_TIMER("fwd_fft");
 }
 
 void PVEngine::inverseTransform(cpx* input, cpx* output)
 {
-	CREATE_TIMER("inv_fft", timeUnit::MICROSECONDS);
+	// CREATE_TIMER("inv_fft", timeUnit::MICROSECONDS);
 	kiss_fft(cfgInv_, input, output);
 }
 
 void PVEngine::createFrame(my_float* input, my_float* frame, my_float* output, int hop, int frameNum)
 {
-	CREATE_TIMER("createFrame", timeUnit::MICROSECONDS);
+	// CREATE_TIMER("createFrame", timeUnit::MICROSECONDS);
 
 	for (int k = 0; k < hop; k++)
 	{
