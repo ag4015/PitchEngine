@@ -104,8 +104,8 @@ void runTest(ParameterCombinator& paramSet)
 void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::string variationName, parameterInstanceMap_t paramInstance)
 {
 	PRINT_LOG("Test ", variationName);
-	// CREATE_TIMER("runPitchEngine", timeUnit::MILISECONDS);
 	SET_DUMPERS_PATH(DEBUG_DIR + variationName + "/");
+	Timer runPitchEngineTimer("runPitchEngineTimer", timeUnit::MILISECONDS);
 
 	int audio_ptr     = 0;                       // Wav file sample pointer
 	int sampleRate    = 44100;

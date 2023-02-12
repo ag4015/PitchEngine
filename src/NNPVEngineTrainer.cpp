@@ -15,7 +15,7 @@ NNPVEngineTrainer::~NNPVEngineTrainer()
 
 void NNPVEngineTrainer::process()
 {
-	// CREATE_TIMER("process", timeUnit::MILISECONDS);
+	Timer processTimer("process", timeUnit::MILISECONDS);
 
 	for (int f = 0; f < numFrames_; f++)
 	{
@@ -48,7 +48,7 @@ void NNPVEngineTrainer::process()
 
 void NNPVEngineTrainer::processFrame()
 {
-	// CREATE_TIMER("processFrame", timeUnit::MICROSECONDS);
+	Timer processFrameTimer("processFrame", timeUnit::MILISECONDS);
 
 	for (int k = 0; k < buflen_; k++)
 	{

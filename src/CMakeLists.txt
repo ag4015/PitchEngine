@@ -9,8 +9,15 @@ endif()
 
 configure_file(PitchEngineConfig.h.in ${PITCH_ENGINE_SRC_DIR}/PitchEngineConfig.h)
 
-add_subdirectory(engine)
-add_subdirectory(debug)
+target_sources(PitchEngine 
+    PRIVATE
+	   PitchEngine.cpp
+	   PVEngine.cpp
+	   PVDREngine.cpp
+	   CQPVEngine.cpp
+	   StrechEngine.cpp
+	   NNPVEngineTrainer.cpp
+)
 
 target_include_directories(PitchEngine PUBLIC . )
 

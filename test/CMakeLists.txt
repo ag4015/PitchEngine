@@ -26,3 +26,12 @@ else()
     message("Multithreading not activated.")
 endif()
 
+option(DEBUG_LOG "Enable logs." ON)
+if(DEBUG_LOG)
+    message("Logging enabled.")
+	target_compile_definitions(PitchEngineTs PRIVATE -DDEBUG_LOG)
+	target_compile_definitions(PitchEngine PRIVATE -DDEBUG_LOG)
+else()
+    message("Multithreading not activated.")
+endif()
+

@@ -13,3 +13,6 @@
 [submodule "deps/Variable-Dumper"]
 	path = deps/Variable-Dumper
 	url = https://github.com/alex-gilson/Variable-Dumper.git
+[submodule "deps/EasyTimer"]
+	path = deps/EasyTimer
+	url = https://github.com/alex-gilson/EasyTimer.git

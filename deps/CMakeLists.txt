@@ -7,6 +7,7 @@ SET(wave_enable_tests OFF CACHE BOOL "Build Unit tests wave")
 add_subdirectory(wave)
 add_subdirectory(ParameterCombinator)
 add_subdirectory(Variable-Dumper)
+add_subdirectory(EasyTimer)
 
 # CONSTANT_Q Folder
 set(CONSTANT_Q_LIB_DIR ${PITCH_ENGINE_DEPENDENCIES_DIR}constant-q-cpp/)
@@ -111,5 +112,5 @@ target_sources(Maximilian PUBLIC ${MAXIMILIAN_SOURCE_FILES} )
 
 target_include_directories(Maximilian PUBLIC ${MAXIMILIAN_SRC_DIR})
 
-target_link_libraries(PitchEngine PUBLIC constant_q_lib wave ParameterCombinator VariableDumper)
+target_link_libraries(PitchEngine PUBLIC constant_q_lib wave ParameterCombinator VariableDumper EasyTimer)
 
