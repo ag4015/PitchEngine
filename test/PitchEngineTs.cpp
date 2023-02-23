@@ -35,8 +35,8 @@ TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
 int PitchEngineTs()
 {
 	PRINT_LOG("Starting test");
-	//ParameterCombinator paramSet = generateInputFileCombinations();
-	ParameterCombinator paramSet = sineSweepCombinations();
+	ParameterCombinator paramSet = generateInputFileCombinations();
+	//ParameterCombinator paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	runTest(paramSet);
@@ -78,7 +78,7 @@ void runTest(ParameterCombinator& paramSet)
 		{
 			std::string inputFileName = getVal<const char*>(paramInstance, "inputFile");
 			removeFileExtension(inputFileName);
-			inputFilePath  = INPUT_AUDIO_DIR + inputFileName + ".wav";
+			inputFilePath  = TEST_AUDIO_DIR + inputFileName + ".wav";
 
 			outputFilePath = OUTPUT_AUDIO_DIR + inputFileName + "/";
 			std::filesystem::create_directory(outputFilePath);
@@ -139,7 +139,6 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 	int buflen  = getVal<int>(paramInstance, "buflen");
 	int steps   = getVal<int>(paramInstance, "steps");
 	int hopA    = getVal<int>(paramInstance, "hopA");
-	int numSamp = getVal<int>(paramInstance, "numSamp");
 
 	my_float shift    = POW(2, (steps/12));
 	int hopS          = static_cast<int>(ROUND(hopA * shift));
