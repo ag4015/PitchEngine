@@ -7,7 +7,6 @@
 #include "NNPVEngineTrainer.h"
 #include "VariableDumper.h"
 #include "logger.h"
-//#include "TimerContainer.h"
 #include "parameterTemplates.h"
 #include "maximilian.h"
 #include "TaskScheduler.h"
@@ -27,7 +26,7 @@
 #define INGAIN     1
 #define OUTGAIN    1
 
-using task_t = std::tuple<std::string, std::string, std::string, parameterInstanceMap_t>;
+using task_t = std::tuple<std::string, parameterInstanceMap_t>;
 
 //TimerContainer* TimerContainer::instance = 0;
 TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
@@ -35,11 +34,18 @@ TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
 int PitchEngineTs()
 {
 	PRINT_LOG("Starting test");
-	ParameterCombinator paramSet = generateInputFileCombinations();
-	//ParameterCombinator paramSet = sineSweepCombinations();
+	//ParameterCombinator paramSet = generateInputFileCombinations();
+	ParameterCombinator paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	runTest(paramSet);
+
+	TaskScheduler<task_t>* taskScheduler = TaskScheduler<task_t>::getInstance(NUM_THREADS);
+	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
+	{
+		taskScheduler->addTask(std::make_tuple(ParameterCombinator::generateCombinationName(paramInstance), paramInstance));
+	}
+	taskScheduler->run();
+
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto exTime = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
 	PRINT_LOG("Test took ", exTime.count(), "s");
@@ -55,57 +61,45 @@ int PitchEngineTs()
 
 }
 
-void runTest(ParameterCombinator& paramSet)
+void configureIO(std::string& inputFilePath, std::string& outputFilePath, std::string& variationName, parameterInstanceMap_t& paramInstance)
 {
-	std::queue<task_t> tasks;
-	TaskScheduler<task_t>* taskScheduler = TaskScheduler<task_t>::getInstance(NUM_THREADS);
-
-	for (auto& paramInstance : *paramSet.getParameterInstanceSet())
+	// Reading from file
+	if (paramInstance.count("inputFile"))
 	{
-		task_t task{};
+		SET_DUMPERS_PATH(DEBUG_DIR + variationName + "/");
+		std::string inputFileName = getVal<const char*>(paramInstance, "inputFile");
+		removeFileExtension(inputFileName);
+		inputFilePath  = TEST_AUDIO_DIR + inputFileName + ".wav";
 
-		std::string& inputFilePath  = std::get<0>(task);
-		std::string& outputFilePath = std::get<1>(task);
-		std::string& variationName  = std::get<2>(task);
-
-		parameterInstanceMap_t& paramInstanceTask = std::get<3>(task);
-		paramInstanceTask = paramInstance;
-
-		variationName = ParameterCombinator::generateCombinationName(paramInstance);
-
-		// Reading from file
-		if (paramInstance.count("inputFile"))
-		{
-			std::string inputFileName = getVal<const char*>(paramInstance, "inputFile");
-			removeFileExtension(inputFileName);
-			inputFilePath  = TEST_AUDIO_DIR + inputFileName + ".wav";
-
-			outputFilePath = OUTPUT_AUDIO_DIR + inputFileName + "/";
-			std::filesystem::create_directory(outputFilePath);
-			outputFilePath += variationName + ".wav";
-		}
-		// Synthezising signal
-		else if (paramInstance.count("signal"))
-		{
-			if (!strcmp(getVal<const char*>(paramInstance, "data"), "features"))
-			{
-				outputFilePath = INPUT_FOR_TRAINING_AUDIO_DIR + variationName + ".wav";
-			}
-			else if (!strcmp(getVal<const char*>(paramInstance, "data"), "labels"))
-			{
-				outputFilePath = TRAINING_AUDIO_DIR + variationName + ".wav";
-			}
-		}
-		taskScheduler->addTask(std::move(task));
+		outputFilePath = OUTPUT_AUDIO_DIR + inputFileName + "/";
+		std::filesystem::create_directory(outputFilePath);
+		outputFilePath += variationName + ".wav";
 	}
-	taskScheduler->run();
+	// Synthezising signal
+	else if (paramInstance.count("signal"))
+	{
+		inputFilePath = "";
+		if (!strcmp(getVal<const char*>(paramInstance, "data"), "input"))
+		{
+			SET_DUMPERS_PATH(TRAINING_INPUT_DIR + variationName + "/");
+			outputFilePath = TRAINING_INPUT_AUDIO_DIR + variationName + ".wav";
+		}
+		else if (!strcmp(getVal<const char*>(paramInstance, "data"), "target"))
+		{
+			SET_DUMPERS_PATH(TRAINING_TARGET_DIR + variationName + "/");
+			outputFilePath = TRAINING_TARGET_AUDIO_DIR + variationName + ".wav";
+		}
+	}
 }
 
-void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::string variationName, parameterInstanceMap_t paramInstance)
+void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInstance)
 {
 	PRINT_LOG("Test ", variationName);
-	SET_DUMPERS_PATH(DEBUG_DIR + variationName + "/");
 	Timer runPitchEngineTimer("runPitchEngineTimer", timeUnit::MILISECONDS);
+	std::string inputFilePath, outputFilePath;
+
+	// Set input/output file paths and configure the dumping path for training data
+	configureIO(inputFilePath, outputFilePath, variationName, paramInstance);
 
 	int audio_ptr     = 0;                       // Wav file sample pointer
 	int sampleRate    = 44100;
@@ -118,13 +112,13 @@ void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::
 	if (paramInstance.count("data"))
 	{
 		generateSignal(in_audio, paramInstance, debugFolder, sampleRate);
-		if (!strcmp(getVal<const char*>(paramInstance, "data"), "labels"))
+		if (!strcmp(getVal<const char*>(paramInstance, "data"), "target"))
 		{
 			writeWav(in_audio, outputFilePath, sampleRate, bitsPerSample);
 			return;
 		}
 		// Generated audio for training the NN
-		else if (!strcmp(getVal<const char*>(paramInstance, "data"), "features"))
+		else if (!strcmp(getVal<const char*>(paramInstance, "data"), "input"))
 		{
 			writeWav(in_audio, outputFilePath, sampleRate, bitsPerSample);
 		}

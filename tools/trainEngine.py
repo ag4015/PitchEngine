@@ -45,7 +45,7 @@ def generate_string_from_dict(d):
 
 def get_shifted_dict_from_input_dict(input_dict):
     shifted_dict = input_dict.copy()
-    shifted_dict["data"] = "labels"
+    shifted_dict["data"] = "target"
     # Multiply the frequency of the input with the pitch shift factor
     freq = float(shifted_dict["freq"]) * 2**(int(shifted_dict["steps"])/12)
     shifted_dict["freq"] = f"{freq:e}"
@@ -58,7 +58,7 @@ if platform.system() == "Windows":
 current_path = os.getcwd() + sep
 data_path = current_path + "data" + sep
 debug_data_path = "debugData" + sep
-training_audio_path = "trainingAudio" + sep
+training_audio_path = "training_audio" + sep
 
 # get a list of all files and directories in the given path
 items = os.listdir(debug_data_path)

@@ -49,7 +49,7 @@ ParameterCombinator generateExpectedDataSetFromTrainingDataSet(parameterCombinat
 	}
 
 	expectedCombs["numSamp"] = paramCombs["numSamp"];
-	expectedCombs["data"]    = { "labels" };
+	expectedCombs["data"]    = { "target" };
 	expectedCombs["signal"] = paramCombs["signal"];
 
 	expectedDataSet.combine(expectedCombs, dontCares);
@@ -63,7 +63,7 @@ ParameterCombinator generateInputFileCombinations()
 
 	// List of parameters to test
 	paramCombs["inputFile"] = { "sine_short" };
-	paramCombs["steps"]     = { 3 };
+	paramCombs["steps"]     = { 0 };
 	paramCombs["hopA"]      = { 256 };
 	paramCombs["algo"]      = { "pv", "trainNN"};
 	paramCombs["magTol"]    = { 1e-6 };
@@ -84,7 +84,7 @@ ParameterCombinator sineSweepCombinations()
 
 	// List of parameters to test
 	paramCombs["signal"]  = { "sine" };
-	paramCombs["freq"]    = linspace(20.0, 20e3, 48);
+	paramCombs["freq"]    = linspace(20.0, 20e3, 4);
 	//paramCombs["freq"]    = { 440., 450. };
 	paramCombs["steps"]   = { 12 };
 	paramCombs["hopA"]    = { 256 };
@@ -92,7 +92,7 @@ ParameterCombinator sineSweepCombinations()
 	paramCombs["magTol"]  = { 1e-6 };
 	paramCombs["buflen"]  = { 1024 };
 	paramCombs["numSamp"] = { 1024*120 };
-	paramCombs["data"]    = { "features" };
+	paramCombs["data"]    = { "input" };
 
 	// List of parameters that don't affect the algorithm
 	dontCares_t dontCares = { {"algo", { {"se", {"magTol"} }, {"pv", {"magTol"} } } } };

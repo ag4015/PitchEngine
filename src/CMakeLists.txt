@@ -7,8 +7,6 @@ if(CONSTANT_Q_T)
 	target_compile_definitions(PitchEngine PRIVATE -DCONSTANT_Q_T)
 endif()
 
-configure_file(PitchEngineConfig.h.in ${PITCH_ENGINE_SRC_DIR}/PitchEngineConfig.h)
-
 target_sources(PitchEngine 
     PRIVATE
 	   PitchEngine.cpp

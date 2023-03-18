@@ -10,8 +10,7 @@ typedef float my_float;
 using namespace parameterCombinator;
 
 int PitchEngineTs();
-void runTest(ParameterCombinator& paramSet);
-void runPitchEngine(std::string inputFilePath, std::string outputFilePath, std::string variationName, parameterInstanceMap_t paramInstance);
+void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInstance);
 std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::string testFileDir, std::string outputFileDir);
 void removeFileExtension(std::string& str);
 void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramInstance, std::string& debugFolder, int sampleRate);
