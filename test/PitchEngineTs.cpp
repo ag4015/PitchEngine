@@ -115,7 +115,6 @@ void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInsta
 		if (!strcmp(getVal<const char*>(paramInstance, "data"), "target"))
 		{
 			writeWav(in_audio, outputFilePath, sampleRate, bitsPerSample);
-			return;
 		}
 		// Generated audio for training the NN
 		else if (!strcmp(getVal<const char*>(paramInstance, "data"), "input"))

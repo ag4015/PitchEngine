@@ -31,30 +31,32 @@ ParametersVec linspace(T start_in, T end_in, int num_in)
 	return linspaced;
 }
 
-ParameterCombinator generateExpectedDataSetFromTrainingDataSet(parameterCombinations_t& paramCombs)
+ParameterCombinator generateTargetCombinator(parameterCombinations_t& trainingInputCombs)
 {
 	dontCares_t             dontCares;
-	ParameterCombinator     expectedDataSet;
-	parameterCombinations_t expectedCombs;
+	ParameterCombinator     trainingTargetCombinator;
+	parameterCombinations_t trainingTargetCombs = trainingInputCombs;
+
+	// Reset certain parameters
+	trainingTargetCombs["algo"]  = { "trainNN" };
+	trainingTargetCombs["data"]  = { "target" };
+	trainingTargetCombs["freq"]  = {};
+	trainingTargetCombs["setps"] = { 0 };
 
 	// The expected frequency is the pitch shifted version of the original frequency
-	for (auto& freqParam : paramCombs["freq"])
+	for (auto& freqParam : trainingInputCombs["freq"])
 	{
 		double freq = getVal<double>(freqParam);
-		for (auto& stepsParam : paramCombs["steps"])
+		for (auto& stepsParam : trainingInputCombs["steps"])
 		{
 			int steps = getVal<int>(stepsParam);
-			expectedCombs["freq"].push_back(freq * POW(2, (steps / SEMITONES_PER_OCTAVE)));
+			trainingTargetCombs["freq"].push_back(freq * POW(2, (steps / SEMITONES_PER_OCTAVE)));
 		}
 	}
 
-	expectedCombs["numSamp"] = paramCombs["numSamp"];
-	expectedCombs["data"]    = { "target" };
-	expectedCombs["signal"] = paramCombs["signal"];
+	trainingTargetCombinator.combine(trainingTargetCombs, dontCares);
 
-	expectedDataSet.combine(expectedCombs, dontCares);
-
-	return expectedDataSet;
+	return trainingTargetCombinator;
 }
 
 ParameterCombinator generateInputFileCombinations()
@@ -80,33 +82,33 @@ ParameterCombinator generateInputFileCombinations()
 
 ParameterCombinator sineSweepCombinations()
 {
-	parameterCombinations_t paramCombs;
+	parameterCombinations_t trainingInputCombs;
 
 	// List of parameters to test
-	paramCombs["signal"]  = { "sine" };
-	paramCombs["freq"]    = linspace(20.0, 20e3, 4);
-	//paramCombs["freq"]    = { 440., 450. };
-	paramCombs["steps"]   = { 12 };
-	paramCombs["hopA"]    = { 256 };
-	paramCombs["algo"]    = { "trainNN" };
-	paramCombs["magTol"]  = { 1e-6 };
-	paramCombs["buflen"]  = { 1024 };
-	paramCombs["numSamp"] = { 1024*120 };
-	paramCombs["data"]    = { "input" };
+	trainingInputCombs["signal"]  = { "sine" };
+	//trainingInputCombs["freq"]    = linspace(20.0, 20e3, 4);
+	trainingInputCombs["freq"]    = { 440., 450. };
+	trainingInputCombs["steps"]   = { 12 };
+	trainingInputCombs["hopA"]    = { 256 };
+	trainingInputCombs["algo"]    = { "trainNN" };
+	trainingInputCombs["magTol"]  = { 1e-6 };
+	trainingInputCombs["buflen"]  = { 1024 };
+	trainingInputCombs["numSamp"] = { 1024*120 };
+	trainingInputCombs["data"]    = { "input" };
 
 	// List of parameters that don't affect the algorithm
 	dontCares_t dontCares = { {"algo", { {"se", {"magTol"} }, {"pv", {"magTol"} } } } };
 
-	ParameterCombinator parameterCombinator;
-	parameterCombinator.combine(paramCombs, dontCares);
+	ParameterCombinator trainingInputCombinator;
+	trainingInputCombinator.combine(trainingInputCombs, dontCares);
 
-	ParameterCombinator expectedDataCombinator = generateExpectedDataSetFromTrainingDataSet(paramCombs);
+	ParameterCombinator trainingTargetCombinator = generateTargetCombinator(trainingInputCombs);
 
 	// Add the two combinators as they are, no recombination
 	dontCares.clear();
-	parameterCombinator.addCombinations(parameterCombinator, expectedDataCombinator, dontCares);
+	trainingInputCombinator.addCombinations(trainingInputCombinator, trainingTargetCombinator, dontCares);
 
-	return parameterCombinator;
+	return trainingInputCombinator;
 }
 
 ParameterCombinator trainEngineSine()
@@ -129,7 +131,7 @@ ParameterCombinator trainEngineSine()
 	ParameterCombinator parameterCombinator;
 	parameterCombinator.combine(paramCombs, dontCares);
 
-	ParameterCombinator trainingSet = generateExpectedDataSetFromTrainingDataSet(paramCombs);
+	ParameterCombinator trainingSet = generateTargetCombinator(paramCombs);
 
 	return parameterCombinator;
 }
