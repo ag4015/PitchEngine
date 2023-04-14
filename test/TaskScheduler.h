@@ -30,7 +30,7 @@ class TaskScheduler
 {
 public:
 	static TaskScheduler* instance;
-	static TaskScheduler* getInstance(const int numThreads = 1)
+	static TaskScheduler* getInstance(const size_t numThreads = 1)
 	{
 		if (!instance)
 		{
@@ -60,7 +60,7 @@ public:
     }
 	void run()
 	{
-		for (int i = 0; i < numThreads_ && i < tasks_.size(); i++)
+		for (size_t i = 0; i < numThreads_ && i < tasks_.size(); i++)
 		{
 			threads_.push(std::thread(&runThread<Task>));
 		}
@@ -72,13 +72,13 @@ public:
 	}
 private:
 
-	const int numThreads_;
+	const size_t numThreads_;
 	std::queue<Task> tasks_;
 	std::queue<std::thread> threads_;
 
-    TaskScheduler(const int numThreads) : numThreads_(numThreads) {}
-    TaskScheduler(TaskScheduler const&) = delete;
-    void operator=(TaskScheduler const&) = delete;
+	TaskScheduler(const size_t numThreads) : numThreads_(numThreads) {}
+	TaskScheduler(TaskScheduler const&) = delete;
+	void operator=(TaskScheduler const&) = delete;
 
 };
 

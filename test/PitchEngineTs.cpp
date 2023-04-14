@@ -23,12 +23,21 @@
 #define NUM_THREADS 1
 #endif
 
+#ifdef WIN32
+#define FILE_EXISTS(x) std::filesystem::exists(x)
+#define CREATE_DIRECTORY(x) std::filesystem::exists(x)
+#else
+#define FILE_EXISTS(x) std::experimental::filesystem::exists(x)
+#define CREATE_DIRECTORY(x) std::experimental::filesystem::exists(x)
+#endif
+
 #define INGAIN     1
 #define OUTGAIN    1
 
 using task_t = std::tuple<std::string, parameterInstanceMap_t>;
 
 //TimerContainer* TimerContainer::instance = 0;
+template<>
 TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
 
 int PitchEngineTs()
@@ -72,7 +81,7 @@ void configureIO(std::string& inputFilePath, std::string& outputFilePath, std::s
 		inputFilePath  = TEST_AUDIO_DIR + inputFileName + ".wav";
 
 		outputFilePath = OUTPUT_AUDIO_DIR + inputFileName + "/";
-		std::filesystem::create_directory(outputFilePath);
+		CREATE_DIRECTORY(outputFilePath);
 		outputFilePath += variationName + ".wav";
 	}
 	// Synthezising signal
@@ -101,7 +110,7 @@ void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInsta
 	// Set input/output file paths and configure the dumping path for training data
 	configureIO(inputFilePath, outputFilePath, variationName, paramInstance);
 
-	int audio_ptr     = 0;                       // Wav file sample pointer
+	size_t audio_ptr  = 0;                       // Wav file sample pointer
 	int sampleRate    = 44100;
 	int bitsPerSample = 16;
 	std::string debugFolder;
@@ -132,10 +141,6 @@ void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInsta
 	int buflen  = getVal<int>(paramInstance, "buflen");
 	int steps   = getVal<int>(paramInstance, "steps");
 	int hopA    = getVal<int>(paramInstance, "hopA");
-
-	my_float shift    = POW(2, (steps/12));
-	int hopS          = static_cast<int>(ROUND(hopA * shift));
-	int numFrames     = static_cast<int>(buflen / hopA);
 
 	std::vector<float> out_audio(in_audio.size(), 0.0);
 
@@ -230,7 +235,7 @@ std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::stri
 		outputFilePath += variationName + ".wav";
 		testFilePath   += variationName + ".wav";
 
-		if (!std::filesystem::exists(outputFilePath) || !std::filesystem::exists(testFilePath))
+		if (!FILE_EXISTS(outputFilePath) || !FILE_EXISTS(testFilePath))
 		{
 			continue;
 		}
@@ -244,7 +249,7 @@ std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::stri
 			continue;
 		}
 		bool failed = false;
-		for (int i = 0; i < output_audio.size() && !failed; i++)
+		for (size_t i = 0; i < output_audio.size() && !failed; i++)
 		{
 			if (output_audio[i] != test_audio[i])
 			{
@@ -269,7 +274,6 @@ void generateSignal(std::vector<float>& signal, parameterInstanceMap_t& paramIns
 {
 	double frequency = getVal<double>(paramInstance, "freq");
 	int numSamp   = getVal<int>(paramInstance, "numSamp");
-	int amplitude = 1;
 	std::string signalType  = getVal<const char*>(paramInstance, "signal");
 	maxiOsc functionGen;
 
