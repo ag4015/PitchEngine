@@ -41,7 +41,7 @@ ParameterCombinator generateTargetCombinator(parameterCombinations_t& trainingIn
 	trainingTargetCombs["algo"]  = { "trainNN" };
 	trainingTargetCombs["data"]  = { "target" };
 	trainingTargetCombs["freq"]  = {};
-	trainingTargetCombs["setps"] = { 0 };
+	trainingTargetCombs["steps"] = { 0 };
 
 	// The expected frequency is the pitch shifted version of the original frequency
 	for (auto& freqParam : trainingInputCombs["freq"])
