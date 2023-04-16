@@ -88,7 +88,7 @@ ParameterCombinator sineSweepCombinations()
 	trainingInputCombs["signal"]  = { "sine" };
 	//trainingInputCombs["freq"]    = linspace(20.0, 20e3, 4);
 	trainingInputCombs["freq"]    = { 440., 450. };
-	trainingInputCombs["steps"]   = { 12 };
+	trainingInputCombs["steps"]   = { 3, 12 };
 	trainingInputCombs["hopA"]    = { 256 };
 	trainingInputCombs["algo"]    = { "trainNN" };
 	trainingInputCombs["magTol"]  = { 1e-6 };

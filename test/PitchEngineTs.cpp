@@ -10,11 +10,6 @@
 #include "parameterTemplates.h"
 #include "maximilian.h"
 #include "TaskScheduler.h"
-#ifdef WIN32
-#include <filesystem>
-#else
-#include <experimental/filesystem>
-#endif
 #include <thread>
 #include <queue>
 #ifdef USE_MULTITHREADING
@@ -24,10 +19,12 @@
 #endif
 
 #ifdef WIN32
-#define FILE_EXISTS(x) std::filesystem::exists(x)
+#include <filesystem>
+#define FILE_EXISTS(x)      std::filesystem::exists(x)
 #define CREATE_DIRECTORY(x) std::filesystem::exists(x)
 #else
-#define FILE_EXISTS(x) std::experimental::filesystem::exists(x)
+#include <experimental/filesystem>
+#define FILE_EXISTS(x)      std::experimental::filesystem::exists(x)
 #define CREATE_DIRECTORY(x) std::experimental::filesystem::exists(x)
 #endif
 
