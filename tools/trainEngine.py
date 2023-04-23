@@ -7,6 +7,7 @@ import platform
 import time
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 #import matplotlib.pyplot as plt
 
@@ -47,7 +48,7 @@ def generate_string_from_dict(d):
 
     return result_string
 
-def get_shifted_dict_from_input_dict(input_dict):
+def get_target_dict_from_input_dict(input_dict):
     shifted_dict = input_dict.copy()
     shifted_dict["data"]  = "target"
     shifted_dict["steps"] = 0
@@ -88,7 +89,7 @@ def load_input_and_target_data(input_path, target_path):
     for i, input_folder in enumerate(folders):
 
         input_dict  = parse_name(input_folder)
-        target_dict = get_shifted_dict_from_input_dict(input_dict)
+        target_dict = get_target_dict_from_input_dict(input_dict)
 
         input_folder_path = training_input_path + input_folder + sep
 
@@ -154,36 +155,54 @@ start_time = time.time()
 
 x_train, y_train = load_input_and_target_data(training_input_path, training_target_path)
 x_train, y_train = preprocess_training_data(x_train, y_train)
-# import pdb; pdb.set_trace()
 
-# Create the neural network
+# Define the neural network architecture
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(1026, 1025)
+        # self.fc2 = nn.Linear(1026, 1025)
+        # self.fc1 = nn.Linear(1026, 512)
+        # self.fc2 = nn.Linear(512, 256)
+        # self.fc3 = nn.Linear(256, 128)
+        # self.fc4 = nn.Linear(128, 1025)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        # x = self.fc2(x)
+        # x = torch.relu(self.fc2(x))
+        # x = torch.relu(self.fc3(x))
+        # x = self.fc4(x)
+        return x
+
+# Create the neural network instance
 net = Net()
 
 # Define the loss function and optimizer
 criterion = nn.MSELoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.01)
+optimizer = optim.SGD(net.parameters(), lr=0.01)
 
 # Convert the training data to PyTorch tensors
-x_train = torch.from_numpy(x_train)
-y_train = torch.from_numpy(y_train)
+x_train = torch.from_numpy(x_train).float()
+y_train = torch.from_numpy(y_train).float()
 
-# # Train the neural network
-# for epoch in range(1000):
-#     # Forward pass
-#     y_pred = net(x_train)
+# Train the neural network
+for epoch in range(1000):
+    # Forward pass
+    outputs = net(x_train)
+    loss = criterion(outputs, y_train)
+    
+    # Backward pass and optimization
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    
+    # Print the training progress
+    if (epoch+1) % 10 == 0:
+        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, 100, loss.item()))
 
-#     # Compute the loss
-#     loss = criterion(y_pred, y_train)
-
-#     # Backward pass and update the weights
-#     optimizer.zero_grad()
-#     loss.backward()
-#     optimizer.step()
-
-#     # Print the loss every 100 epochs
-#     if epoch % 100 == 0:
-#         print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
-
+# Save the trained model
+torch.save(net.state_dict(), 'model.pth')
 
 execution_time = time.time() - start_time
 print("Execution time:", execution_time, "seconds")
