@@ -107,6 +107,12 @@ void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInsta
 	// Set input/output file paths and configure the dumping path for training data
 	configureIO(inputFilePath, outputFilePath, variationName, paramInstance);
 
+	if (FILE_EXISTS(outputFilePath))
+	{
+		std::cout << " Skipping";
+		return;
+	}
+
 	size_t audio_ptr  = 0;                       // Wav file sample pointer
 	int sampleRate    = 44100;
 	int bitsPerSample = 16;
@@ -199,7 +205,6 @@ void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInsta
 		writeWav(out_audio, outputFilePath, sampleRate, bitsPerSample);
 	}
 
-	// DUMP_TIMINGS("timings.csv");
 	DESTROY_DUMPERS();
 }
 
