@@ -31,6 +31,16 @@ ParametersVec linspace(T start_in, T end_in, int num_in)
 	return linspaced;
 }
 
+ParametersVec range(int start, int stop, int step = 1)
+{
+	ParametersVec range;
+    for (int i = start; i < stop; i += step)
+	{
+        range.push_back(i);
+    }
+    return range;
+}
+
 ParameterCombinator generateTargetCombinator(parameterCombinations_t& trainingInputCombs)
 {
 	dontCares_t             dontCares;
@@ -86,9 +96,10 @@ ParameterCombinator sineSweepCombinations()
 
 	// List of parameters to test
 	trainingInputCombs["signal"]  = { "sine" };
-	//trainingInputCombs["freq"]    = linspace(20.0, 20e3, 4);
-	trainingInputCombs["freq"]    = { 440., 450. };
-	trainingInputCombs["steps"]   = { 3, 12 };
+	trainingInputCombs["freq"]    = linspace(20.0, 20e3, 10);
+	// trainingInputCombs["freq"]    = { 440., 450. };
+	// trainingInputCombs["steps"]   = { 1, 2, 3, 4,  12 };
+	trainingInputCombs["steps"]   = range(1, 12);
 	trainingInputCombs["hopA"]    = { 256 };
 	trainingInputCombs["algo"]    = { "trainNN" };
 	trainingInputCombs["magTol"]  = { 1e-6 };
