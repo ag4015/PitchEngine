@@ -15,6 +15,7 @@ target_link_libraries(PitchEngineTs PRIVATE
                         PitchEngine
                         ParameterCombinator
                         Maximilian
+                        pthread
                         )
 
 option(USE_MULTITHREADING "Use multithreading for each parameter" ON)
