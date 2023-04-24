@@ -4,7 +4,11 @@ import os
 # Get the paths of the folders to delete files from
 current_path = os.getcwd() + os.sep
 pitchengine_index = current_path.rfind('PitchEngine')
-pitch_engine_path = current_path[:pitchengine_index+len('PitchEngine')]
+if pitchengine_index == -1:
+  pitch_engine_path = current_path + "PitchEngine" + os.sep
+else:
+  pitch_engine_path = current_path[:pitchengine_index+len('PitchEngine')]
+
 
 data_path = pitch_engine_path + os.sep + "data" + os.sep
 
