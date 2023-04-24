@@ -31,7 +31,7 @@ ParametersVec linspace(T start_in, T end_in, int num_in)
 	return linspaced;
 }
 
-ParametersVec range(int start, int stop, int step = 1)
+ParametersVec range(int start, int stop, int step)
 {
 	ParametersVec range;
     for (int i = start; i < stop; i += step)
@@ -69,6 +69,77 @@ ParameterCombinator generateTargetCombinator(parameterCombinations_t& trainingIn
 	return trainingTargetCombinator;
 }
 
+ParameterCombinator generateCombinatorFromArguments(int argc, char** argv)
+{
+
+	parameterCombinations_t parsedCombs;
+	std::set<std::string>   possibleParamNames = { "signal", "freq", "steps", "hopA", "algo", "magTol", "buflen", "numSamp", "data"};
+	std::set<std::string>   stringParameters   = { "signal", "algo", "data"};
+	std::set<std::string>   intParameters      = { "steps", "hopA", "buflen", "numSamp"};
+	std::set<std::string>   floatParameters    = { "freq", "magTol"};
+	int i = 1;
+	std::string paramName;
+	while (i < argc)
+	{
+		std::string arg = argv[i];
+		if (possibleParamNames.count(arg))
+		{
+			paramName = argv[i];
+		}
+		else if (arg == "linspace")
+		{
+			auto vals = linspace(std::stod(argv[i+1]), std::stod(argv[i+2]), std::stoi(argv[i+3]));
+			for (auto val : vals)
+			{
+				parsedCombs[paramName].push_back(val);
+			}
+			i += 4;
+			continue;
+		}
+		else if (arg == "range")
+		{
+			auto vals = range(std::stoi(argv[i+1]), std::stoi(argv[i+2]), std::stoi(argv[i+3]));
+			for (auto val : vals)
+			{
+				parsedCombs[paramName].push_back(val);
+			}
+			i += 4;
+			continue;
+		}
+		else if (floatParameters.count(paramName))
+		{
+			parsedCombs[paramName].push_back(std::stod(arg));
+		}
+		else if (stringParameters.count(paramName))
+		{
+			const char* x = argv[i];
+			parsedCombs[paramName].push_back(x);
+		}
+		else if (intParameters.count(paramName))
+		{
+			parsedCombs[paramName].push_back(std::stoi(arg));
+		}
+		else
+		{
+			throw std::runtime_error("Unknown parameter type.");
+		}
+		i++;
+	}
+	// List of parameters that don't affect the algorithm
+	dontCares_t dontCares = { {"algo", { {"se", {"magTol"} }, {"pv", {"magTol"} } } } };
+
+	ParameterCombinator trainingInputCombinator;
+	trainingInputCombinator.combine(parsedCombs, dontCares);
+
+	ParameterCombinator trainingTargetCombinator = generateTargetCombinator(parsedCombs);
+
+	// Add the two combinators as they are, no recombination
+	dontCares.clear();
+	trainingInputCombinator.addCombinations(trainingInputCombinator, trainingTargetCombinator, dontCares);
+
+	return trainingInputCombinator;
+}
+
 ParameterCombinator generateInputFileCombinations()
 {
 	parameterCombinations_t paramCombs;
@@ -99,7 +170,7 @@ ParameterCombinator sineSweepCombinations()
 	trainingInputCombs["freq"]    = linspace(20.0, 20e3, 10);
 	// trainingInputCombs["freq"]    = { 440., 450. };
 	// trainingInputCombs["steps"]   = { 1, 2, 3, 4,  12 };
-	trainingInputCombs["steps"]   = range(1, 12);
+	trainingInputCombs["steps"]   = range(1, 12, 1);
 	trainingInputCombs["hopA"]    = { 256 };
 	trainingInputCombs["algo"]    = { "trainNN" };
 	trainingInputCombs["magTol"]  = { 1e-6 };

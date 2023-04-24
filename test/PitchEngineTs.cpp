@@ -37,11 +37,21 @@ using task_t = std::tuple<std::string, parameterInstanceMap_t>;
 template<>
 TaskScheduler<task_t>* TaskScheduler<task_t>::instance = 0;
 
-int PitchEngineTs()
+int main(int argc, char** argv)
 {
 	PRINT_LOG("Starting test");
+
+	ParameterCombinator paramSet;
+	if (argc > 1)
+	{
+		paramSet = generateCombinatorFromArguments(argc, argv);
+	}
+	else
+	{
+		paramSet = sineSweepCombinations();
+	}
+
 	//ParameterCombinator paramSet = generateInputFileCombinations();
-	ParameterCombinator paramSet = sineSweepCombinations();
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -66,6 +76,7 @@ int PitchEngineTs()
 	return failedTests.size() != 0;
 
 }
+
 
 void configureIO(std::string& inputFilePath, std::string& outputFilePath, std::string& variationName, parameterInstanceMap_t& paramInstance)
 {
@@ -109,7 +120,6 @@ void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInsta
 
 	if (FILE_EXISTS(outputFilePath))
 	{
-		std::cout << " Skipping";
 		return;
 	}
 

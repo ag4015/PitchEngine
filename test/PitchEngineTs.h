@@ -9,7 +9,7 @@ typedef float my_float;
 
 using namespace parameterCombinator;
 
-int PitchEngineTs();
+int main(int argc, char** argv);
 void runPitchEngine(std::string variationName, parameterInstanceMap_t paramInstance);
 std::vector<std::string> getFailedTests(ParameterCombinator& paramSet, std::string testFileDir, std::string outputFileDir);
 void removeFileExtension(std::string& str);
