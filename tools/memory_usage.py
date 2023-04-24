@@ -1,10 +1,14 @@
 import os
 import sys
 
-# Get the paths of the folders to calculate memory usage for
+# Get the paths of the folders to delete files from
 current_path = os.getcwd() + os.sep
 pitchengine_index = current_path.rfind('PitchEngine')
-pitch_engine_path = current_path[:pitchengine_index+len('PitchEngine')]
+if pitchengine_index == -1:
+  pitch_engine_path = current_path + "PitchEngine" + os.sep
+else:
+  pitch_engine_path = current_path[:pitchengine_index+len('PitchEngine')]
+
 
 data_path = pitch_engine_path + os.sep + "data" + os.sep
 
@@ -15,6 +19,7 @@ training_target_path          = data_path + "training_target"          + os.sep
 training_target_audio_path    = data_path + "training_target_audio"    + os.sep
 training_predicted_path       = data_path + "training_predicted"       + os.sep
 training_predicted_audio_path = data_path + "training_predicted_audio" + os.sep
+
 
 # Define a function to calculate the total memory usage of all files in a directory
 def get_directory_memory_usage(directory):
